@@ -13,7 +13,12 @@ case class EventStream(effectiveEvents: Iterator[EffectiveEvent]) {
 
 case class SerializedEvent(eventType: String, body: Array[Byte])
 
-case class EffectiveEvent(effectiveTimestamp: DateTime, event: SerializedEvent, version: Option[Long] = None)
+case class EffectiveEvent(
+                           effectiveTimestamp: DateTime,
+                           event: SerializedEvent,
+                           version: Option[Long] = None,
+                           last: Boolean = false
+                           )
 
 class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) {
 
@@ -69,6 +74,7 @@ class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => Dat
 
       EventStream(eventsIterator.toList.toIterator)
     } finally {
+      statement.close()
       results.close()
     }
   }
