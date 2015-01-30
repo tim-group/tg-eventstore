@@ -6,7 +6,7 @@ import java.sql.{DriverManager, Connection}
 import org.joda.time.{DateTimeZone, DateTime}
 import org.scalatest.{MustMatchers, FunSpec}
 
-class SQLEventStoreFunctionalSpec extends FunSpec with MustMatchers {
+class SQLEventStoreTest extends FunSpec with MustMatchers {
   val effectiveTimestamp = new DateTime(2015, 1, 15, 23, 43, 53, DateTimeZone.UTC)
 
   case class ExampleEvent(a: Int)
