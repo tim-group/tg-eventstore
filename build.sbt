@@ -2,6 +2,8 @@ import scala.util.matching.Regex
 
 name := "mysql-eventstore"
 
+organization := "com.timgroup"
+
 version := "0.0." + sys.env.getOrElse("BUILD_NUMBER", "0-SNAPSHOT")
 
 scalaVersion := "2.11.5"
@@ -34,3 +36,5 @@ CreateDatabase.settings
 net.virtualvoid.sbt.graph.Plugin.graphSettings
 
 publishTo := Some("publish-repo" at "http://repo.youdevise.com:8081/nexus/content/repositories/yd-release-candidates")
+
+credentials += Credentials(new File("/etc/sbt/credentials"))
