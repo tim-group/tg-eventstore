@@ -14,6 +14,6 @@ class InMemoryEventStore extends EventStore {
   }
 
   override def fromAll(connection: Connection, version: Long): EventStream = {
-    EventStream(events.dropWhile(_.version.get <= version).toIterator)
+    EventStream(SQLEventStore.tagLast(events.dropWhile(_.version.get <= version).toIterator))
   }
 }

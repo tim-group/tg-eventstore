@@ -78,13 +78,15 @@ class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => Dat
         )
       }
 
-      EventStream(tagLast(eventsIterator.toList.toIterator))
+      EventStream(SQLEventStore.tagLast(eventsIterator.toList.toIterator))
     } finally {
       statement.close()
       results.close()
     }
   }
-  
+}
+
+object SQLEventStore {
   def tagLast(iterator: Iterator[EffectiveEvent]) = {
     new Iterator[EffectiveEvent] {
       override def hasNext: Boolean = iterator.hasNext
