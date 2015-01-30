@@ -50,6 +50,18 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
     }
   }
 
+  it("labels the last event of the stream") {
+    val eventStore = new SQLEventStore()
+
+    inTransaction { conn =>
+      eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
+
+      val nextEvents = eventStore.fromAll(conn).effectiveEvents.toList
+
+      nextEvents.map(_.last) must be(List(false, true))
+    }
+  }
+
   def serialized(evts: ExampleEvent*) = evts.map(serialize)
 
   def serialize(evt: ExampleEvent) = SerializedEvent(evt.getClass.getSimpleName, evt.a.toString.getBytes("UTF-8"))

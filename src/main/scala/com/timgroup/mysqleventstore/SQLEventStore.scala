@@ -72,10 +72,22 @@ class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => Dat
         )
       }
 
-      EventStream(eventsIterator.toList.toIterator)
+      EventStream(tagLast(eventsIterator.toList.toIterator))
     } finally {
       statement.close()
       results.close()
+    }
+  }
+  
+  def tagLast(iterator: Iterator[EffectiveEvent]) = {
+    new Iterator[EffectiveEvent] {
+      override def hasNext: Boolean = iterator.hasNext
+
+      override def next(): EffectiveEvent = {
+        val evt: EffectiveEvent = iterator.next()
+
+        evt.copy(last = !iterator.hasNext)
+      }
     }
   }
 }
