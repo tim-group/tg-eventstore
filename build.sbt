@@ -32,3 +32,5 @@ libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.20" % "test"
 CreateDatabase.settings
 
 net.virtualvoid.sbt.graph.Plugin.graphSettings
+
+publishTo := Some("publish-repo" at "http://repo.youdevise.com:8081/nexus/content/repositories/yd-release-candidates")
