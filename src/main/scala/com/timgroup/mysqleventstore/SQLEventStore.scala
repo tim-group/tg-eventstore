@@ -7,13 +7,15 @@ import org.joda.time.{DateTimeZone, DateTime}
 
 case class EventStream(effectiveEvents: Iterator[EffectiveEvent]) {
   def events: Iterator[SerializedEvent] = effectiveEvents.map(_.event)
+
+  def isEmpty = effectiveEvents.isEmpty
 }
 
 case class SerializedEvent(eventType: String, body: Array[Byte])
 
-case class EffectiveEvent(effectiveTimestamp: DateTime, event: SerializedEvent)
+case class EffectiveEvent(effectiveTimestamp: DateTime, event: SerializedEvent, version: Option[Long] = None)
 
-class SQLEventStore(tableName: String = "Event", now: () => DateTime) {
+class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) {
 
   def save(connection: Connection, newEvents: Seq[SerializedEvent]): Unit = {
     val effectiveTimestamp = now()
@@ -46,8 +48,9 @@ class SQLEventStore(tableName: String = "Event", now: () => DateTime) {
     }
   }
 
-  def fromAll(connection: Connection): EventStream = {
-    val statement = connection.prepareStatement("select effective_timestamp, eventType, body from " + tableName)
+  def fromAll(connection: Connection, version: Long = 0): EventStream = {
+    val statement = connection.prepareStatement("select effective_timestamp, eventType, body, version from  %s where version > ?".format(tableName))
+    statement.setLong(1, version)
 
     val results = statement.executeQuery()
 
@@ -59,7 +62,8 @@ class SQLEventStore(tableName: String = "Event", now: () => DateTime) {
           new DateTime(results.getTimestamp("effective_timestamp"),DateTimeZone.UTC),
           SerializedEvent(
             eventType = results.getString("eventType"),
-            body = results.getBytes("body"))
+            body = results.getBytes("body")),
+          Some(results.getLong("version"))
         )
       }
 

@@ -1,6 +1,5 @@
 package com.timgroup.mysqleventstore
 
-import java.io.{ByteArrayInputStream, ObjectInputStream, ByteArrayOutputStream, ObjectOutputStream}
 import java.sql.{DriverManager, Connection}
 
 import org.joda.time.{DateTimeZone, DateTime}
@@ -16,7 +15,7 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
       val eventStore = new SQLEventStore(now = () => effectiveTimestamp)
 
       inTransaction { conn =>
-        eventStore.save(conn, Seq(ExampleEvent(21), ExampleEvent(22)).map(serialize))
+        eventStore.save(conn, serialized(ExampleEvent(21), ExampleEvent(22)))
 
         val all = eventStore.fromAll(conn).effectiveEvents.toList
         val lastTwo = all.slice(all.size-2, all.size)
@@ -26,6 +25,32 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
       }
     }
   }
+
+  it("can replay events from a given version number onwards") {
+    val eventStore = new SQLEventStore()
+
+    inTransaction { conn =>
+      eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
+
+      val previousVersion = eventStore.fromAll(conn).effectiveEvents.toList.last.version.get
+
+      eventStore.save(conn, serialized(ExampleEvent(3), ExampleEvent(4)))
+
+      val nextEvents = eventStore.fromAll(conn, version = previousVersion).effectiveEvents.toList.map(_.event).map(deserialize)
+
+      nextEvents must be(List(ExampleEvent(3), ExampleEvent(4)))
+    }
+  }
+
+  it("returns no events if there are none past the specified version") {
+    val eventStore = new SQLEventStore()
+
+    inTransaction { conn =>
+      eventStore.fromAll(conn, version = 900000).isEmpty must be(true)
+    }
+  }
+
+  def serialized(evts: ExampleEvent*) = evts.map(serialize)
 
   def serialize(evt: ExampleEvent) = SerializedEvent(evt.getClass.getSimpleName, evt.a.toString.getBytes("UTF-8"))
 
