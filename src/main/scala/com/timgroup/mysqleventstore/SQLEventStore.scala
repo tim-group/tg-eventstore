@@ -6,9 +6,9 @@ import java.sql.{Timestamp, Connection}
 import org.joda.time.{DateTimeZone, DateTime}
 
 trait EventStore {
-  def save(connection: Connection, newEvents: Seq[SerializedEvent]): Unit
+  def save(newEvents: Seq[SerializedEvent]): Unit
 
-  def fromAll(connection: Connection, version: Long = 0): EventStream
+  def fromAll(version: Long = 0): EventStream
 }
 
 case class EventStream(effectiveEvents: Iterator[EffectiveEvent]) {
@@ -26,9 +26,9 @@ case class EffectiveEvent(
                            last: Boolean = false
                            )
 
-class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) extends EventStore {
+class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) {
 
-  override def save(connection: Connection, newEvents: Seq[SerializedEvent]): Unit = {
+  def save(connection: Connection, newEvents: Seq[SerializedEvent]): Unit = {
     val effectiveTimestamp = now()
     saveRaw(connection, newEvents.map(EffectiveEvent(effectiveTimestamp, _)))
   }
@@ -59,7 +59,7 @@ class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => Dat
     }
   }
 
-  override def fromAll(connection: Connection, version: Long = 0): EventStream = {
+  def fromAll(connection: Connection, version: Long = 0): EventStream = {
     val statement = connection.prepareStatement("select effective_timestamp, eventType, body, version from  %s where version > ?".format(tableName))
     statement.setLong(1, version)
 
