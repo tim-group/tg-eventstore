@@ -1,0 +1,3 @@
+package com.timgroup.mysqleventstore
+
+class OptimisticConcurrencyFailure extends RuntimeException

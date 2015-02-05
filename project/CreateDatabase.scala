@@ -8,7 +8,7 @@ object CreateDatabase {
     println("Re-creating DB")
     Process("mysql", Seq("-edrop database if exists sql_eventstore")).!
     Process("mysql", Seq("-ecreate database sql_eventstore")).!
-    Process("mysql", Seq("sql_eventstore", "-eCREATE TABLE Event(eventType VARCHAR(255), body BLOB, version INT AUTO_INCREMENT PRIMARY KEY, effective_timestamp datetime)")).!
+    Process("mysql", Seq("sql_eventstore", "-eCREATE TABLE Event(eventType VARCHAR(255), body BLOB, version INT PRIMARY KEY, effective_timestamp datetime)")).!
   },
     (test in Test) <<= (test in Test) dependsOn createDb
   )

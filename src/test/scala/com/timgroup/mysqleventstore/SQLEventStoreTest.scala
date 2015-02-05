@@ -8,27 +8,20 @@ import org.scalatest.{MustMatchers, FunSpec}
 class SQLEventStoreTest extends FunSpec with MustMatchers {
   val effectiveTimestamp = new DateTime(2015, 1, 15, 23, 43, 53, DateTimeZone.UTC)
 
-  case class ExampleEvent(a: Int)
+  val eventStore = new SQLEventStore(now = () => effectiveTimestamp)
 
-  describe("writing to a stream") {
-    it("creates and writes the first events, if the stream is new") {
-      val eventStore = new SQLEventStore(now = () => effectiveTimestamp)
+  it("can save events") {
+    inTransaction { conn =>
+      eventStore.save(conn, serialized(ExampleEvent(21), ExampleEvent(22)))
 
-      inTransaction { conn =>
-        eventStore.save(conn, serialized(ExampleEvent(21), ExampleEvent(22)))
+      val all = eventStore.fromAll(conn).effectiveEvents.toList
 
-        val all = eventStore.fromAll(conn).effectiveEvents.toList
-        val lastTwo = all.slice(all.size-2, all.size)
-
-        lastTwo.map(_.effectiveTimestamp) must be(List(effectiveTimestamp, effectiveTimestamp))
-        lastTwo.map(_.event).map(deserialize) must be(List(ExampleEvent(21),ExampleEvent(22)))
-      }
+      all.map(_.effectiveTimestamp) must be(List(effectiveTimestamp, effectiveTimestamp))
+      all.map(_.event).map(deserialize) must be(List(ExampleEvent(21),ExampleEvent(22)))
     }
   }
 
   it("can replay events from a given version number onwards") {
-    val eventStore = new SQLEventStore()
-
     inTransaction { conn =>
       eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
 
@@ -43,16 +36,12 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
   }
 
   it("returns no events if there are none past the specified version") {
-    val eventStore = new SQLEventStore()
-
     inTransaction { conn =>
       eventStore.fromAll(conn, version = 900000).isEmpty must be(true)
     }
   }
 
   it("labels the last event of the stream") {
-    val eventStore = new SQLEventStore()
-
     inTransaction { conn =>
       eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
 
@@ -61,6 +50,70 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
       nextEvents.map(_.last) must be(List(false, true))
     }
   }
+
+  it("writes events to the current version of the stream when no expected version is specified") {
+    inTransaction { conn =>
+      eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
+      eventStore.save(conn, serialized(ExampleEvent(3)))
+
+      eventStore.fromAll(conn, version = 2).effectiveEvents.toList.map(_.event).map(deserialize) must be(List(ExampleEvent(3)))
+    }
+  }
+
+  it("throws OptimisticConcurrencyFailure when stream has already moved beyond the expected version") {
+    inTransaction { conn =>
+      eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
+      intercept[OptimisticConcurrencyFailure] {
+        eventStore.save(conn, serialized(ExampleEvent(3)), expectedVersion = Some(1))
+      }
+    }
+  }
+
+  it("throws OptimisticConcurrencyFailure when stream is not yet at the expected version") {
+    inTransaction { conn =>
+      eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
+      intercept[OptimisticConcurrencyFailure] {
+        eventStore.save(conn, serialized(ExampleEvent(3)), expectedVersion = Some(10))
+      }
+    }
+  }
+
+  it("throws OptimisticConcurrencyFailure when stream moves past expected version during save") {
+    try {
+      inTransaction { conn =>
+        eventStore.fromAll(conn)
+
+        unrelatedSavesOfEventHappens()
+        intercept[OptimisticConcurrencyFailure] {
+          eventStore.save(conn, serialized(ExampleEvent(3)), expectedVersion = Some(0))
+        }
+      }
+    } finally {
+      cleanup()
+    }
+  }
+
+  it("returns nothing if eventstore is empty") {
+    inTransaction { conn =>
+      eventStore.fromAll(conn).events.toList must be(Nil)
+    }
+  }
+
+  def cleanup(): Unit = {
+    inTransaction { conn =>
+      conn.prepareStatement("delete from Event").execute()
+      conn.commit()
+    }
+  }
+
+  def unrelatedSavesOfEventHappens(): Unit = {
+    inTransaction { conn =>
+      eventStore.save(conn, serialized(ExampleEvent(3)))
+      conn.commit()
+    }
+  }
+
+  case class ExampleEvent(a: Int)
 
   def serialized(evts: ExampleEvent*) = evts.map(serialize)
 
