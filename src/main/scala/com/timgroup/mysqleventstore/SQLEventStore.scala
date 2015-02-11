@@ -23,8 +23,13 @@ case class EffectiveEvent(
                            effectiveTimestamp: DateTime,
                            event: SerializedEvent,
                            version: Option[Long] = None,
-                           last: Boolean = false
-                           )
+                           lastVersion: Option[Long] = None
+                           ) {
+  val last = (for {
+    me <- version
+    head <- lastVersion
+  } yield (me == head)).getOrElse(false)
+}
 
 class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) {
 
@@ -85,6 +90,8 @@ class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => Dat
     val statement = connection.prepareStatement("select effective_timestamp, eventType, body, version from  %s where version > ?".format(tableName))
     statement.setLong(1, version)
 
+    val last = fetchCurrentVersion(connection)
+
     val results = statement.executeQuery()
 
     try {
@@ -96,28 +103,15 @@ class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => Dat
           SerializedEvent(
             eventType = results.getString("eventType"),
             body = results.getBytes("body")),
-          Some(results.getLong("version"))
+          Some(results.getLong("version")),
+          Some(last)
         )
       }
 
-      EventStream(SQLEventStore.tagLast(eventsIterator.toList.toIterator))
+      EventStream(eventsIterator.toList.toIterator)
     } finally {
       statement.close()
       results.close()
-    }
-  }
-}
-
-object SQLEventStore {
-  def tagLast(iterator: Iterator[EffectiveEvent]) = {
-    new Iterator[EffectiveEvent] {
-      override def hasNext: Boolean = iterator.hasNext
-
-      override def next(): EffectiveEvent = {
-        val evt: EffectiveEvent = iterator.next()
-
-        evt.copy(last = !iterator.hasNext)
-      }
     }
   }
 }

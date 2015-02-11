@@ -1,7 +1,5 @@
 package com.timgroup.mysqleventstore
 
-import java.sql.Connection
-
 import org.joda.time.DateTime
 
 class InMemoryEventStore extends EventStore {
@@ -14,6 +12,7 @@ class InMemoryEventStore extends EventStore {
   }
 
   override def fromAll(version: Long): EventStream = {
-    EventStream(SQLEventStore.tagLast(events.dropWhile(_.version.get <= version).toIterator))
+    val last = events.lastOption.flatMap(_.version)
+    EventStream(events.dropWhile(_.version.get <= version).toIterator.map(_.copy(lastVersion = last)))
   }
 }
