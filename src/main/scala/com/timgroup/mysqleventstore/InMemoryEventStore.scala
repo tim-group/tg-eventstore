@@ -11,8 +11,10 @@ class InMemoryEventStore extends EventStore {
     }
   }
 
-  override def fromAll(version: Long): EventStream = {
-    val last = events.lastOption.flatMap(_.version)
-    EventStream(events.dropWhile(_.version.get <= version).toIterator.map(_.copy(lastVersion = last)))
+  override def fromAll(version: Long, batchSize: Option[Int] = None): EventStream = {
+    val fetched = events.dropWhile(_.version.get <= version).take(batchSize.getOrElse(Int.MaxValue))
+
+    val last = fetched.lastOption.flatMap(_.version)
+    EventStream(fetched.dropWhile(_.version.get <= version).toIterator.map(_.copy(lastVersion = last)))
   }
 }

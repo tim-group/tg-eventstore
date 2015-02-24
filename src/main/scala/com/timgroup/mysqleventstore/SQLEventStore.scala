@@ -8,7 +8,7 @@ import org.joda.time.{DateTimeZone, DateTime}
 trait EventStore {
   def save(newEvents: Seq[SerializedEvent]): Unit
 
-  def fromAll(version: Long = 0): EventStream
+  def fromAll(version: Long = 0, batchSize: Option[Int] = None): EventStream
 }
 
 case class EventStream(effectiveEvents: Iterator[EffectiveEvent]) {
@@ -86,8 +86,8 @@ class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => Dat
     }
   }
 
-  def fromAll(connection: Connection, version: Long = 0): EventStream = {
-    val statement = connection.prepareStatement("select effective_timestamp, eventType, body, version from  %s where version > ?".format(tableName))
+  def fromAll(connection: Connection, version: Long = 0, batchSize: Option[Int] = None): EventStream = {
+    val statement = connection.prepareStatement("select effective_timestamp, eventType, body, version from  %s where version > ? %s".format(tableName, batchSize.map("limit " + _).getOrElse("")))
     statement.setLong(1, version)
 
     val last = fetchCurrentVersion(connection)

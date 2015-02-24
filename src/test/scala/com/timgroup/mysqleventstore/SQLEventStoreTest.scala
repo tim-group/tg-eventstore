@@ -99,6 +99,16 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
     }
   }
 
+
+  it("returns only number of events asked for in batchSize") {
+    inTransaction { conn =>
+      eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2), ExampleEvent(3), ExampleEvent(4)))
+
+      eventStore.fromAll(conn, 0, Some(2)).effectiveEvents.toList.map(_.event).map(deserialize) must be(List(ExampleEvent(1), ExampleEvent(2)))
+      eventStore.fromAll(conn, 2, Some(2)).effectiveEvents.toList.map(_.event).map(deserialize) must be(List(ExampleEvent(3), ExampleEvent(4)))
+    }
+  }
+
   def cleanup(): Unit = {
     inTransaction { conn =>
       conn.prepareStatement("delete from Event").execute()
