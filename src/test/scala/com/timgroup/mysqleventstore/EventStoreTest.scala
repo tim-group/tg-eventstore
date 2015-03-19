@@ -24,9 +24,12 @@ trait EventStoreTest { this: FunSpec with MustMatchers =>
 
       eventStore.save(serialized(ExampleEvent(3), ExampleEvent(4)))
 
-      val nextEvents = eventStore.fromAll(version = previousVersion).events.toList.map(_.eventData).map(deserialize)
+      val nextEvents = eventStore.fromAll(version = previousVersion).events.toList.map(evt => (evt.version, evt.lastVersion, deserialize(evt.eventData)))
 
-      nextEvents must be(List(ExampleEvent(3), ExampleEvent(4)))
+      nextEvents must be(List(
+        (3, 4, ExampleEvent(3)),
+        (4, 4, ExampleEvent(4))
+      ))
     }
 
     it("returns no events if there are none past the specified version") {

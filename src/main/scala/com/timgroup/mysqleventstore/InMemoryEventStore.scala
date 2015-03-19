@@ -17,14 +17,14 @@ class InMemoryEventStore(now: () => DateTime = () => DateTime.now(DateTimeZone.U
     val last = events.size
     val batchSize = maybeBatchSize.getOrElse(Int.MaxValue)
 
-    val potential = events.drop(version.toInt)
+    val potential = events.zipWithIndex.drop(version.toInt)
     val fetched = if (potential.length > batchSize) {
       potential.take(batchSize)
     } else {
       potential
     }
 
-    EventPage(fetched.toIterator.zipWithIndex.map {
+    EventPage(fetched.toIterator.map {
       case (EventAtATime(effectiveTimestamp, data), index) => EventInStream(effectiveTimestamp, data, index + 1, last)
     })
   }
