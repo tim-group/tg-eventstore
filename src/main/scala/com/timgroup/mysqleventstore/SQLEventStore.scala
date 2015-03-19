@@ -26,14 +26,15 @@ case class EventInStream(effectiveTimestamp: DateTime,
   val last = version == lastVersion
 }
 
-class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) {
+case class EventAtAtime(effectiveTimestamp: DateTime, eventData: EventData)
 
+class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) {
   def save(connection: Connection, newEvents: Seq[EventData], expectedVersion: Option[Long] = None): Unit = {
     val effectiveTimestamp = now()
-    saveRaw(connection, newEvents.map(EventInStream(effectiveTimestamp, _, 0, 0)), expectedVersion)
+    saveRaw(connection, newEvents.map(EventAtAtime(effectiveTimestamp, _)), expectedVersion)
   }
 
-  def saveRaw(connection: Connection, newEvents: Seq[EventInStream], expectedVersion: Option[Long] = None): Unit = {
+  def saveRaw(connection: Connection, newEvents: Seq[EventAtAtime], expectedVersion: Option[Long] = None): Unit = {
     val statement = connection.prepareStatement("insert ignore into " + tableName + "(eventType,body,effective_timestamp,version) values(?,?,?,?)")
 
     val currentVersion = fetchCurrentVersion(connection)
