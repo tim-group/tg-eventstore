@@ -1,10 +1,11 @@
 package com.timgroup.mysqleventstore
 
-import org.joda.time.{DateTimeZone, DateTime}
+import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest._
 
 trait EventStoreTest { this: FunSpec with MustMatchers =>
-  val effectiveTimestamp = new DateTime(2015, 1, 15, 23, 43, 53, DateTimeZone.UTC)
+  val
+  effectiveTimestamp = new DateTime(2015, 1, 15, 23, 43, 53, DateTimeZone.UTC)
 
   def anEventStore(eventStore: EventStore) = {
     it("can save events") {
