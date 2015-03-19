@@ -1,6 +1,8 @@
-package com.timgroup.mysqleventstore
+package com.timgroup.mysqleventstore.memory
 
-import org.joda.time.{DateTimeZone, DateTime}
+import com.timgroup.mysqleventstore._
+import com.timgroup.mysqleventstore.sql.EventAtATime
+import org.joda.time.{DateTime, DateTimeZone}
 
 class InMemoryEventStore(now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) extends EventStore {
   var events = Vector[EventAtATime]()

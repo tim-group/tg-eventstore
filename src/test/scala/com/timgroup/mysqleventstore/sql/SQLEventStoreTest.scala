@@ -1,7 +1,8 @@
-package com.timgroup.mysqleventstore
+package com.timgroup.mysqleventstore.sql
 
 import java.sql.{Connection, DriverManager}
 
+import com.timgroup.mysqleventstore.EventStoreTest
 import org.scalatest.{BeforeAndAfterEach, FunSpec, MustMatchers}
 
 class SQLEventStoreTest extends FunSpec with EventStoreTest with MustMatchers with BeforeAndAfterEach {

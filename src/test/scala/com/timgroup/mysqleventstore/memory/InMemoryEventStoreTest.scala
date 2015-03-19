@@ -1,6 +1,7 @@
-package com.timgroup.mysqleventstore
+package com.timgroup.mysqleventstore.memory
 
-import org.scalatest.{BeforeAndAfterEach, MustMatchers, FunSpec, FunSuite}
+import com.timgroup.mysqleventstore.EventStoreTest
+import org.scalatest.{BeforeAndAfterEach, FunSpec, MustMatchers}
 
 class InMemoryEventStoreTest extends FunSpec with EventStoreTest with MustMatchers with BeforeAndAfterEach {
   val inMemoryEventStore = new InMemoryEventStore(

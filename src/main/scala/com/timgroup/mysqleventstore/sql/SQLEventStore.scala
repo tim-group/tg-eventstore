@@ -1,0 +1,45 @@
+package com.timgroup.mysqleventstore.sql
+
+import java.sql.Connection
+
+import com.timgroup.mysqleventstore.{EventData, EventPage, EventStore}
+import org.joda.time.{DateTime, DateTimeZone}
+
+import scala.util.control.Exception.allCatch
+
+trait ConnectionProvider {
+  def getConnection(): Connection
+}
+
+class SQLEventStore(connectionProvider: ConnectionProvider,
+                    tableName: String = "Event",
+                    now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) extends EventStore {
+  val persister = new SQLEventPersister(tableName)
+  val fetcher = new SQLEventFetcher(tableName)
+
+  override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {
+    val connection = connectionProvider.getConnection()
+    try {
+      connection.setAutoCommit(false)
+      val effectiveTimestamp = now()
+      persister.saveEventsToDB(connection, newEvents.map(EventAtATime(effectiveTimestamp, _)), expectedVersion)
+      connection.commit()
+    } catch {
+      case e: Exception => {
+        connection.rollback()
+        throw e
+      }
+    } finally {
+      allCatch opt { connection.close() }
+    }
+  }
+
+  override def fromAll(version: Long, batchSize: Option[Int]): EventPage = {
+    val connection = connectionProvider.getConnection()
+    try {
+      fetcher.fetchEventsFromDB(connection, version, batchSize)
+    } finally {
+      allCatch opt { connection.close() }
+    }
+  }
+}
