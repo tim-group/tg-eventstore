@@ -39,8 +39,15 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {
     val connection = connectionProvider.getConnection()
     try {
+      connection.setAutoCommit(false)
       val effectiveTimestamp = now()
       saveEventsToDB(connection, newEvents.map(EventAtAtime(effectiveTimestamp, _)), expectedVersion)
+      connection.commit()
+    } catch {
+      case e: Exception => {
+        connection.rollback()
+        throw e
+      }
     } finally {
       allCatch opt { connection.close() }
     }

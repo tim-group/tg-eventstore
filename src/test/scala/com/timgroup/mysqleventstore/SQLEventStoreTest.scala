@@ -152,7 +152,7 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
     def apply(delegate: Connection) = newProxyInstance(this.getClass.getClassLoader, Array(classOf[Connection]),
       new InvocationHandler {
       override def invoke(proxy: scala.Any, method: Method, args: Array[AnyRef]): AnyRef = {
-        if (method.getName == "close") {
+        if (List("close", "setAutoCommit", "commit", "rollback").contains(method.getName)) {
           Unit
         } else {
           method.invoke(delegate, args :_*)
