@@ -51,6 +51,19 @@ trait EventStoreTest { this: FunSpec with MustMatchers =>
       eventStore.fromAll(version = 2).events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(3)))
     }
 
+    it("returns nothing if eventstore is empty") {
+        eventStore.fromAll().eventData.toList must be(Nil)
+    }
+
+    it("returns only number of events asked for in batchSize") {
+      eventStore.save(serialized(ExampleEvent(1), ExampleEvent(2), ExampleEvent(3), ExampleEvent(4)))
+
+      eventStore.fromAll(0, Some(2)).events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(1), ExampleEvent(2)))
+      eventStore.fromAll(2, Some(2)).events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(3), ExampleEvent(4)))
+    }
+  }
+
+  def optimisticConcurrencyControl(eventStore: EventStore) = {
     it("throws OptimisticConcurrencyFailure when stream has already moved beyond the expected version") {
       eventStore.save(serialized(ExampleEvent(1), ExampleEvent(2)))
       intercept[OptimisticConcurrencyFailure] {
@@ -63,17 +76,6 @@ trait EventStoreTest { this: FunSpec with MustMatchers =>
       intercept[OptimisticConcurrencyFailure] {
         eventStore.save(serialized(ExampleEvent(3)), expectedVersion = Some(10))
       }
-    }
-
-    it("returns nothing if eventstore is empty") {
-        eventStore.fromAll().eventData.toList must be(Nil)
-    }
-
-    it("returns only number of events asked for in batchSize") {
-      eventStore.save(serialized(ExampleEvent(1), ExampleEvent(2), ExampleEvent(3), ExampleEvent(4)))
-
-      eventStore.fromAll(0, Some(2)).events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(1), ExampleEvent(2)))
-      eventStore.fromAll(2, Some(2)).events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(3), ExampleEvent(4)))
     }
 
     it("throws OptimisticConcurrencyFailure when stream moves past expected version during save") {

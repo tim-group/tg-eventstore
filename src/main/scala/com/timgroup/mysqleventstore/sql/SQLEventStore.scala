@@ -11,12 +11,20 @@ trait ConnectionProvider {
   def getConnection(): Connection
 }
 
-class SQLEventStore(connectionProvider: ConnectionProvider,
-                    tableName: String = "Event",
-                    now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) extends EventStore {
-  val persister = new SQLEventPersister(tableName)
-  val fetcher = new SQLEventFetcher(tableName)
+object SQLEventStore {
+  def apply(connectionProvider: ConnectionProvider,
+            tableName: String = "Event",
+            now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) = new SQLEventStore(connectionProvider, new SQLEventFetcher(tableName), new SQLEventPersister(tableName), now)
+}
 
+trait EventPersister {
+  def saveEventsToDB(connection: Connection, newEvents: Seq[EventAtATime], expectedVersion: Option[Long] = None): Unit
+}
+
+class SQLEventStore(connectionProvider: ConnectionProvider,
+                    fetcher: SQLEventFetcher,
+                    persister: EventPersister,
+                    now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) extends EventStore {
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {
     val connection = connectionProvider.getConnection()
     try {

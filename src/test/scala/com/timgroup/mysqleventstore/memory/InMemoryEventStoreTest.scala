@@ -13,4 +13,6 @@ class InMemoryEventStoreTest extends FunSpec with EventStoreTest with MustMatche
   }
 
   it should behave like anEventStore(inMemoryEventStore)
+
+  it should behave like optimisticConcurrencyControl(inMemoryEventStore)
 }
