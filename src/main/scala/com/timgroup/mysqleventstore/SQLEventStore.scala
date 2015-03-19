@@ -1,55 +1,44 @@
 package com.timgroup.mysqleventstore
 
 import java.io.ByteArrayInputStream
-import java.sql.{Connection, Timestamp}
+import java.sql.{ResultSet, PreparedStatement, Timestamp, Connection}
 
-import org.joda.time.{DateTime, DateTimeZone}
+import org.joda.time.{DateTimeZone, DateTime}
 
 trait EventStore {
-  def saveLiveEvent(newEvents: Seq[EventData], expectedVersion: Option[Long] = None): Unit
-  def saveBackfillEvent(newEvents: Seq[BackfillEvent], expectedVersion: Option[Long] = None): Unit
+  def save(newEvents: Seq[SerializedEvent]): Unit
+
   def fromAll(version: Long = 0, batchSize: Option[Int] = None): EventStream
 }
 
 case class EventStream(effectiveEvents: Iterator[EffectiveEvent]) {
-  def events: Iterator[EventData] = effectiveEvents.map(_.eventData)
+  def events: Iterator[SerializedEvent] = effectiveEvents.map(_.event)
 
   def isEmpty = effectiveEvents.isEmpty
 }
 
-case class EventData(eventType: String, body: Array[Byte])
+case class SerializedEvent(eventType: String, body: Array[Byte])
 
-case class BackfillEvent(effectiveTimestamp: DateTime,
-                         version: Long,
-                         eventData: EventData)
-
-
-case class EffectiveEvent(effectiveTimestamp: DateTime,
-                          eventData: EventData,
-                          version: Long,
-                          lastVersion: Long) {
-  val last = version == lastVersion
+case class EffectiveEvent(
+                           effectiveTimestamp: DateTime,
+                           event: SerializedEvent,
+                           version: Option[Long] = None,
+                           lastVersion: Option[Long] = None
+                           ) {
+  val last = (for {
+    me <- version
+    head <- lastVersion
+  } yield (me == head)).getOrElse(false)
 }
 
-class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) { // extends EventStore
+class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) {
 
-  private case class PersistableEvent(effectiveTimestamp: DateTime,
-                                      eventData: EventData,
-                                      version: Option[Long] = None)
-
-  def saveLiveEvent(connection: Connection, newEvents: Seq[EventData], expectedVersion: Option[Long] = None): Unit = {
+  def save(connection: Connection, newEvents: Seq[SerializedEvent], expectedVersion: Option[Long] = None): Unit = {
     val effectiveTimestamp = now()
-    saveEvent(connection, newEvents.map(PersistableEvent(effectiveTimestamp, _)), expectedVersion)
+    saveRaw(connection, newEvents.map(EffectiveEvent(effectiveTimestamp, _)), expectedVersion)
   }
 
-  def saveBackfillEvent(connection: Connection, newEvents: Seq[BackfillEvent], expectedVersion: Option[Long] = None): Unit = {
-    val persistableEvents = newEvents.map { backfillEvent =>
-      PersistableEvent(backfillEvent.effectiveTimestamp, backfillEvent.eventData, Some(backfillEvent.version))
-    }
-    saveEvent(connection, persistableEvents, expectedVersion)
-  }
-
-  private def saveEvent(connection: Connection, newEvents: Seq[PersistableEvent], expectedVersion: Option[Long] = None): Unit = {
+  def saveRaw(connection: Connection, newEvents: Seq[EffectiveEvent], expectedVersion: Option[Long] = None): Unit = {
     val statement = connection.prepareStatement("insert ignore into " + tableName + "(eventType,body,effective_timestamp,version) values(?,?,?,?)")
 
     val currentVersion = fetchCurrentVersion(connection)
@@ -62,8 +51,8 @@ class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => Dat
       newEvents.zipWithIndex.foreach {
         case (effectiveEvent, index) => {
           statement.clearParameters()
-          statement.setString(1, effectiveEvent.eventData.eventType)
-          statement.setBlob(2, new ByteArrayInputStream(effectiveEvent.eventData.body))
+          statement.setString(1, effectiveEvent.event.eventType)
+          statement.setBlob(2, new ByteArrayInputStream(effectiveEvent.event.body))
           statement.setTimestamp(3, new Timestamp(effectiveEvent.effectiveTimestamp.getMillis))
           statement.setLong(4, currentVersion + index + 1)
           statement.addBatch()
@@ -111,11 +100,11 @@ class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => Dat
 
         override def next() = EffectiveEvent(
           new DateTime(results.getTimestamp("effective_timestamp"),DateTimeZone.UTC),
-          EventData(
+          SerializedEvent(
             eventType = results.getString("eventType"),
             body = results.getBytes("body")),
-            results.getLong("version"),
-            last
+          Some(results.getLong("version")),
+          Some(last)
         )
       }
 

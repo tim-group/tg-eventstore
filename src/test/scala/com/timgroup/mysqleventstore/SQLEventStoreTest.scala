@@ -12,24 +12,24 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
 
   it("can save events") {
     inTransaction { conn =>
-      eventStore.saveLiveEvent(conn, serialized(ExampleEvent(21), ExampleEvent(22)))
+      eventStore.save(conn, serialized(ExampleEvent(21), ExampleEvent(22)))
 
       val all = eventStore.fromAll(conn).effectiveEvents.toList
 
       all.map(_.effectiveTimestamp) must be(List(effectiveTimestamp, effectiveTimestamp))
-      all.map(_.eventData).map(deserialize) must be(List(ExampleEvent(21),ExampleEvent(22)))
+      all.map(_.event).map(deserialize) must be(List(ExampleEvent(21),ExampleEvent(22)))
     }
   }
 
   it("can replay events from a given version number onwards") {
     inTransaction { conn =>
-      eventStore.saveLiveEvent(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
+      eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
 
-      val previousVersion = eventStore.fromAll(conn).effectiveEvents.toList.last.version
+      val previousVersion = eventStore.fromAll(conn).effectiveEvents.toList.last.version.get
 
-      eventStore.saveLiveEvent(conn, serialized(ExampleEvent(3), ExampleEvent(4)))
+      eventStore.save(conn, serialized(ExampleEvent(3), ExampleEvent(4)))
 
-      val nextEvents = eventStore.fromAll(conn, version = previousVersion).effectiveEvents.toList.map(_.eventData).map(deserialize)
+      val nextEvents = eventStore.fromAll(conn, version = previousVersion).effectiveEvents.toList.map(_.event).map(deserialize)
 
       nextEvents must be(List(ExampleEvent(3), ExampleEvent(4)))
     }
@@ -43,7 +43,7 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
 
   it("labels the last event of the stream") {
     inTransaction { conn =>
-      eventStore.saveLiveEvent(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
+      eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
 
       val nextEvents = eventStore.fromAll(conn).effectiveEvents.toList
 
@@ -53,27 +53,27 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
 
   it("writes events to the current version of the stream when no expected version is specified") {
     inTransaction { conn =>
-      eventStore.saveLiveEvent(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
-      eventStore.saveLiveEvent(conn, serialized(ExampleEvent(3)))
+      eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
+      eventStore.save(conn, serialized(ExampleEvent(3)))
 
-      eventStore.fromAll(conn, version = 2).effectiveEvents.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(3)))
+      eventStore.fromAll(conn, version = 2).effectiveEvents.toList.map(_.event).map(deserialize) must be(List(ExampleEvent(3)))
     }
   }
 
   it("throws OptimisticConcurrencyFailure when stream has already moved beyond the expected version") {
     inTransaction { conn =>
-      eventStore.saveLiveEvent(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
+      eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
       intercept[OptimisticConcurrencyFailure] {
-        eventStore.saveLiveEvent(conn, serialized(ExampleEvent(3)), expectedVersion = Some(1))
+        eventStore.save(conn, serialized(ExampleEvent(3)), expectedVersion = Some(1))
       }
     }
   }
 
   it("throws OptimisticConcurrencyFailure when stream is not yet at the expected version") {
     inTransaction { conn =>
-      eventStore.saveLiveEvent(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
+      eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
       intercept[OptimisticConcurrencyFailure] {
-        eventStore.saveLiveEvent(conn, serialized(ExampleEvent(3)), expectedVersion = Some(10))
+        eventStore.save(conn, serialized(ExampleEvent(3)), expectedVersion = Some(10))
       }
     }
   }
@@ -85,7 +85,7 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
 
         unrelatedSavesOfEventHappens()
         intercept[OptimisticConcurrencyFailure] {
-          eventStore.saveLiveEvent(conn, serialized(ExampleEvent(3)), expectedVersion = Some(0))
+          eventStore.save(conn, serialized(ExampleEvent(3)), expectedVersion = Some(0))
         }
       }
     } finally {
@@ -99,12 +99,13 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
     }
   }
 
+
   it("returns only number of events asked for in batchSize") {
     inTransaction { conn =>
-      eventStore.saveLiveEvent(conn, serialized(ExampleEvent(1), ExampleEvent(2), ExampleEvent(3), ExampleEvent(4)))
+      eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2), ExampleEvent(3), ExampleEvent(4)))
 
-      eventStore.fromAll(conn, 0, Some(2)).effectiveEvents.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(1), ExampleEvent(2)))
-      eventStore.fromAll(conn, 2, Some(2)).effectiveEvents.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(3), ExampleEvent(4)))
+      eventStore.fromAll(conn, 0, Some(2)).effectiveEvents.toList.map(_.event).map(deserialize) must be(List(ExampleEvent(1), ExampleEvent(2)))
+      eventStore.fromAll(conn, 2, Some(2)).effectiveEvents.toList.map(_.event).map(deserialize) must be(List(ExampleEvent(3), ExampleEvent(4)))
     }
   }
 
@@ -117,7 +118,7 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
 
   def unrelatedSavesOfEventHappens(): Unit = {
     inTransaction { conn =>
-      eventStore.saveLiveEvent(conn, serialized(ExampleEvent(3)))
+      eventStore.save(conn, serialized(ExampleEvent(3)))
       conn.commit()
     }
   }
@@ -126,9 +127,9 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
 
   def serialized(evts: ExampleEvent*) = evts.map(serialize)
 
-  def serialize(evt: ExampleEvent) = EventData(evt.getClass.getSimpleName, evt.a.toString.getBytes("UTF-8"))
+  def serialize(evt: ExampleEvent) = SerializedEvent(evt.getClass.getSimpleName, evt.a.toString.getBytes("UTF-8"))
 
-  def deserialize(evt: EventData) = ExampleEvent(new String(evt.body, "UTF-8").toInt)
+  def deserialize(evt: SerializedEvent) = ExampleEvent(new String(evt.body, "UTF-8").toInt)
 
   def inTransaction[T](f: Connection => T): T = {
     val connection: Connection = connect()
