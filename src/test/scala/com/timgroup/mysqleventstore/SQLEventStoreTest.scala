@@ -14,10 +14,10 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
     inTransaction { conn =>
       eventStore.save(conn, serialized(ExampleEvent(21), ExampleEvent(22)))
 
-      val all = eventStore.fromAll(conn).effectiveEvents.toList
+      val all = eventStore.fromAll(conn).events.toList
 
       all.map(_.effectiveTimestamp) must be(List(effectiveTimestamp, effectiveTimestamp))
-      all.map(_.event).map(deserialize) must be(List(ExampleEvent(21),ExampleEvent(22)))
+      all.map(_.eventData).map(deserialize) must be(List(ExampleEvent(21),ExampleEvent(22)))
     }
   }
 
@@ -25,11 +25,11 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
     inTransaction { conn =>
       eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
 
-      val previousVersion = eventStore.fromAll(conn).effectiveEvents.toList.last.version.get
+      val previousVersion = eventStore.fromAll(conn).events.toList.last.version
 
       eventStore.save(conn, serialized(ExampleEvent(3), ExampleEvent(4)))
 
-      val nextEvents = eventStore.fromAll(conn, version = previousVersion).effectiveEvents.toList.map(_.event).map(deserialize)
+      val nextEvents = eventStore.fromAll(conn, version = previousVersion).events.toList.map(_.eventData).map(deserialize)
 
       nextEvents must be(List(ExampleEvent(3), ExampleEvent(4)))
     }
@@ -45,7 +45,7 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
     inTransaction { conn =>
       eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
 
-      val nextEvents = eventStore.fromAll(conn).effectiveEvents.toList
+      val nextEvents = eventStore.fromAll(conn).events.toList
 
       nextEvents.map(_.last) must be(List(false, true))
     }
@@ -56,7 +56,7 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
       eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
       eventStore.save(conn, serialized(ExampleEvent(3)))
 
-      eventStore.fromAll(conn, version = 2).effectiveEvents.toList.map(_.event).map(deserialize) must be(List(ExampleEvent(3)))
+      eventStore.fromAll(conn, version = 2).events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(3)))
     }
   }
 
@@ -95,7 +95,7 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
 
   it("returns nothing if eventstore is empty") {
     inTransaction { conn =>
-      eventStore.fromAll(conn).events.toList must be(Nil)
+      eventStore.fromAll(conn).eventData.toList must be(Nil)
     }
   }
 
@@ -104,8 +104,8 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
     inTransaction { conn =>
       eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2), ExampleEvent(3), ExampleEvent(4)))
 
-      eventStore.fromAll(conn, 0, Some(2)).effectiveEvents.toList.map(_.event).map(deserialize) must be(List(ExampleEvent(1), ExampleEvent(2)))
-      eventStore.fromAll(conn, 2, Some(2)).effectiveEvents.toList.map(_.event).map(deserialize) must be(List(ExampleEvent(3), ExampleEvent(4)))
+      eventStore.fromAll(conn, 0, Some(2)).events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(1), ExampleEvent(2)))
+      eventStore.fromAll(conn, 2, Some(2)).events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(3), ExampleEvent(4)))
     }
   }
 
@@ -127,9 +127,9 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
 
   def serialized(evts: ExampleEvent*) = evts.map(serialize)
 
-  def serialize(evt: ExampleEvent) = SerializedEvent(evt.getClass.getSimpleName, evt.a.toString.getBytes("UTF-8"))
+  def serialize(evt: ExampleEvent) = EventData(evt.getClass.getSimpleName, evt.a.toString.getBytes("UTF-8"))
 
-  def deserialize(evt: SerializedEvent) = ExampleEvent(new String(evt.body, "UTF-8").toInt)
+  def deserialize(evt: EventData) = ExampleEvent(new String(evt.body, "UTF-8").toInt)
 
   def inTransaction[T](f: Connection => T): T = {
     val connection: Connection = connect()

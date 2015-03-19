@@ -6,39 +6,34 @@ import java.sql.{ResultSet, PreparedStatement, Timestamp, Connection}
 import org.joda.time.{DateTimeZone, DateTime}
 
 trait EventStore {
-  def save(newEvents: Seq[SerializedEvent]): Unit
+  def save(newEvents: Seq[EventData]): Unit
 
-  def fromAll(version: Long = 0, batchSize: Option[Int] = None): EventStream
+  def fromAll(version: Long = 0, batchSize: Option[Int] = None): EventPage
 }
 
-case class EventStream(effectiveEvents: Iterator[EffectiveEvent]) {
-  def events: Iterator[SerializedEvent] = effectiveEvents.map(_.event)
+case class EventPage(events: Iterator[EventInStream]) {
+  def eventData: Iterator[EventData] = events.map(_.eventData)
 
-  def isEmpty = effectiveEvents.isEmpty
+  def isEmpty = events.isEmpty
 }
 
-case class SerializedEvent(eventType: String, body: Array[Byte])
+case class EventData(eventType: String, body: Array[Byte])
 
-case class EffectiveEvent(
-                           effectiveTimestamp: DateTime,
-                           event: SerializedEvent,
-                           version: Option[Long] = None,
-                           lastVersion: Option[Long] = None
-                           ) {
-  val last = (for {
-    me <- version
-    head <- lastVersion
-  } yield (me == head)).getOrElse(false)
+case class EventInStream(effectiveTimestamp: DateTime,
+                         eventData: EventData,
+                         version: Long,
+                         lastVersion: Long) {
+  val last = version == lastVersion
 }
 
 class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) {
 
-  def save(connection: Connection, newEvents: Seq[SerializedEvent], expectedVersion: Option[Long] = None): Unit = {
+  def save(connection: Connection, newEvents: Seq[EventData], expectedVersion: Option[Long] = None): Unit = {
     val effectiveTimestamp = now()
-    saveRaw(connection, newEvents.map(EffectiveEvent(effectiveTimestamp, _)), expectedVersion)
+    saveRaw(connection, newEvents.map(EventInStream(effectiveTimestamp, _, 0, 0)), expectedVersion)
   }
 
-  def saveRaw(connection: Connection, newEvents: Seq[EffectiveEvent], expectedVersion: Option[Long] = None): Unit = {
+  def saveRaw(connection: Connection, newEvents: Seq[EventInStream], expectedVersion: Option[Long] = None): Unit = {
     val statement = connection.prepareStatement("insert ignore into " + tableName + "(eventType,body,effective_timestamp,version) values(?,?,?,?)")
 
     val currentVersion = fetchCurrentVersion(connection)
@@ -51,8 +46,8 @@ class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => Dat
       newEvents.zipWithIndex.foreach {
         case (effectiveEvent, index) => {
           statement.clearParameters()
-          statement.setString(1, effectiveEvent.event.eventType)
-          statement.setBlob(2, new ByteArrayInputStream(effectiveEvent.event.body))
+          statement.setString(1, effectiveEvent.eventData.eventType)
+          statement.setBlob(2, new ByteArrayInputStream(effectiveEvent.eventData.body))
           statement.setTimestamp(3, new Timestamp(effectiveEvent.effectiveTimestamp.getMillis))
           statement.setLong(4, currentVersion + index + 1)
           statement.addBatch()
@@ -86,7 +81,7 @@ class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => Dat
     }
   }
 
-  def fromAll(connection: Connection, version: Long = 0, batchSize: Option[Int] = None): EventStream = {
+  def fromAll(connection: Connection, version: Long = 0, batchSize: Option[Int] = None): EventPage = {
     val statement = connection.prepareStatement("select effective_timestamp, eventType, body, version from  %s where version > ? %s".format(tableName, batchSize.map("limit " + _).getOrElse("")))
     statement.setLong(1, version)
 
@@ -95,20 +90,20 @@ class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => Dat
     val results = statement.executeQuery()
 
     try {
-      val eventsIterator = new Iterator[EffectiveEvent] {
+      val eventsIterator = new Iterator[EventInStream] {
         override def hasNext = results.next()
 
-        override def next() = EffectiveEvent(
+        override def next() = EventInStream(
           new DateTime(results.getTimestamp("effective_timestamp"),DateTimeZone.UTC),
-          SerializedEvent(
+          EventData(
             eventType = results.getString("eventType"),
             body = results.getBytes("body")),
-          Some(results.getLong("version")),
-          Some(last)
+          results.getLong("version"),
+          last
         )
       }
 
-      EventStream(eventsIterator.toList.toIterator)
+      EventPage(eventsIterator.toList.toIterator)
     } finally {
       statement.close()
       results.close()
