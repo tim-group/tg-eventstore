@@ -7,7 +7,7 @@ class InMemoryEventStore extends EventStore {
   var events = Vector[EffectiveEvent]()
 
   override def saveLiveEvent(newEvents: Seq[EventData], expectedVersion: Option[Long] = None): Unit = {
-    val oldLast: Long = (0L +: (events.map(_.version))).max
+    val oldLast: Long = events.map(_.version).max
     val newLast: Long = oldLast + newEvents.length
     events = events ++ newEvents.zipWithIndex.map {
       case (evt, index) =>
