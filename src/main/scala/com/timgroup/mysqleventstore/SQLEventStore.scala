@@ -7,7 +7,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.util.control.Exception.allCatch
 
-case class EventAtAtime(effectiveTimestamp: DateTime, eventData: EventData)
+case class EventAtATime(effectiveTimestamp: DateTime, eventData: EventData)
 
 trait ConnectionProvider {
   def getConnection(): Connection
@@ -21,7 +21,7 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
     try {
       connection.setAutoCommit(false)
       val effectiveTimestamp = now()
-      saveEventsToDB(connection, newEvents.map(EventAtAtime(effectiveTimestamp, _)), expectedVersion)
+      saveEventsToDB(connection, newEvents.map(EventAtATime(effectiveTimestamp, _)), expectedVersion)
       connection.commit()
     } catch {
       case e: Exception => {
@@ -42,7 +42,7 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
     }
   }
 
-  def saveEventsToDB(connection: Connection, newEvents: Seq[EventAtAtime], expectedVersion: Option[Long] = None): Unit = {
+  def saveEventsToDB(connection: Connection, newEvents: Seq[EventAtATime], expectedVersion: Option[Long] = None): Unit = {
     val statement = connection.prepareStatement("insert ignore into " + tableName + "(eventType,body,effective_timestamp,version) values(?,?,?,?)")
 
     val currentVersion = fetchCurrentVersion(connection)
