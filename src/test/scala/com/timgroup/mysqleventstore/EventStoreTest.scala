@@ -71,6 +71,19 @@ trait EventStoreTest { this: FunSpec with MustMatchers =>
       eventStore.fromAll(0, Some(2)).events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(1), ExampleEvent(2)))
       eventStore.fromAll(2, Some(2)).events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(3), ExampleEvent(4)))
     }
+
+    it("throws OptimisticConcurrencyFailure when stream moves past expected version during save") {
+      eventStore.fromAll()
+
+      unrelatedSavesOfEventHappens()
+      intercept[OptimisticConcurrencyFailure] {
+        eventStore.save(serialized(ExampleEvent(3)), expectedVersion = Some(0))
+      }
+    }
+
+    def unrelatedSavesOfEventHappens(): Unit = {
+      eventStore.save(serialized(ExampleEvent(3)))
+    }
   }
 
   case class ExampleEvent(a: Int)
