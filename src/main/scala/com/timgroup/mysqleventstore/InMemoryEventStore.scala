@@ -5,8 +5,8 @@ import org.joda.time.{DateTimeZone, DateTime}
 class InMemoryEventStore extends EventStore {
   var events = Vector[EventAtAtime]()
 
-  override def save(newEvents: Seq[EventData]): Unit = {
 
+  override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit =  {
     events= events ++ newEvents.map { evt => EventAtAtime(new DateTime(DateTimeZone.UTC), evt) }
   }
 

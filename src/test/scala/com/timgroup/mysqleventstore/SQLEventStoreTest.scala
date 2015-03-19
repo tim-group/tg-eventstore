@@ -8,13 +8,15 @@ import org.scalatest.{MustMatchers, FunSpec}
 class SQLEventStoreTest extends FunSpec with MustMatchers {
   val effectiveTimestamp = new DateTime(2015, 1, 15, 23, 43, 53, DateTimeZone.UTC)
 
-  val eventStore = new SQLEventStore(now = () => effectiveTimestamp)
+  val eventStore = new SQLEventStore(new ConnectionProvider {
+    override def getConnection(): Connection = ???
+  }, now = () => effectiveTimestamp)
 
   it("can save events") {
     inTransaction { conn =>
-      eventStore.save(conn, serialized(ExampleEvent(21), ExampleEvent(22)))
+      eventStore.saveEventsToDB(conn, serialized(ExampleEvent(21), ExampleEvent(22)))
 
-      val all = eventStore.fromAll(conn).events.toList
+      val all = eventStore.fetchEventsFromDB(conn).events.toList
 
       all.map(_.effectiveTimestamp) must be(List(effectiveTimestamp, effectiveTimestamp))
       all.map(_.eventData).map(deserialize) must be(List(ExampleEvent(21),ExampleEvent(22)))
@@ -23,13 +25,13 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
 
   it("can replay events from a given version number onwards") {
     inTransaction { conn =>
-      eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
+      eventStore.saveEventsToDB(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
 
-      val previousVersion = eventStore.fromAll(conn).events.toList.last.version
+      val previousVersion = eventStore.fetchEventsFromDB(conn).events.toList.last.version
 
-      eventStore.save(conn, serialized(ExampleEvent(3), ExampleEvent(4)))
+      eventStore.saveEventsToDB(conn, serialized(ExampleEvent(3), ExampleEvent(4)))
 
-      val nextEvents = eventStore.fromAll(conn, version = previousVersion).events.toList.map(_.eventData).map(deserialize)
+      val nextEvents = eventStore.fetchEventsFromDB(conn, version = previousVersion).events.toList.map(_.eventData).map(deserialize)
 
       nextEvents must be(List(ExampleEvent(3), ExampleEvent(4)))
     }
@@ -37,15 +39,15 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
 
   it("returns no events if there are none past the specified version") {
     inTransaction { conn =>
-      eventStore.fromAll(conn, version = 900000).isEmpty must be(true)
+      eventStore.fetchEventsFromDB(conn, version = 900000).isEmpty must be(true)
     }
   }
 
   it("labels the last event of the stream") {
     inTransaction { conn =>
-      eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
+      eventStore.saveEventsToDB(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
 
-      val nextEvents = eventStore.fromAll(conn).events.toList
+      val nextEvents = eventStore.fetchEventsFromDB(conn).events.toList
 
       nextEvents.map(_.last) must be(List(false, true))
     }
@@ -53,27 +55,27 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
 
   it("writes events to the current version of the stream when no expected version is specified") {
     inTransaction { conn =>
-      eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
-      eventStore.save(conn, serialized(ExampleEvent(3)))
+      eventStore.saveEventsToDB(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
+      eventStore.saveEventsToDB(conn, serialized(ExampleEvent(3)))
 
-      eventStore.fromAll(conn, version = 2).events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(3)))
+      eventStore.fetchEventsFromDB(conn, version = 2).events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(3)))
     }
   }
 
   it("throws OptimisticConcurrencyFailure when stream has already moved beyond the expected version") {
     inTransaction { conn =>
-      eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
+      eventStore.saveEventsToDB(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
       intercept[OptimisticConcurrencyFailure] {
-        eventStore.save(conn, serialized(ExampleEvent(3)), expectedVersion = Some(1))
+        eventStore.saveEventsToDB(conn, serialized(ExampleEvent(3)), expectedVersion = Some(1))
       }
     }
   }
 
   it("throws OptimisticConcurrencyFailure when stream is not yet at the expected version") {
     inTransaction { conn =>
-      eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
+      eventStore.saveEventsToDB(conn, serialized(ExampleEvent(1), ExampleEvent(2)))
       intercept[OptimisticConcurrencyFailure] {
-        eventStore.save(conn, serialized(ExampleEvent(3)), expectedVersion = Some(10))
+        eventStore.saveEventsToDB(conn, serialized(ExampleEvent(3)), expectedVersion = Some(10))
       }
     }
   }
@@ -81,11 +83,11 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
   it("throws OptimisticConcurrencyFailure when stream moves past expected version during save") {
     try {
       inTransaction { conn =>
-        eventStore.fromAll(conn)
+        eventStore.fetchEventsFromDB(conn)
 
         unrelatedSavesOfEventHappens()
         intercept[OptimisticConcurrencyFailure] {
-          eventStore.save(conn, serialized(ExampleEvent(3)), expectedVersion = Some(0))
+          eventStore.saveEventsToDB(conn, serialized(ExampleEvent(3)), expectedVersion = Some(0))
         }
       }
     } finally {
@@ -95,17 +97,17 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
 
   it("returns nothing if eventstore is empty") {
     inTransaction { conn =>
-      eventStore.fromAll(conn).eventData.toList must be(Nil)
+      eventStore.fetchEventsFromDB(conn).eventData.toList must be(Nil)
     }
   }
 
 
   it("returns only number of events asked for in batchSize") {
     inTransaction { conn =>
-      eventStore.save(conn, serialized(ExampleEvent(1), ExampleEvent(2), ExampleEvent(3), ExampleEvent(4)))
+      eventStore.saveEventsToDB(conn, serialized(ExampleEvent(1), ExampleEvent(2), ExampleEvent(3), ExampleEvent(4)))
 
-      eventStore.fromAll(conn, 0, Some(2)).events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(1), ExampleEvent(2)))
-      eventStore.fromAll(conn, 2, Some(2)).events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(3), ExampleEvent(4)))
+      eventStore.fetchEventsFromDB(conn, 0, Some(2)).events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(1), ExampleEvent(2)))
+      eventStore.fetchEventsFromDB(conn, 2, Some(2)).events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(3), ExampleEvent(4)))
     }
   }
 
@@ -118,14 +120,14 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
 
   def unrelatedSavesOfEventHappens(): Unit = {
     inTransaction { conn =>
-      eventStore.save(conn, serialized(ExampleEvent(3)))
+      eventStore.saveEventsToDB(conn, serialized(ExampleEvent(3)))
       conn.commit()
     }
   }
 
   case class ExampleEvent(a: Int)
 
-  def serialized(evts: ExampleEvent*) = evts.map(serialize)
+  def serialized(evts: ExampleEvent*) = evts.map(serialize).map(EventAtAtime(effectiveTimestamp, _))
 
   def serialize(evt: ExampleEvent) = EventData(evt.getClass.getSimpleName, evt.a.toString.getBytes("UTF-8"))
 

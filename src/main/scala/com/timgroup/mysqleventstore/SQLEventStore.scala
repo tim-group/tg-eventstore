@@ -6,7 +6,7 @@ import java.sql.{ResultSet, PreparedStatement, Timestamp, Connection}
 import org.joda.time.{DateTimeZone, DateTime}
 
 trait EventStore {
-  def save(newEvents: Seq[EventData]): Unit
+  def save(newEvents: Seq[EventData], expectedVersion: Option[Long] = None): Unit
 
   def fromAll(version: Long = 0, batchSize: Option[Int] = None): EventPage
 }
@@ -28,8 +28,25 @@ case class EventInStream(effectiveTimestamp: DateTime,
 
 case class EventAtAtime(effectiveTimestamp: DateTime, eventData: EventData)
 
-class SQLEVentFetcherAndPersister(tableName: String = "Event") {
-  def saveRaw(connection: Connection, newEvents: Seq[EventAtAtime], expectedVersion: Option[Long] = None): Unit = {
+trait ConnectionProvider {
+  def getConnection(): Connection
+}
+
+class SQLEventStore(connectionProvider: ConnectionProvider,
+                    tableName: String = "Event",
+                    now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) extends EventStore {
+  override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {
+    val connection = connectionProvider.getConnection()
+    val effectiveTimestamp = now()
+    saveEventsToDB(connection, newEvents.map(EventAtAtime(effectiveTimestamp, _)), expectedVersion)
+  }
+
+  override def fromAll(version: Long, batchSize: Option[Int]): EventPage = {
+    val connection = connectionProvider.getConnection()
+    fetchEventsFromDB(connection, version, batchSize)
+  }
+
+  def saveEventsToDB(connection: Connection, newEvents: Seq[EventAtAtime], expectedVersion: Option[Long] = None): Unit = {
     val statement = connection.prepareStatement("insert ignore into " + tableName + "(eventType,body,effective_timestamp,version) values(?,?,?,?)")
 
     val currentVersion = fetchCurrentVersion(connection)
@@ -64,7 +81,7 @@ class SQLEVentFetcherAndPersister(tableName: String = "Event") {
     }
   }
 
-  def fromAll(connection: Connection, version: Long = 0, batchSize: Option[Int] = None): EventPage = {
+  def fetchEventsFromDB(connection: Connection, version: Long = 0, batchSize: Option[Int] = None): EventPage = {
     val statement = connection.prepareStatement("select effective_timestamp, eventType, body, version from  %s where version > ? %s".format(tableName, batchSize.map("limit " + _).getOrElse("")))
     statement.setLong(1, version)
 
@@ -104,16 +121,5 @@ class SQLEVentFetcherAndPersister(tableName: String = "Event") {
       results.close()
       statement.close()
     }
-  }
-}
-
-class SQLEventStore(tableName: String = "Event", now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) {
-  def save(connection: Connection, newEvents: Seq[EventData], expectedVersion: Option[Long] = None): Unit = {
-    val effectiveTimestamp = now()
-    new SQLEVentFetcherAndPersister(tableName).saveRaw(connection, newEvents.map(EventAtAtime(effectiveTimestamp, _)), expectedVersion)
-  }
-
-  def fromAll(connection: Connection, version: Long = 0, batchSize: Option[Int] = None): EventPage = {
-    new SQLEVentFetcherAndPersister(tableName).fromAll(connection, version, batchSize)
   }
 }
