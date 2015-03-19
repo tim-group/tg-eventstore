@@ -1,9 +1,11 @@
 package com.timgroup.mysqleventstore
 
-import java.sql.{DriverManager, Connection}
+import java.lang.reflect.Proxy.newProxyInstance
+import java.lang.reflect.{Method, InvocationHandler}
+import java.sql.{Connection, DriverManager}
 
-import org.joda.time.{DateTimeZone, DateTime}
-import org.scalatest.{MustMatchers, FunSpec}
+import org.joda.time.{DateTime, DateTimeZone}
+import org.scalatest.{FunSpec, MustMatchers}
 
 class SQLEventStoreTest extends FunSpec with MustMatchers {
   val effectiveTimestamp = new DateTime(2015, 1, 15, 23, 43, 53, DateTimeZone.UTC)
@@ -11,8 +13,6 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
   val eventStore = new SQLEventStore(new ConnectionProvider {
     override def getConnection(): Connection = ???
   }, now = () => effectiveTimestamp)
-
-  case class SingleTransactionProvider(getConnection: Connection) extends ConnectionProvider
 
   it("can save events") {
     inTransaction { eventStore =>
@@ -142,6 +142,23 @@ class SQLEventStoreTest extends FunSpec with MustMatchers {
     } finally {
       connection.rollback()
     }
+  }
+
+  case class SingleTransactionProvider(connection: Connection) extends ConnectionProvider {
+    override def getConnection() = NonClosingConnection(connection)
+  }
+
+  object NonClosingConnection {
+    def apply(delegate: Connection) = newProxyInstance(this.getClass.getClassLoader, Array(classOf[Connection]),
+      new InvocationHandler {
+      override def invoke(proxy: scala.Any, method: Method, args: Array[AnyRef]): AnyRef = {
+        if (method.getName == "close") {
+          Unit
+        } else {
+          method.invoke(delegate, args :_*)
+        }
+      }
+    }).asInstanceOf[Connection]
   }
 
   def connect() = {

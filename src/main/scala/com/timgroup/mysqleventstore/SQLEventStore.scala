@@ -2,6 +2,7 @@ package com.timgroup.mysqleventstore
 
 import java.io.ByteArrayInputStream
 import java.sql.{ResultSet, PreparedStatement, Timestamp, Connection}
+import scala.util.control.Exception.allCatch
 
 import org.joda.time.{DateTimeZone, DateTime}
 
@@ -37,13 +38,21 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
                     now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) extends EventStore {
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {
     val connection = connectionProvider.getConnection()
-    val effectiveTimestamp = now()
-    saveEventsToDB(connection, newEvents.map(EventAtAtime(effectiveTimestamp, _)), expectedVersion)
+    try {
+      val effectiveTimestamp = now()
+      saveEventsToDB(connection, newEvents.map(EventAtAtime(effectiveTimestamp, _)), expectedVersion)
+    } finally {
+      allCatch opt { connection.close() }
+    }
   }
 
   override def fromAll(version: Long, batchSize: Option[Int]): EventPage = {
     val connection = connectionProvider.getConnection()
-    fetchEventsFromDB(connection, version, batchSize)
+    try {
+      fetchEventsFromDB(connection, version, batchSize)
+    } finally {
+      allCatch opt { connection.close() }
+    }
   }
 
   def saveEventsToDB(connection: Connection, newEvents: Seq[EventAtAtime], expectedVersion: Option[Long] = None): Unit = {
