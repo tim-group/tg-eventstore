@@ -45,8 +45,10 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
   override def fromAll(version: Long, batchSize: Option[Int]): EventPage = {
     val connection = connectionProvider.getConnection()
     try {
+      connection.setAutoCommit(false)
       fetcher.fetchEventsFromDB(connection, version, batchSize)
     } finally {
+      allCatch opt { connection.rollback() }
       allCatch opt { connection.close() }
     }
   }
