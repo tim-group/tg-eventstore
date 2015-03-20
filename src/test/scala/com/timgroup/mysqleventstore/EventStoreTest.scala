@@ -87,6 +87,14 @@ trait EventStoreTest { this: FunSpec with MustMatchers =>
       }
     }
 
+    it("Saves events if the expected version matches") {
+      eventStore.save(serialized(ExampleEvent(1), ExampleEvent(2)))
+
+      eventStore.save(serialized(ExampleEvent(3)), expectedVersion = Some(2))
+
+      eventStore.fromAll().events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(1), ExampleEvent(2), ExampleEvent(3)))
+    }
+
     def unrelatedSavesOfEventHappens(): Unit = {
       eventStore.save(serialized(ExampleEvent(3)))
     }

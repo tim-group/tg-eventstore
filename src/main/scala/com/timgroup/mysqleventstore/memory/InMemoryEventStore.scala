@@ -9,7 +9,7 @@ class InMemoryEventStore(now: () => DateTime = () => DateTime.now(DateTimeZone.U
 
 
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit =  {
-    if (expectedVersion.map(_ != events.size + 1).getOrElse(false)) {
+    if (expectedVersion.exists(_ != events.size)) {
       throw new OptimisticConcurrencyFailure()
     }
     events= events ++ newEvents.map { evt => EventAtATime(now(), evt) }
