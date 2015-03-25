@@ -21,6 +21,10 @@ trait EventPersister {
   def saveEventsToDB(connection: Connection, newEvents: Seq[EventAtATime], expectedVersion: Option[Long] = None): Unit
 }
 
+trait EventFetcher {
+  def fetchEventsFromDB(connection: Connection, version: Long = 0, batchSize: Option[Int] = None): EventPage
+}
+
 class SQLEventStore(connectionProvider: ConnectionProvider,
                     fetcher: SQLEventFetcher,
                     persister: EventPersister,
