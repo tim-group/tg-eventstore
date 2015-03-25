@@ -26,7 +26,7 @@ trait EventFetcher {
 }
 
 class SQLEventStore(connectionProvider: ConnectionProvider,
-                    fetcher: SQLEventFetcher,
+                    fetcher: EventFetcher,
                     persister: EventPersister,
                     now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) extends EventStore {
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {
