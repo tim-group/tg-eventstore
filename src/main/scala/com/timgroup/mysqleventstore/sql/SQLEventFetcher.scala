@@ -10,7 +10,7 @@ class SQLEventFetcher(tableName: String) extends EventFetcher {
     val statement = connection.prepareStatement("select effective_timestamp, eventType, body, version from  %s where version > ? %s".format(tableName, batchSize.map("limit " + _).getOrElse("")))
     statement.setLong(1, version)
 
-    val last = CurrentEventStreamVersion.fetchCurrentVersion(connection, tableName)
+    val last = fetchCurrentVersion(connection)
 
     val results = statement.executeQuery()
 
@@ -32,6 +32,19 @@ class SQLEventFetcher(tableName: String) extends EventFetcher {
     } finally {
       statement.close()
       results.close()
+    }
+  }
+
+  def fetchCurrentVersion(connection: Connection): Long = {
+    val statement = connection.prepareStatement("select max(version) from " + tableName)
+    val results = statement.executeQuery()
+
+    try {
+      results.next()
+      results.getLong(1)
+    } finally {
+      results.close()
+      statement.close()
     }
   }
 }

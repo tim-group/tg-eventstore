@@ -14,7 +14,15 @@ trait ConnectionProvider {
 object SQLEventStore {
   def apply(connectionProvider: ConnectionProvider,
             tableName: String = "Event",
-            now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) = new SQLEventStore(connectionProvider, new SQLEventFetcher(tableName), new SQLEventPersister(tableName), now)
+            now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) = {
+    val fetcher = new SQLEventFetcher(tableName)
+
+    new SQLEventStore(
+      connectionProvider,
+      fetcher,
+      new SQLEventPersister(tableName, fetcher),
+      now)
+  }
 }
 
 trait EventPersister {
@@ -23,6 +31,8 @@ trait EventPersister {
 
 trait EventFetcher {
   def fetchEventsFromDB(connection: Connection, version: Long = 0, batchSize: Option[Int] = None): EventPage
+
+  def fetchCurrentVersion(connection: Connection): Long
 }
 
 class SQLEventStore(connectionProvider: ConnectionProvider,
