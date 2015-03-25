@@ -23,7 +23,7 @@ class AutoIncrementBasedEventPersister(tableName: String) extends EventPersister
       newEvents.foreach { effectiveEvent =>
         statement.clearParameters()
         statement.setString(1, effectiveEvent.eventData.eventType)
-        statement.setBlob(2, new ByteArrayInputStream(effectiveEvent.eventData.body))
+        statement.setBlob(2, new ByteArrayInputStream(effectiveEvent.eventData.body.data))
         statement.setTimestamp(3, new Timestamp(effectiveEvent.effectiveTimestamp.getMillis))
         statement.addBatch()
       }

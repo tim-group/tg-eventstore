@@ -106,5 +106,5 @@ trait EventStoreTest { this: FunSpec with MustMatchers =>
 
   def serialize(evt: ExampleEvent) = EventData(evt.getClass.getSimpleName, evt.a.toString.getBytes("UTF-8"))
 
-  def deserialize(evt: EventData) = ExampleEvent(new String(evt.body, "UTF-8").toInt)
+  def deserialize(evt: EventData) = ExampleEvent(new String(evt.body.data, "UTF-8").toInt)
 }

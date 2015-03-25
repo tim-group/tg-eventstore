@@ -24,7 +24,7 @@ class SQLEventPersister(tableName: String = "Event", fetcher: EventFetcher) exte
         case (effectiveEvent, index) => {
           statement.clearParameters()
           statement.setString(1, effectiveEvent.eventData.eventType)
-          statement.setBlob(2, new ByteArrayInputStream(effectiveEvent.eventData.body))
+          statement.setBlob(2, new ByteArrayInputStream(effectiveEvent.eventData.body.data))
           statement.setTimestamp(3, new Timestamp(effectiveEvent.effectiveTimestamp.getMillis))
           statement.setLong(4, currentVersion + index + 1)
           statement.addBatch()

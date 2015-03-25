@@ -14,7 +14,21 @@ case class EventPage(events: Iterator[EventInStream]) {
   def isEmpty = events.isEmpty
 }
 
-case class EventData(eventType: String, body: Array[Byte])
+case class Body(data: Array[Byte]) {
+  override def equals(obj: scala.Any): Boolean = {
+    if (obj != null && obj.getClass == getClass) {
+      data.deep == obj.asInstanceOf[Body].data.deep
+    } else {
+      false
+    }
+  }
+}
+
+case class EventData(eventType: String, body: Body)
+
+object EventData {
+  def apply(eventType: String, body: Array[Byte]): EventData = EventData(eventType, Body(body))
+}
 
 case class EventInStream(effectiveTimestamp: DateTime,
                          eventData: EventData,
