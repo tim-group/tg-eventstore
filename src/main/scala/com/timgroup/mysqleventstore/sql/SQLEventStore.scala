@@ -2,7 +2,7 @@ package com.timgroup.mysqleventstore.sql
 
 import java.sql.Connection
 
-import com.timgroup.mysqleventstore.{EventData, EventPage, EventStore}
+import com.timgroup.mysqleventstore.{EventInStream, EventData, EventPage, EventStore}
 import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.util.control.Exception.allCatch
@@ -19,8 +19,9 @@ object SQLEventStore {
 
     new SQLEventStore(
       connectionProvider,
-      new SQLEventFetcher(tableName, headVersionFetcher),
+      new SQLEventFetcher(tableName),
       new SQLEventPersister(tableName, headVersionFetcher),
+      headVersionFetcher,
       now)
   }
 }
@@ -30,12 +31,17 @@ trait EventPersister {
 }
 
 trait EventFetcher {
-  def fetchEventsFromDB(connection: Connection, version: Long = 0, batchSize: Option[Int] = None): EventPage
+  def fetchEventsFromDB(connection: Connection, version: Long = 0, batchSize: Option[Int] = None): Seq[EventInStream]
+}
+
+trait HeadVersionFetcher {
+  def fetchCurrentVersion(connection: Connection): Long
 }
 
 class SQLEventStore(connectionProvider: ConnectionProvider,
                     fetcher: EventFetcher,
                     persister: EventPersister,
+                    headVersionFetcher: HeadVersionFetcher,
                     now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) extends EventStore {
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {
     val connection = connectionProvider.getConnection()
@@ -58,7 +64,7 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
     val connection = connectionProvider.getConnection()
     try {
       connection.setAutoCommit(false)
-      fetcher.fetchEventsFromDB(connection, version, batchSize)
+      EventPage(fetcher.fetchEventsFromDB(connection, version, batchSize), headVersionFetcher.fetchCurrentVersion(connection))
     } finally {
       allCatch opt { connection.rollback() }
       allCatch opt { connection.close() }

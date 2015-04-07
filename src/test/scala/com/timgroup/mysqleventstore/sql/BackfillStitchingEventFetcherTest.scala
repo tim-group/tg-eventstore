@@ -1,12 +1,12 @@
 package com.timgroup.mysqleventstore.sql
 
-import java.sql.{DriverManager, Connection}
+import java.sql.{Connection, DriverManager}
 
-import com.timgroup.mysqleventstore.{Body, EventInStream, EventData, EventStoreTest}
 import com.timgroup.mysqleventstore.sql.legacy.AutoIncrementBasedEventPersister
+import com.timgroup.mysqleventstore.{Body, EventData, EventInStream, EventStoreTest}
+import org.joda.time.DateTime
 import org.joda.time.DateTimeZone.UTC
-import org.joda.time.{DateTimeZone, DateTime}
-import org.scalatest.{BeforeAndAfterEach, MustMatchers, FunSpec, FunSuite}
+import org.scalatest.{BeforeAndAfterEach, FunSpec, MustMatchers}
 
 import scala.util.Random
 
@@ -35,13 +35,15 @@ class BackfillStitchingEventFetcherTest extends FunSpec with EventStoreTest with
   val eventStore = new SQLEventStore(
     connectionProvider,
     new BackfillStitchingEventFetcher(
-      new SQLEventFetcher("EventsBackfill", new SQLHeadVersionFetcher("EventsBackfill")),
-      new SQLHeadVersionFetcher("EventsBackfill"),
-      new SQLEventFetcher("EventsLive", new SQLHeadVersionFetcher("EventsLive")),
-      new SQLHeadVersionFetcher("EventsLive")
+      new SQLEventFetcher("EventsBackfill"),
+      new SQLEventFetcher("EventsLive")
     ),
     new AutoIncrementBasedEventPersister("EventsLive"),
-    now = () => effectiveTime)
+    new BackfillStitchingHeadVersionFetcher(
+      new SQLHeadVersionFetcher("EventsBackfill"),
+      new SQLHeadVersionFetcher("EventsLive")),
+    now = () => effectiveTime
+  )
 
   it("fetches all events from both tables when no batch size specified") {
     val backfillA = EventData("A", randomContents())
