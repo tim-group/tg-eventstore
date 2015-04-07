@@ -9,7 +9,7 @@ import org.joda.time.DateTime
 
 case class EventAtATime(effectiveTimestamp: DateTime, eventData: EventData)
 
-class SQLEventPersister(tableName: String = "Event", fetcher: EventFetcher) extends EventPersister {
+class SQLEventPersister(tableName: String = "Event", fetcher: SQLHeadVersionFetcher) extends EventPersister {
   def saveEventsToDB(connection: Connection, newEvents: Seq[EventAtATime], expectedVersion: Option[Long] = None): Unit = {
     val statement = connection.prepareStatement("insert ignore into " + tableName + "(eventType,body,effective_timestamp,version) values(?,?,?,?)")
 

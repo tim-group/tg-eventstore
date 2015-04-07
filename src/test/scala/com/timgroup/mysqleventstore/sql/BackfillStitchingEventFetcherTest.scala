@@ -34,7 +34,12 @@ class BackfillStitchingEventFetcherTest extends FunSpec with EventStoreTest with
 
   val eventStore = new SQLEventStore(
     connectionProvider,
-    new BackfillStitchingEventFetcher(new SQLEventFetcher("EventsBackfill"), new SQLEventFetcher("EventsLive")),
+    new BackfillStitchingEventFetcher(
+      new SQLEventFetcher("EventsBackfill", new SQLHeadVersionFetcher("EventsBackfill")),
+      new SQLHeadVersionFetcher("EventsBackfill"),
+      new SQLEventFetcher("EventsLive", new SQLHeadVersionFetcher("EventsLive")),
+      new SQLHeadVersionFetcher("EventsLive")
+    ),
     new AutoIncrementBasedEventPersister("EventsLive"),
     now = () => effectiveTime)
 

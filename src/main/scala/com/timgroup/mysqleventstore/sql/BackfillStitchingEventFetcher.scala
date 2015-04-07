@@ -5,7 +5,9 @@ import java.sql.Connection
 import com.timgroup.mysqleventstore.{EventInStream, EventPage}
 
 class BackfillStitchingEventFetcher(backfill: EventFetcher,
-                                    live: EventFetcher) extends EventFetcher {
+                                    backfillHeadVersion: SQLHeadVersionFetcher,
+                                    live: EventFetcher,
+                                    liveHeadVersion: SQLHeadVersionFetcher) extends EventFetcher {
   override def fetchEventsFromDB(connection: Connection, version: Long, batchSize: Option[Int]): EventPage = {
     val overallLastVersion = fetchCurrentVersion(connection)
 
@@ -28,13 +30,13 @@ class BackfillStitchingEventFetcher(backfill: EventFetcher,
   private def eventPage(events: Seq[EventInStream], lastVersion: Long) =
     EventPage(events.map(_.copy(lastVersion = lastVersion)).toIterator)
 
-  override def fetchCurrentVersion(connection: Connection): Long = {
-    val liveVersion: Long = live.fetchCurrentVersion(connection)
+  def fetchCurrentVersion(connection: Connection): Long = {
+    val liveVersion: Long = liveHeadVersion.fetchCurrentVersion(connection)
 
     if (liveVersion > 0) {
       liveVersion
     } else {
-      backfill.fetchCurrentVersion(connection)
+      backfillHeadVersion.fetchCurrentVersion(connection)
     }
   }
 }
