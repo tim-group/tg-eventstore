@@ -23,12 +23,11 @@ class SQLEventFetcher(tableName: String, headVersionFetcher: SQLHeadVersionFetch
           EventData(
             eventType = results.getString("eventType"),
             body = results.getBytes("body")),
-          results.getLong("version"),
-          last
+          results.getLong("version")
         )
       }
 
-      EventPage(eventsIterator.toList)
+      EventPage(eventsIterator.toList, last)
     } finally {
       statement.close()
       results.close()

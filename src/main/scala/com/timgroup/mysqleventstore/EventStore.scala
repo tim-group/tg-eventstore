@@ -8,7 +8,7 @@ trait EventStore {
   def fromAll(version: Long = 0, batchSize: Option[Int] = None): EventPage
 }
 
-case class EventPage(events: Seq[EventInStream]) {
+case class EventPage(events: Seq[EventInStream], lastVersion: Long) {
   def eventData: Seq[EventData] = events.map(_.eventData)
 
   def isEmpty = events.isEmpty
@@ -17,7 +17,7 @@ case class EventPage(events: Seq[EventInStream]) {
 
   def lastOption = events.lastOption
 
-  def isLastPage = lastOption.map(_.last)
+  def isLastPage = lastOption.map(_.version).map(_ == lastVersion)
 }
 
 case class Body(data: Array[Byte]) {
@@ -38,7 +38,4 @@ object EventData {
 
 case class EventInStream(effectiveTimestamp: DateTime,
                          eventData: EventData,
-                         version: Long,
-                         lastVersion: Long) {
-  val last = version == lastVersion
-}
+                         version: Long)

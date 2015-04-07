@@ -24,11 +24,11 @@ trait EventStoreTest { this: FunSpec with MustMatchers =>
 
       eventStore.save(serialized(ExampleEvent(3), ExampleEvent(4)))
 
-      val nextEvents = eventStore.fromAll(version = previousVersion).events.toList.map(evt => (evt.version, evt.lastVersion, deserialize(evt.eventData)))
+      val nextEvents = eventStore.fromAll(version = previousVersion).events.toList.map(evt => (evt.version, deserialize(evt.eventData)))
 
       nextEvents must be(List(
-        (3, 4, ExampleEvent(3)),
-        (4, 4, ExampleEvent(4))
+        (3, ExampleEvent(3)),
+        (4, ExampleEvent(4))
       ))
     }
 
@@ -36,12 +36,10 @@ trait EventStoreTest { this: FunSpec with MustMatchers =>
       eventStore.fromAll(version = 900000).isEmpty must be(true)
     }
 
-    it("labels the last event of the stream") {
+    it("labels the last event page of the stream") {
       eventStore.save(serialized(ExampleEvent(1), ExampleEvent(2)))
 
-      val nextEvents = eventStore.fromAll().events.toList
-
-      nextEvents.map(_.last) must be(List(false, true))
+      eventStore.fromAll().isLastPage must be(Some(true))
     }
 
     it("writes events to the current version of the stream when no expected version is specified") {

@@ -28,7 +28,7 @@ class BackfillStitchingEventFetcher(backfill: EventFetcher,
   }
 
   private def eventPage(events: Seq[EventInStream], lastVersion: Long) =
-    EventPage(events.map(_.copy(lastVersion = lastVersion)))
+    EventPage(events, lastVersion)
 
   def fetchCurrentVersion(connection: Connection): Long = {
     val liveVersion: Long = liveHeadVersion.fetchCurrentVersion(connection)

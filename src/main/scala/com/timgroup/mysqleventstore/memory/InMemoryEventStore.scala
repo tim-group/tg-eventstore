@@ -27,8 +27,8 @@ class InMemoryEventStore(now: () => DateTime = () => DateTime.now(DateTimeZone.U
     }
 
     EventPage(fetched.map {
-      case (EventAtATime(effectiveTimestamp, data), index) => EventInStream(effectiveTimestamp, data, index + 1, last)
-    })
+      case (EventAtATime(effectiveTimestamp, data), index) => EventInStream(effectiveTimestamp, data, index + 1)
+    }, last)
   }
 
   def clear(): Unit = {
