@@ -26,7 +26,7 @@ class InMemoryEventStore(now: () => DateTime = () => DateTime.now(DateTimeZone.U
       potential
     }
 
-    EventPage(fetched.toIterator.map {
+    EventPage(fetched.map {
       case (EventAtATime(effectiveTimestamp, data), index) => EventInStream(effectiveTimestamp, data, index + 1, last)
     })
   }

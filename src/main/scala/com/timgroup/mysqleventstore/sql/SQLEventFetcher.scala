@@ -28,7 +28,7 @@ class SQLEventFetcher(tableName: String, headVersionFetcher: SQLHeadVersionFetch
         )
       }
 
-      EventPage(eventsIterator.toList.toIterator)
+      EventPage(eventsIterator.toList)
     } finally {
       statement.close()
       results.close()

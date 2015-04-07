@@ -8,10 +8,16 @@ trait EventStore {
   def fromAll(version: Long = 0, batchSize: Option[Int] = None): EventPage
 }
 
-case class EventPage(events: Iterator[EventInStream]) {
-  def eventData: Iterator[EventData] = events.map(_.eventData)
+case class EventPage(events: Seq[EventInStream]) {
+  def eventData: Seq[EventData] = events.map(_.eventData)
 
   def isEmpty = events.isEmpty
+
+  def size = events.size
+
+  def lastOption = events.lastOption
+
+  def isLastPage = lastOption.map(_.last)
 }
 
 case class Body(data: Array[Byte]) {
