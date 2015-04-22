@@ -2,7 +2,7 @@ package com.timgroup.mysqleventstore.sql
 
 import java.sql.Connection
 
-import com.timgroup.mysqleventstore.{EventInStream, EventPage}
+import com.timgroup.eventstore.api.EventInStream
 
 class BackfillStitchingEventFetcher(backfill: EventFetcher,
                                     live: EventFetcher) extends EventFetcher {

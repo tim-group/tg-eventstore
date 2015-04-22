@@ -2,8 +2,9 @@ package com.timgroup.mysqleventstore.sql
 
 import java.sql.{Connection, DriverManager}
 
+import com.timgroup.eventstore.api.{EventInStream, EventData, Body}
 import com.timgroup.mysqleventstore.sql.legacy.AutoIncrementBasedEventPersister
-import com.timgroup.mysqleventstore.{Body, EventData, EventInStream, EventStoreTest}
+import com.timgroup.mysqleventstore.EventStoreTest
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone.UTC
 import org.scalatest.{BeforeAndAfterEach, FunSpec, MustMatchers}

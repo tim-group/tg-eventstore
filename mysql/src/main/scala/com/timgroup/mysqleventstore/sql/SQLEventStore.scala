@@ -2,7 +2,7 @@ package com.timgroup.mysqleventstore.sql
 
 import java.sql.Connection
 
-import com.timgroup.mysqleventstore.{EventInStream, EventData, EventPage, EventStore}
+import com.timgroup.eventstore.api.{EventInStream, EventData, EventPage, EventStore}
 import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.util.control.Exception.allCatch

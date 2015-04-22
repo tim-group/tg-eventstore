@@ -1,5 +1,6 @@
 package com.timgroup.mysqleventstore
 
+import com.timgroup.eventstore.api.{EventData, EventStore}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.scalatest._
 

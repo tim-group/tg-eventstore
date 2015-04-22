@@ -1,5 +1,6 @@
 package com.timgroup.mysqleventstore.memory
 
+import com.timgroup.eventstore.api.{EventInStream, EventData, EventPage, EventStore}
 import com.timgroup.mysqleventstore._
 import com.timgroup.mysqleventstore.sql.EventAtATime
 import org.joda.time.{DateTime, DateTimeZone}
