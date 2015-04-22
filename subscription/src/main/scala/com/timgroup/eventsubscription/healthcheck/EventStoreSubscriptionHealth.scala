@@ -6,7 +6,7 @@ import com.timgroup.tucker.info.{Component, Report, Status}
 import org.joda.time.{DateTime, Seconds}
 import org.slf4j.LoggerFactory
 
-class EventStoreSubscriptionHealth(name: String, clock: Clock) extends Component(s"event-subscription-health-$name", s"Event subscription health ($name)") with EventSubscriptionListener {
+class EventStoreSubscriptionHealth(name: String, clock: Clock) extends Component("event-subscription-health-" + name, "Event subscription health (" + name + ")") with EventSubscriptionListener {
   @volatile private var lastPollTimestamp: Option[DateTime] = None
 
   @volatile private var catastrophicFailure: Option[Exception] = None

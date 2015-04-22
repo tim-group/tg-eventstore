@@ -7,7 +7,7 @@ import com.timgroup.tucker.info.Health.State
 import com.timgroup.tucker.info.{Component, Health, Report, Status}
 import org.joda.time.{DateTime, Seconds}
 
-class EventStreamCatchupHealth(name: String, clock: Clock) extends Component(s"event-stream-catchup-$name", s"Event stream catchup ($name)") with Health with EventHandler {
+class EventStreamCatchupHealth(name: String, clock: Clock) extends Component("event-stream-catchup-" + name, "Event stream catchup (" + name + ")") with Health with EventHandler {
   private val startTimestamp = clock.now()
   @volatile private var replayFinishTimestamp: Option[DateTime] = None
   @volatile private var state = State.ill
