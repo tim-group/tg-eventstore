@@ -1,8 +1,7 @@
 package com.timgroup.mysqleventstore.sql.legacy
 
 import java.sql.{Connection, DriverManager}
-
-import com.timgroup.mysqleventstore.EventStoreTest
+import com.timgroup.eventstore.api.EventStoreTest
 import com.timgroup.mysqleventstore.sql.ConnectionProvider
 import org.scalatest.{BeforeAndAfterEach, FunSpec, MustMatchers}
 

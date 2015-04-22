@@ -30,6 +30,8 @@ case class Body(data: Array[Byte]) {
   }
 }
 
+case class EventAtATime(effectiveTimestamp: DateTime, eventData: EventData)
+
 case class EventData(eventType: String, body: Body)
 
 object EventData {

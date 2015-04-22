@@ -39,12 +39,15 @@ object EventStoreBuild extends Build {
     .settings(compatibleScalaTestDependency)
 
   val eventstore_mysql = Project(id = "eventstore-mysql", base = file("mysql"))
-    .dependsOn(eventstore_api)
+    .dependsOn(eventstore_api % "compile->compile; test->test")
     .settings(defaults : _*)
-    .settings(libraryDependencies ++= joda)
     .settings(
       compatibleScalaTestDependency,
       libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.20" % "test"
     )
     .settings(CreateDatabase.settings :_*)
+
+  val eventstore_memory = Project(id = "eventstore-memory", base = file("memory"))
+    .dependsOn(eventstore_api % "compile->compile; test->test")
+    .settings(defaults : _*)
 }

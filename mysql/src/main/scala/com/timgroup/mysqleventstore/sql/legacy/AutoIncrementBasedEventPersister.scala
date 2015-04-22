@@ -1,10 +1,11 @@
 package com.timgroup.mysqleventstore.sql.legacy
 
 import java.io.ByteArrayInputStream
-import java.sql.{Timestamp, Connection}
+import java.sql.{Connection, Timestamp}
 
+import com.timgroup.eventstore.api.EventAtATime
 import com.timgroup.mysqleventstore.sql._
-import org.joda.time.{DateTimeZone, DateTime}
+import org.joda.time.{DateTime, DateTimeZone}
 
 object AutoIncrementBasedEventStore {
   def apply(connectionProvider: ConnectionProvider,

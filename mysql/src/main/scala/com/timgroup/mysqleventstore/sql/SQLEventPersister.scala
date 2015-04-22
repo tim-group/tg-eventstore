@@ -3,12 +3,7 @@ package com.timgroup.mysqleventstore.sql
 import java.io.ByteArrayInputStream
 import java.sql.{Connection, Timestamp}
 
-import com.timgroup.eventstore.api.EventData
-import com.timgroup.mysqleventstore.OptimisticConcurrencyFailure
-import org.joda.time.DateTime
-
-
-case class EventAtATime(effectiveTimestamp: DateTime, eventData: EventData)
+import com.timgroup.eventstore.api.{OptimisticConcurrencyFailure, EventAtATime}
 
 class SQLEventPersister(tableName: String = "Event", fetcher: SQLHeadVersionFetcher) extends EventPersister {
   def saveEventsToDB(connection: Connection, newEvents: Seq[EventAtATime], expectedVersion: Option[Long] = None): Unit = {

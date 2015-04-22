@@ -1,3 +1,3 @@
-package com.timgroup.mysqleventstore
+package com.timgroup.eventstore.api
 
 class OptimisticConcurrencyFailure extends RuntimeException
