@@ -50,4 +50,13 @@ object EventStoreBuild extends Build {
   val eventstore_memory = Project(id = "eventstore-memory", base = file("memory"))
     .dependsOn(eventstore_api % "compile->compile; test->test")
     .settings(defaults : _*)
+
+  val eventstore_subscription = Project(id = "eventstore-subscription", base = file("subscription"))
+    .dependsOn(eventstore_api, eventstore_memory % "compile->test")
+    .settings(defaults : _*)
+    .settings(libraryDependencies ++= Seq(
+    "com.timgroup" % "Tucker" % "1.0.363",
+    "org.mockito" % "mockito-core" % "1.9.5" % "test"
+  ))
+
 }
