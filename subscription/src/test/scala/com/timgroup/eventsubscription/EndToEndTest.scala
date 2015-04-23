@@ -2,10 +2,9 @@ package com.timgroup.eventsubscription
 
 import java.util.concurrent.{ArrayBlockingQueue, Semaphore, TimeUnit}
 
-import com.timgroup.eventstore.api.{EventData, EventPage}
+import com.timgroup.eventstore.api.{Body, EventData, EventInStream}
 import com.timgroup.eventstore.memory.InMemoryEventStore
 import com.timgroup.eventsubscription.EventSubscriptionManager.SubscriptionSetup
-import com.timgroup.eventsubscription.healthcheck.EventStorePolled
 import com.timgroup.eventsubscription.util.Clock
 import com.timgroup.tucker.info.Health.State.{healthy, ill}
 import com.timgroup.tucker.info.Report
@@ -34,7 +33,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     setup.health.get() must be(ill)
 
     eventProcessing.continueProcessing()
-    cycle.await()
+    cycle.awaitInitialReplayCompletion()
 
     setup.health.get() must be(healthy)
   }
@@ -48,11 +47,12 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     setup = EventSubscriptionManager("test", new InMemoryEventStore(), Nil, clock, listener = cycle)
     setup.subscriptionManager.start()
 
-    cycle.await()
+    cycle.awaitInitialReplayCompletion()
 
-    val component = setup.components.find(_.getId == "event-subscription-health-test").get
+    val component = setup.components.find(_.getId == "event-store-polling-test").get
 
     component.getReport.getStatus must be(OK)
+    setup.subscriptionManager.stop()
     when(clock.now()).thenReturn(initialTime.plusSeconds(6))
     component.getReport.getStatus must be(WARNING)
   }
@@ -69,9 +69,9 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     setup = EventSubscriptionManager("test", store, List(failingHandler), listener = cycle)
     setup.subscriptionManager.start()
 
-    cycle.await()
+    cycle.awaitFailure()
 
-    val component = setup.components.find(_.getId == "event-subscription-health-test").get
+    val component = setup.components.find(_.getId == "event-subscription-status-test").get
 
     component.getReport must be(new Report(WARNING, "Event subscription terminated: failure"))
   }
@@ -81,13 +81,13 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     setup.subscriptionManager.stop()
   }
 
-  def anEvent() = EventData("A", Random.alphanumeric.take(10).mkString.getBytes("utf-8"))
+  def anEvent() = EventData("A", Body(Random.alphanumeric.take(10).mkString.getBytes("utf-8")))
 }
 
 class BlockingEventHandler extends EventHandler {
   val lock = new Semaphore(0)
 
-  override def apply(event: EventPage): Unit = {
+  override def apply(event: EventInStream): Unit = {
     lock.acquire()
     lock.release()
   }
@@ -100,13 +100,34 @@ class BlockingEventHandler extends EventHandler {
 class CycleListener extends EventSubscriptionListener {
   val count = new ArrayBlockingQueue[Unit](1000)
 
-  override def pollSucceeded(details: EventStorePolled): Unit = {}
+  private val replayCompleted = new Semaphore(0)
+  private val failureHappened = new Semaphore(0)
+
+  override def pollSucceeded(): Unit = {}
 
   override def cycleCompleted(): Unit = { count.add(Unit) }
 
-  override def eventHandlerFailure(e: Exception): Unit = {}
+  override def eventHandlerFailure(e: Exception): Unit = { failureHappened.release() }
 
   override def pollFailed(e: Exception): Unit = {}
 
+  override def initialReplayCompleted(): Unit = {
+    replayCompleted.release()
+  }
+
+  override def newEventsFound(): Unit = {}
+
+  override def caughtUp(): Unit = {}
+
+  override def eventSubscriptionStarted(): Unit = {}
+
   def await() = count.poll(1, TimeUnit.SECONDS)
+
+  def awaitInitialReplayCompletion(): Unit = {
+    replayCompleted.acquire()
+  }
+
+  def awaitFailure(): Unit = {
+    failureHappened.acquire()
+  }
 }

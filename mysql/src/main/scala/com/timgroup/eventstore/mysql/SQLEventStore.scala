@@ -42,7 +42,8 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
                     fetcher: EventFetcher,
                     persister: EventPersister,
                     headVersionFetcher: HeadVersionFetcher,
-                    now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) extends EventStore {
+                    now: () => DateTime = () => DateTime.now(DateTimeZone.UTC),
+                    batchSize: Option[Int] = None) extends EventStore {
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {
     val connection = connectionProvider.getConnection()
     try {
@@ -60,14 +61,37 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
     }
   }
 
-  override def fromAll(version: Long, batchSize: Option[Int]): EventPage = {
+  private def fetchPage(version: Long, batchSize: Option[Int]) = {
     val connection = connectionProvider.getConnection()
     try {
       connection.setAutoCommit(false)
-      EventPage(fetcher.fetchEventsFromDB(connection, version, batchSize), headVersionFetcher.fetchCurrentVersion(connection))
+      fetcher.fetchEventsFromDB(connection, version, batchSize)
     } finally {
       allCatch opt { connection.rollback() }
       allCatch opt { connection.close() }
+    }
+  }
+
+  override def fromAll(version: Long): EventStream = new EventStream {
+    private var events: Iterator[EventInStream] = Iterator.empty
+    private var currentVersion = version
+
+    override def next(): EventInStream = {
+      potentiallyFetchMore()
+      val event = events.next()
+      currentVersion = event.version
+      event
+    }
+
+    override def hasNext: Boolean = {
+      potentiallyFetchMore()
+      events.hasNext
+    }
+
+    private def potentiallyFetchMore(): Unit = {
+      if (!events.hasNext) {
+        events = fetchPage(currentVersion, batchSize).iterator
+      }
     }
   }
 }

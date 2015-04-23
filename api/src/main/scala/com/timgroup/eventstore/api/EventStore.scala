@@ -5,10 +5,12 @@ import org.joda.time.DateTime
 trait EventStore {
   def save(newEvents: Seq[EventData], expectedVersion: Option[Long] = None): Unit
 
-  def fromAll(version: Long = 0, batchSize: Option[Int] = None): EventPage
+  def fromAll(version: Long = 0): EventStream
 }
 
-case class EventPage(events: Seq[EventInStream], lastVersion: Long) {
+trait EventStream extends Iterator[EventInStream]
+
+case class EventPage(events: Seq[EventInStream], isLastPage: Boolean) {
   def eventData: Seq[EventData] = events.map(_.eventData)
 
   def isEmpty = events.isEmpty
@@ -16,8 +18,6 @@ case class EventPage(events: Seq[EventInStream], lastVersion: Long) {
   def size = events.size
 
   def lastOption = events.lastOption
-
-  def isLastPage = lastOption.map(_.version).map(_ == lastVersion)
 }
 
 case class Body(data: Array[Byte]) {

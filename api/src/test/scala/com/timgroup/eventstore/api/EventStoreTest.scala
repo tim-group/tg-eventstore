@@ -11,7 +11,7 @@ trait EventStoreTest { this: FunSpec with MustMatchers =>
     it("can save events") {
       eventStore.save(serialized(ExampleEvent(21), ExampleEvent(22)))
 
-      val all = eventStore.fromAll().events.toList
+      val all = eventStore.fromAll().toList
 
       all.map(_.effectiveTimestamp) must be(List(effectiveTimestamp, effectiveTimestamp))
       all.map(_.eventData).map(deserialize) must be(List(ExampleEvent(21),ExampleEvent(22)))
@@ -20,11 +20,11 @@ trait EventStoreTest { this: FunSpec with MustMatchers =>
     it("can replay events from a given version number onwards") {
       eventStore.save(serialized(ExampleEvent(1), ExampleEvent(2)))
 
-      val previousVersion = eventStore.fromAll().events.toList.last.version
+      val previousVersion = eventStore.fromAll().toList.last.version
 
       eventStore.save(serialized(ExampleEvent(3), ExampleEvent(4)))
 
-      val nextEvents = eventStore.fromAll(version = previousVersion).events.toList.map(evt => (evt.version, deserialize(evt.eventData)))
+      val nextEvents = eventStore.fromAll(version = previousVersion).toList.map(evt => (evt.version, deserialize(evt.eventData)))
 
       nextEvents must be(List(
         (3, ExampleEvent(3)),
@@ -36,28 +36,39 @@ trait EventStoreTest { this: FunSpec with MustMatchers =>
       eventStore.fromAll(version = 900000).isEmpty must be(true)
     }
 
-    it("labels the last event page of the stream") {
+    it("hasNext reports false when there are no more events") {
       eventStore.save(serialized(ExampleEvent(1), ExampleEvent(2)))
 
-      eventStore.fromAll().isLastPage must be(Some(true))
+      val stream = eventStore.fromAll()
+      stream.next()
+      stream.next()
+
+      stream.hasNext must be(false)
+    }
+
+    it("has more elements when new events arrive") {
+      eventStore.save(serialized(ExampleEvent(1), ExampleEvent(2)))
+      val stream = eventStore.fromAll()
+
+      stream.next()
+      stream.next()
+      stream.hasNext must be(false)
+
+      eventStore.save(serialized(ExampleEvent(3)))
+
+      stream.hasNext must be(true)
+      deserialize(stream.next().eventData) must be(ExampleEvent(3))
     }
 
     it("writes events to the current version of the stream when no expected version is specified") {
       eventStore.save(serialized(ExampleEvent(1), ExampleEvent(2)))
       eventStore.save(serialized(ExampleEvent(3)))
 
-      eventStore.fromAll(version = 2).events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(3)))
+      eventStore.fromAll(version = 2).toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(3)))
     }
 
     it("returns nothing if eventstore is empty") {
-        eventStore.fromAll().eventData.toList must be(Nil)
-    }
-
-    it("returns only number of events asked for in batchSize") {
-      eventStore.save(serialized(ExampleEvent(1), ExampleEvent(2), ExampleEvent(3), ExampleEvent(4)))
-
-      eventStore.fromAll(0, Some(2)).events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(1), ExampleEvent(2)))
-      eventStore.fromAll(2, Some(2)).events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(3), ExampleEvent(4)))
+        eventStore.fromAll().toList must be(Nil)
     }
   }
 
@@ -90,7 +101,7 @@ trait EventStoreTest { this: FunSpec with MustMatchers =>
 
       eventStore.save(serialized(ExampleEvent(3)), expectedVersion = Some(2))
 
-      eventStore.fromAll().events.toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(1), ExampleEvent(2), ExampleEvent(3)))
+      eventStore.fromAll().toList.map(_.eventData).map(deserialize) must be(List(ExampleEvent(1), ExampleEvent(2), ExampleEvent(3)))
     }
 
     def unrelatedSavesOfEventHappens(): Unit = {

@@ -1,6 +1,6 @@
 package com.timgroup.eventsubscription
 
-import com.timgroup.eventstore.api.{EventPage, EventStore}
+import com.timgroup.eventstore.api.{EventInStream, EventPage, EventStore}
 import com.timgroup.eventsubscription.healthcheck.EventStorePolled
 
 import scala.annotation.tailrec
@@ -9,48 +9,47 @@ class EventSubscriptionRunnable(eventstore: EventStore,
                                 handler: EventHandler,
                                 listener: EventSubscriptionListener = NoopSubscriptionListener,
                                 batchSize: Option[Int] = None) extends Runnable {
-  private var currentVersion: Long = 0
+  private val eventStream = eventstore.fromAll(0)
+
+  private var initialReplayDone = false
+
+  private def initialReplay(): Unit = {
+    listener.eventSubscriptionStarted()
+    eventStream.foreach(applyToHandler)
+    listener.initialReplayCompleted()
+  }
 
   override def run() {
-    catchUp()
-  }
-
-  @tailrec private def catchUp(): Unit = {
-    val page = pollES()
-
-    if (page.isDefined) {
-      applyToHandler(page.get)
-
-      page.get.lastOption.foreach { event =>
-        currentVersion = event.version
+    try {
+      if (!initialReplayDone) {
+        initialReplay()
+        initialReplayDone = true
       }
 
-      if (!page.get.isLastPage.getOrElse(true)) {
-        catchUp()
+      if (eventStream.hasNext) {
+        listener.newEventsFound()
+        eventStream.foreach(applyToHandler)
+        listener.caughtUp()
       }
+
+      listener.pollSucceeded()
+    } catch {
+      case e: EventHandlerFailed => throw e
+      case e: Exception => listener.pollFailed(e)
     }
+
   }
 
-  private def applyToHandler(evt: EventPage) = {
+  private def applyToHandler(evt: EventInStream) = {
     try {
       handler.apply(evt)
     } catch {
       case e: Exception => {
         listener.eventHandlerFailure(e)
-        throw e
+        throw new EventHandlerFailed(e)
       }
     }
   }
-
-  private def pollES(): Option[EventPage] = try {
-    val page = eventstore.fromAll(currentVersion, batchSize)
-    listener.pollSucceeded(EventStorePolled(currentVersion, page.size))
-
-    Some(page).filterNot(_.isEmpty)
-  } catch {
-    case e: Exception => {
-      listener.pollFailed(e)
-      None
-    }
-  }
 }
+
+class EventHandlerFailed(e: Exception) extends RuntimeException(e)

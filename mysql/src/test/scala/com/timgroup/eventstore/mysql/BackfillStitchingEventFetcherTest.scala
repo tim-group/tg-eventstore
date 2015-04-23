@@ -45,7 +45,7 @@ class BackfillStitchingEventFetcherTest extends FunSpec with EventStoreTest with
     now = () => effectiveTime
   )
 
-  it("fetches all events from both tables when no batch size specified") {
+  it("fetches all events from both tables") {
     val backfillA = EventData("A", randomContents())
     val backfillB = EventData("B", randomContents())
     val liveA = EventData("A", randomContents())
@@ -61,51 +61,12 @@ class BackfillStitchingEventFetcherTest extends FunSpec with EventStoreTest with
       liveB
     ))
 
-    val page = eventStore.fromAll()
-    page.lastVersion must be(1001)
-    page.events.toList must be(List(
+    val stream = eventStore.fromAll()
+    stream.toList must be(List(
       EventInStream(effectiveTime, backfillA, 1),
       EventInStream(effectiveTime, backfillB, 2),
       EventInStream(effectiveTime, liveA, 1000),
       EventInStream(effectiveTime, liveB, 1001)
-    ))
-  }
-
-  it("fetches batch from just the backfill if enough events are present") {
-    saveInBackfill(Seq(
-      EventData("Backfill", randomContents()),
-      EventData("Backfill", randomContents()),
-      EventData("Backfill", randomContents())
-    ))
-
-    eventStore.save(Seq(
-      EventData("Live", randomContents()),
-      EventData("Live", randomContents()),
-      EventData("Live", randomContents())
-    ))
-
-    eventStore.fromAll(batchSize = Some(2)).eventData.map(_.eventType).toList must be(List("Backfill", "Backfill"))
-  }
-
-  it("fetches an overlapping batch if required") {
-    saveInBackfill(Seq(
-      EventData("Backfill", randomContents()),
-      EventData("Backfill", randomContents()),
-      EventData("Backfill", randomContents())
-    ))
-
-    eventStore.save(Seq(
-      EventData("Live", randomContents()),
-      EventData("Live", randomContents()),
-      EventData("Live", randomContents())
-    ))
-
-    eventStore.fromAll(batchSize = Some(5)).eventData.map(_.eventType).toList must be(List(
-      "Backfill",
-      "Backfill",
-      "Backfill",
-      "Live",
-      "Live"
     ))
   }
 
@@ -116,9 +77,8 @@ class BackfillStitchingEventFetcherTest extends FunSpec with EventStoreTest with
       EventData("Backfill", randomContents())
     ))
 
-    val page = eventStore.fromAll()
-    page.lastVersion must be(3)
-    page.events.map(evt => evt.version).toList must be(List(
+    val stream = eventStore.fromAll()
+    stream.toList.map(evt => evt.version).toList must be(List(
       1,
       2,
       3

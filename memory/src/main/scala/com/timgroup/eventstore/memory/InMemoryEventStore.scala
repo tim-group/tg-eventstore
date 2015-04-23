@@ -4,30 +4,29 @@ import com.timgroup.eventstore.api._
 import org.joda.time.{DateTime, DateTimeZone}
 
 class InMemoryEventStore(now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) extends EventStore {
-  var events = Vector[EventAtATime]()
+  var events = Vector[EventInStream]()
 
 
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit =  {
-    if (expectedVersion.exists(_ != events.size)) {
+    val currentVersion = events.size
+
+    if (expectedVersion.exists(_ != currentVersion)) {
       throw new OptimisticConcurrencyFailure()
     }
-    events= events ++ newEvents.map { evt => EventAtATime(now(), evt) }
+
+    events = events ++ newEvents.zipWithIndex.map { case (evt, index) => EventInStream(now(), evt, currentVersion + index + 1) }
   }
 
-  override def fromAll(version: Long, maybeBatchSize: Option[Int] = None): EventPage = {
-    val last = events.size
-    val batchSize = maybeBatchSize.getOrElse(Int.MaxValue)
+  override def fromAll(version: Long): EventStream = new EventStream {
+    private var currentVersion: Int = version.toInt
 
-    val potential = events.zipWithIndex.drop(version.toInt)
-    val fetched = if (potential.length > batchSize) {
-      potential.take(batchSize)
-    } else {
-      potential
+    override def next(): EventInStream = {
+      val event = events(currentVersion)
+      currentVersion = currentVersion + 1
+      event
     }
 
-    EventPage(fetched.map {
-      case (EventAtATime(effectiveTimestamp, data), index) => EventInStream(effectiveTimestamp, data, index + 1)
-    }, last)
+    override def hasNext: Boolean = events.size > currentVersion
   }
 
   def clear(): Unit = {

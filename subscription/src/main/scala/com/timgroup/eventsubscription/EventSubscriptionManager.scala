@@ -3,7 +3,7 @@ package com.timgroup.eventsubscription
 import java.util.concurrent.{Executors, ThreadFactory, TimeUnit}
 
 import com.timgroup.eventstore.api.EventStore
-import com.timgroup.eventsubscription.healthcheck.{EventStoreSubscriptionHealth, EventStreamCatchupHealth}
+import com.timgroup.eventsubscription.healthcheck.{EventSubscriptionStatus, EventStorePollingHealth}
 import com.timgroup.eventsubscription.util.{Clock, SystemClock}
 import com.timgroup.tucker.info.{Component, Health}
 import org.slf4j.LoggerFactory
@@ -13,7 +13,7 @@ class EventSubscriptionManager(
             eventstore: EventStore,
             handlers: List[EventHandler],
             listener: EventSubscriptionListener,
-            batchSize: Option[Int] = Some(100000)) {
+            batchSize: Option[Int] = Some(10000)) {
   private val executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactory {
     override def newThread(r: Runnable) = {
       val thread = new Thread(r, "EventSubscriptionRunner-" + name)
@@ -61,11 +61,12 @@ object EventSubscriptionManager {
             clock: Clock = SystemClock,
             batchSize: Option[Int] = Some(10000),
             listener: EventSubscriptionListener = NoopSubscriptionListener) = {
-    val subscriptionHealth = new EventStoreSubscriptionHealth(name, clock)
-    val catchupHealth = new EventStreamCatchupHealth(name, clock)
 
-    val manager = new EventSubscriptionManager(name, eventStore, handlers ++ List(catchupHealth), new BroadcastingListener(subscriptionHealth, listener), batchSize)
+    val pollingHealth = new EventStorePollingHealth(name, clock)
+    val subscriptionStatus = new EventSubscriptionStatus(name)
 
-    SubscriptionSetup(catchupHealth, List(catchupHealth, subscriptionHealth), manager)
+    val manager = new EventSubscriptionManager(name, eventStore, handlers, new BroadcastingListener(subscriptionStatus, pollingHealth, listener), batchSize)
+
+    SubscriptionSetup(subscriptionStatus, List(subscriptionStatus, pollingHealth), manager)
   }
 }
