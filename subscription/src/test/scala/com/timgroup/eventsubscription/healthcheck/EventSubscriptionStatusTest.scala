@@ -1,9 +1,12 @@
 package com.timgroup.eventsubscription.healthcheck
 
-import com.timgroup.eventstore.api.EventInStream
+import com.timgroup.eventsubscription.util.Clock
 import com.timgroup.tucker.info.Health.State.{healthy, ill}
 import com.timgroup.tucker.info.{Report, Status}
-import org.joda.time.DateTime
+import org.joda.time.DateTimeZone.UTC
+import org.joda.time.{DateTimeZone, DateTime}
+import org.mockito.Mockito
+import org.mockito.Mockito.{when, mock}
 import org.scalatest.{FunSpec, MustMatchers}
 
 class EventSubscriptionStatusTest extends FunSpec with MustMatchers {
@@ -21,13 +24,18 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers {
   }
 
   it("reports healthy once initial replay is completed") {
-    val status = new EventSubscriptionStatus("")
+    val timestamp = new DateTime(2014, 2, 1, 0, 0, 0, UTC)
 
+    val clock = mock(classOf[Clock])
+    val status = new EventSubscriptionStatus("", clock)
+
+    when(clock.now()).thenReturn(timestamp)
     status.eventSubscriptionStarted()
+    when(clock.now()).thenReturn(timestamp.plusSeconds(314))
     status.initialReplayCompleted()
 
     status.get() must be(healthy)
-    status.getReport() must be(new Report(Status.OK, "Caught up"))
+    status.getReport() must be(new Report(Status.OK, "Caught up. Initial replay took 314s"))
   }
 
   it("reports warning if stale") {
@@ -50,7 +58,7 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers {
     status.caughtUp()
 
     status.get() must be(healthy)
-    status.getReport() must be(new Report(Status.OK, "Caught up"))
+    status.getReport().getStatus must be(Status.OK)
   }
 
   it("reports failure if subscription terminates") {

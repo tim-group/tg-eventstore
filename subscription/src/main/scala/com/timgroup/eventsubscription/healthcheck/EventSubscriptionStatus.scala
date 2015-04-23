@@ -1,27 +1,36 @@
 package com.timgroup.eventsubscription.healthcheck
 
 import com.timgroup.eventsubscription.EventSubscriptionListener
+import com.timgroup.eventsubscription.util.{SystemClock, Clock}
 import com.timgroup.tucker.info.Health.State
 import com.timgroup.tucker.info.Health.State.{healthy, ill}
 import com.timgroup.tucker.info.Status.{OK, WARNING}
 import com.timgroup.tucker.info.{Component, Health, Report, Status}
+import org.joda.time.Seconds.secondsBetween
+import org.joda.time.{Seconds, DateTime}
 import org.slf4j.LoggerFactory
 
-class EventSubscriptionStatus(name: String) extends Component("event-subscription-status-" + name, "Event subscription status (" + name + ")") with Health with EventSubscriptionListener {
+class EventSubscriptionStatus(name: String, clock: Clock = SystemClock) extends Component("event-subscription-status-" + name, "Event subscription status (" + name + ")") with Health with EventSubscriptionListener {
   @volatile private var currentHealth = ill
   @volatile private var currentState = new Report(WARNING, "Not running")
+  @volatile private var startTime: DateTime = null
+  @volatile private var finishTime: DateTime = null
+
+  private def caughtUpReport = new Report(OK, "Caught up. Initial replay took " + secondsBetween(startTime, finishTime).getSeconds + "s")
 
   override def getReport: Report = currentState
 
   override def get(): State = currentHealth
 
   override def eventSubscriptionStarted(): Unit = {
+    startTime = clock.now()
     currentState = new Report(WARNING, "Event subscription started")
   }
 
   override def initialReplayCompleted(): Unit = {
+    finishTime = clock.now()
     currentHealth = healthy
-    currentState = new Report(OK, "Caught up")
+    currentState = caughtUpReport
   }
 
   override def newEventsFound(): Unit = {
@@ -29,7 +38,7 @@ class EventSubscriptionStatus(name: String) extends Component("event-subscriptio
   }
 
   override def caughtUp(): Unit = {
-    currentState = new Report(OK, "Caught up")
+    currentState = caughtUpReport
   }
 
   override def eventHandlerFailure(e: Exception): Unit = {
