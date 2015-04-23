@@ -1,13 +1,13 @@
 package com.timgroup.eventsubscription.healthcheck
 
 import com.timgroup.eventsubscription.EventSubscriptionListener
-import com.timgroup.eventsubscription.util.{SystemClock, Clock}
+import com.timgroup.eventsubscription.util.{Clock, SystemClock}
 import com.timgroup.tucker.info.Health.State
 import com.timgroup.tucker.info.Health.State.{healthy, ill}
 import com.timgroup.tucker.info.Status.{OK, WARNING}
 import com.timgroup.tucker.info.{Component, Health, Report, Status}
+import org.joda.time.DateTime
 import org.joda.time.Seconds.secondsBetween
-import org.joda.time.{Seconds, DateTime}
 import org.slf4j.LoggerFactory
 
 class EventSubscriptionStatus(name: String, clock: Clock = SystemClock) extends Component("event-subscription-status-" + name, "Event subscription status (" + name + ")") with Health with EventSubscriptionListener {

@@ -3,10 +3,9 @@ package com.timgroup.eventsubscription.healthcheck
 import com.timgroup.eventsubscription.util.Clock
 import com.timgroup.tucker.info.Health.State.{healthy, ill}
 import com.timgroup.tucker.info.{Report, Status}
+import org.joda.time.DateTime
 import org.joda.time.DateTimeZone.UTC
-import org.joda.time.{DateTimeZone, DateTime}
-import org.mockito.Mockito
-import org.mockito.Mockito.{when, mock}
+import org.mockito.Mockito.{mock, when}
 import org.scalatest.{FunSpec, MustMatchers}
 
 class EventSubscriptionStatusTest extends FunSpec with MustMatchers {

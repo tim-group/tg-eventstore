@@ -32,10 +32,23 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     setup.health.get() must be(ill)
 
-    eventProcessing.continueProcessing()
+    eventProcessing.allowProcessing(3)
     cycle.awaitInitialReplayCompletion()
 
     setup.health.get() must be(healthy)
+  }
+
+  it("reports current version") {
+    val store = new InMemoryEventStore()
+    store.save(List(anEvent(), anEvent(), anEvent()))
+
+    val cycle = new CycleListener()
+    setup = EventSubscriptionManager("test", store, List(), listener = cycle)
+    setup.subscriptionManager.start()
+    val component = setup.components.find(_.getId == "event-stream-version-test").get
+
+    cycle.awaitInitialReplayCompletion()
+    component.getReport.getValue must be(3)
   }
 
   it("reports warning if event store was not polled recently") {
@@ -89,11 +102,10 @@ class BlockingEventHandler extends EventHandler {
 
   override def apply(event: EventInStream): Unit = {
     lock.acquire()
-    lock.release()
   }
 
-  def continueProcessing() {
-    lock.release()
+  def allowProcessing(count: Int) {
+    lock.release(count)
   }
 }
 

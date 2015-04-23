@@ -3,7 +3,7 @@ package com.timgroup.eventsubscription
 import java.util.concurrent.{Executors, ThreadFactory, TimeUnit}
 
 import com.timgroup.eventstore.api.EventStore
-import com.timgroup.eventsubscription.healthcheck.{EventSubscriptionStatus, EventStorePollingHealth}
+import com.timgroup.eventsubscription.healthcheck.{EventStreamVersionComponent, EventSubscriptionStatus, EventStorePollingHealth}
 import com.timgroup.eventsubscription.util.{Clock, SystemClock}
 import com.timgroup.tucker.info.{Component, Health}
 import org.slf4j.LoggerFactory
@@ -64,9 +64,10 @@ object EventSubscriptionManager {
 
     val pollingHealth = new EventStorePollingHealth(name, clock)
     val subscriptionStatus = new EventSubscriptionStatus(name)
+    val versionComponent = new EventStreamVersionComponent(name)
 
-    val manager = new EventSubscriptionManager(name, eventStore, handlers, new BroadcastingListener(subscriptionStatus, pollingHealth, listener), batchSize)
+    val manager = new EventSubscriptionManager(name, eventStore, handlers ++ List(versionComponent), new BroadcastingListener(subscriptionStatus, pollingHealth, listener), batchSize)
 
-    SubscriptionSetup(subscriptionStatus, List(subscriptionStatus, pollingHealth), manager)
+    SubscriptionSetup(subscriptionStatus, List(subscriptionStatus, pollingHealth, versionComponent), manager)
   }
 }
