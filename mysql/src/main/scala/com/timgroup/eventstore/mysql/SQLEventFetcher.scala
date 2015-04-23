@@ -34,18 +34,3 @@ class SQLEventFetcher(tableName: String) extends EventFetcher {
     }
   }
 }
-
-class SQLHeadVersionFetcher(tableName: String) extends HeadVersionFetcher {
-  override def fetchCurrentVersion(connection: Connection): Long = {
-    val statement = connection.prepareStatement("select max(version) from " + tableName)
-    val results = statement.executeQuery()
-
-    try {
-      results.next()
-      results.getLong(1)
-    } finally {
-      allCatch opt { results.close() }
-      allCatch opt { statement.close() }
-    }
-  }
-}

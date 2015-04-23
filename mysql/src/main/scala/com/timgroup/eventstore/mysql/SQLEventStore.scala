@@ -15,12 +15,10 @@ object SQLEventStore {
   def apply(connectionProvider: ConnectionProvider,
             tableName: String = "Event",
             now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) = {
-    val headVersionFetcher = new SQLHeadVersionFetcher(tableName)
-
     new SQLEventStore(
       connectionProvider,
       new SQLEventFetcher(tableName),
-      new SQLEventPersister(tableName, headVersionFetcher),
+      new SQLEventPersister(tableName),
       now)
   }
 }
@@ -31,10 +29,6 @@ trait EventPersister {
 
 trait EventFetcher {
   def fetchEventsFromDB(connection: Connection, version: Long = 0, batchSize: Option[Int] = None): Seq[EventInStream]
-}
-
-trait HeadVersionFetcher {
-  def fetchCurrentVersion(connection: Connection): Long
 }
 
 class SQLEventStore(connectionProvider: ConnectionProvider,

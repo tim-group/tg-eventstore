@@ -5,11 +5,13 @@ import java.sql.{Connection, Timestamp}
 
 import com.timgroup.eventstore.api.{OptimisticConcurrencyFailure, EventAtATime}
 
-class SQLEventPersister(tableName: String = "Event", fetcher: SQLHeadVersionFetcher) extends EventPersister {
+import scala.util.control.Exception._
+
+class SQLEventPersister(tableName: String = "Event") extends EventPersister {
   def saveEventsToDB(connection: Connection, newEvents: Seq[EventAtATime], expectedVersion: Option[Long] = None): Unit = {
     val statement = connection.prepareStatement("insert ignore into " + tableName + "(eventType,body,effective_timestamp,version) values(?,?,?,?)")
 
-    val currentVersion = fetcher.fetchCurrentVersion(connection)
+    val currentVersion = fetchCurrentVersion(connection)
 
     if (expectedVersion.map(_ != currentVersion).getOrElse(false)) {
       throw new OptimisticConcurrencyFailure()
@@ -38,6 +40,19 @@ class SQLEventPersister(tableName: String = "Event", fetcher: SQLHeadVersionFetc
       }
     } finally {
       statement.close()
+    }
+  }
+
+  private def fetchCurrentVersion(connection: Connection): Long = {
+    val statement = connection.prepareStatement("select max(version) from " + tableName)
+    val results = statement.executeQuery()
+
+    try {
+      results.next()
+      results.getLong(1)
+    } finally {
+      allCatch opt { results.close() }
+      allCatch opt { statement.close() }
     }
   }
 }
