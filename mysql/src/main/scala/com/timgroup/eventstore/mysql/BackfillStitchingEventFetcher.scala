@@ -1,4 +1,4 @@
-package com.timgroup.mysqleventstore.sql
+package com.timgroup.eventstore.mysql
 
 import java.sql.Connection
 

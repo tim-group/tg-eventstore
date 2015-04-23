@@ -1,10 +1,10 @@
-package com.timgroup.mysqleventstore.sql.legacy
+package com.timgroup.eventstore.mysql.legacy
 
 import java.io.ByteArrayInputStream
 import java.sql.{Connection, Timestamp}
 
 import com.timgroup.eventstore.api.EventAtATime
-import com.timgroup.mysqleventstore.sql._
+import com.timgroup.eventstore.mysql._
 import org.joda.time.{DateTime, DateTimeZone}
 
 object AutoIncrementBasedEventStore {
