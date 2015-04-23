@@ -39,9 +39,6 @@ class BackfillStitchingEventFetcherTest extends FunSpec with EventStoreTest with
       new SQLEventFetcher("EventsLive")
     ),
     new AutoIncrementBasedEventPersister("EventsLive"),
-    new BackfillStitchingHeadVersionFetcher(
-      new SQLHeadVersionFetcher("EventsBackfill"),
-      new SQLHeadVersionFetcher("EventsLive")),
     now = () => effectiveTime
   )
 

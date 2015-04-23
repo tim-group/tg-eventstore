@@ -19,20 +19,4 @@ class BackfillStitchingEventFetcher(backfill: EventFetcher,
       allEvents.take(batchSize.getOrElse(allEvents.size))
     }
   }
-
-
-
-}
-
-class BackfillStitchingHeadVersionFetcher(backfillHeadVersion: HeadVersionFetcher,
-                                          liveHeadVersion: HeadVersionFetcher) extends HeadVersionFetcher {
-  override def fetchCurrentVersion(connection: Connection): Long = {
-    val liveVersion: Long = liveHeadVersion.fetchCurrentVersion(connection)
-
-    if (liveVersion > 0) {
-      liveVersion
-    } else {
-      backfillHeadVersion.fetchCurrentVersion(connection)
-    }
-  }
 }

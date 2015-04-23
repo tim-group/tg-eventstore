@@ -14,7 +14,7 @@ object AutoIncrementBasedEventStore {
     new SQLEventStore(
       connectionProvider,
       new SQLEventFetcher(tableName),
-      new AutoIncrementBasedEventPersister(tableName), new SQLHeadVersionFetcher(tableName), now)
+      new AutoIncrementBasedEventPersister(tableName), now)
   }
 }
 

@@ -21,7 +21,6 @@ object SQLEventStore {
       connectionProvider,
       new SQLEventFetcher(tableName),
       new SQLEventPersister(tableName, headVersionFetcher),
-      headVersionFetcher,
       now)
   }
 }
@@ -41,7 +40,6 @@ trait HeadVersionFetcher {
 class SQLEventStore(connectionProvider: ConnectionProvider,
                     fetcher: EventFetcher,
                     persister: EventPersister,
-                    headVersionFetcher: HeadVersionFetcher,
                     now: () => DateTime = () => DateTime.now(DateTimeZone.UTC),
                     batchSize: Option[Int] = None) extends EventStore {
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {
