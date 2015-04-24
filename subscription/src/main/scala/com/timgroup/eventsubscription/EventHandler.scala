@@ -1,6 +1,6 @@
 package com.timgroup.eventsubscription
 
-import com.timgroup.eventstore.api.{EventInStream, EventPage}
+import com.timgroup.eventstore.api.EventInStream
 
 trait EventHandler {
   def apply(event: EventInStream): Unit

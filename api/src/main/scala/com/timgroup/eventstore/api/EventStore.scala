@@ -10,16 +10,6 @@ trait EventStore {
 
 trait EventStream extends Iterator[EventInStream]
 
-case class EventPage(events: Seq[EventInStream], isLastPage: Boolean) {
-  def eventData: Seq[EventData] = events.map(_.eventData)
-
-  def isEmpty = events.isEmpty
-
-  def size = events.size
-
-  def lastOption = events.lastOption
-}
-
 case class Body(data: Array[Byte]) {
   override def equals(obj: scala.Any): Boolean = {
     if (obj != null && obj.getClass == getClass) {
@@ -29,8 +19,6 @@ case class Body(data: Array[Byte]) {
     }
   }
 }
-
-case class EventAtATime(effectiveTimestamp: DateTime, eventData: EventData)
 
 case class EventData(eventType: String, body: Body)
 

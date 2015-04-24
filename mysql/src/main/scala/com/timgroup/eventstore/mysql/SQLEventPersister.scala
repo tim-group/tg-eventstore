@@ -3,7 +3,7 @@ package com.timgroup.eventstore.mysql
 import java.io.ByteArrayInputStream
 import java.sql.{Connection, Timestamp}
 
-import com.timgroup.eventstore.api.{OptimisticConcurrencyFailure, EventAtATime}
+import com.timgroup.eventstore.api.OptimisticConcurrencyFailure
 
 import scala.util.control.Exception._
 

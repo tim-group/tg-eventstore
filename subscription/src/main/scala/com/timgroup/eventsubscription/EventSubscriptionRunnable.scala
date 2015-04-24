@@ -1,9 +1,6 @@
 package com.timgroup.eventsubscription
 
-import com.timgroup.eventstore.api.{EventInStream, EventPage, EventStore}
-import com.timgroup.eventsubscription.healthcheck.EventStorePolled
-
-import scala.annotation.tailrec
+import com.timgroup.eventstore.api.{EventInStream, EventStore}
 
 class EventSubscriptionRunnable(eventstore: EventStore,
                                 handler: EventHandler,
