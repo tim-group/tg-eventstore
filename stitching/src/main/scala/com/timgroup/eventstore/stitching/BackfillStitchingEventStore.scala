@@ -1,6 +1,6 @@
-package com.timgroup.eventstore.memory
+package com.timgroup.eventstore.stitching
 
-import com.timgroup.eventstore.api.{EventInStream, EventData, EventStream, EventStore}
+import com.timgroup.eventstore.api.{EventData, EventInStream, EventStore, EventStream}
 
 class BackfillStitchingEventStore(backfill: EventStore, live: EventStore, liveCuttoffVersion: Long) extends EventStore {
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = live.save(newEvents, expectedVersion)

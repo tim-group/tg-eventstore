@@ -1,6 +1,7 @@
-package com.timgroup.eventstore.memory
+package com.timgroup.eventstore.stitching
 
 import com.timgroup.eventstore.api.EventData
+import com.timgroup.eventstore.memory.InMemoryEventStore
 import org.scalatest.{FunSpec, MustMatchers}
 
 class StitchingEventStoreTest extends FunSpec with MustMatchers {

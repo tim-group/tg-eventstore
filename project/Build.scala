@@ -37,6 +37,9 @@ object EventStoreBuild extends Build {
   val eventstore_memory = Project(id = "eventstore-memory", base = file("memory"))
     .dependsOn(eventstore_api % "compile->compile; test->test")
 
+  val eventstore_stitching = Project(id = "eventstore-stitching", base = file("stitching"))
+    .dependsOn(eventstore_api, eventstore_memory % "compile->test")
+
   val eventstore_subscription = Project(id = "eventstore-subscription", base = file("subscription"))
     .dependsOn(eventstore_api, eventstore_memory % "compile->test")
     .settings(libraryDependencies ++= Seq(
