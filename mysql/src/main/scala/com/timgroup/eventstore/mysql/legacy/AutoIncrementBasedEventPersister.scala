@@ -9,11 +9,14 @@ import org.joda.time.{DateTime, DateTimeZone}
 object AutoIncrementBasedEventStore {
   def apply(connectionProvider: ConnectionProvider,
             tableName: String = "Event",
-            now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) = {
+            now: () => DateTime = () => DateTime.now(DateTimeZone.UTC),
+            batchSize: Option[Int] = None) = {
     new SQLEventStore(
       connectionProvider,
       new SQLEventFetcher(tableName),
-      new AutoIncrementBasedEventPersister(tableName), now)
+      new AutoIncrementBasedEventPersister(tableName),
+      now,
+      batchSize)
   }
 }
 

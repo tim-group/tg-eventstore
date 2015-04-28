@@ -14,12 +14,15 @@ trait ConnectionProvider {
 object SQLEventStore {
   def apply(connectionProvider: ConnectionProvider,
             tableName: String = "Event",
-            now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) = {
+            now: () => DateTime = () => DateTime.now(DateTimeZone.UTC),
+            batchSize: Option[Int] = None) = {
     new SQLEventStore(
       connectionProvider,
       new SQLEventFetcher(tableName),
       new SQLEventPersister(tableName),
-      now)
+      now,
+      batchSize
+    )
   }
 }
 
