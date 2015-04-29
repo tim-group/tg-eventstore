@@ -1,18 +1,20 @@
 package com.timgroup.eventsubscription
 
+import java.util.concurrent.ExecutorService
+
 import com.timgroup.eventstore.api.{EventInStream, EventStore}
 
 class EventSubscriptionRunnable(eventstore: EventStore,
                                 handler: EventHandler,
                                 listener: EventSubscriptionListener = NoopSubscriptionListener,
-                                batchSize: Option[Int] = None) extends Runnable {
+                                bufferExecutor: ExecutorService) extends Runnable {
   private val eventStream = eventstore.fromAll(0)
 
   private var initialReplayDone = false
 
   private def initialReplay(): Unit = {
     listener.eventSubscriptionStarted()
-    eventStream.foreach(applyToHandler)
+    new BufferingIterator(eventStream, bufferExecutor, 50000).foreach(applyToHandler)
     listener.initialReplayCompleted()
   }
 
