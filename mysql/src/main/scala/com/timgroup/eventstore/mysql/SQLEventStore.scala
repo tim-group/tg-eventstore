@@ -36,18 +36,15 @@ trait EventFetcher {
 
 case class EventAtATime(effectiveTimestamp: DateTime, eventData: EventData)
 
-class SQLEventStore(connectionProvider: ConnectionProvider,
-                    fetcher: EventFetcher,
-                    persister: EventPersister,
-                    now: () => DateTime = () => DateTime.now(DateTimeZone.UTC),
-                    batchSize: Option[Int] = None) extends EventStore {
-  override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {
+object Utils {
+  def transactionallyUsing[T](connectionProvider: ConnectionProvider)(code: Connection => T): T = {
     val connection = connectionProvider.getConnection()
+
     try {
       connection.setAutoCommit(false)
-      val effectiveTimestamp = now()
-      persister.saveEventsToDB(connection, newEvents.map(EventAtATime(effectiveTimestamp, _)), expectedVersion)
+      val result = code(connection)
       connection.commit()
+      return result
     } catch {
       case e: Exception => {
         connection.rollback()
@@ -57,15 +54,23 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
       allCatch opt { connection.close() }
     }
   }
+}
+
+class SQLEventStore(connectionProvider: ConnectionProvider,
+                    fetcher: EventFetcher,
+                    persister: EventPersister,
+                    now: () => DateTime = () => DateTime.now(DateTimeZone.UTC),
+                    batchSize: Option[Int] = None) extends EventStore {
+  override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {
+    Utils.transactionallyUsing(connectionProvider) { connection =>
+      val effectiveTimestamp = now()
+      persister.saveEventsToDB(connection, newEvents.map(EventAtATime(effectiveTimestamp, _)), expectedVersion)
+    }
+  }
 
   private def fetchPage(version: Long, batchSize: Option[Int]) = {
-    val connection = connectionProvider.getConnection()
-    try {
-      connection.setAutoCommit(false)
+    Utils.transactionallyUsing(connectionProvider) { connection =>
       fetcher.fetchEventsFromDB(connection, version, batchSize)
-    } finally {
-      allCatch opt { connection.rollback() }
-      allCatch opt { connection.close() }
     }
   }
 
