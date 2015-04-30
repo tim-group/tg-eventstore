@@ -7,14 +7,15 @@ import com.timgroup.eventstore.api.{EventInStream, EventStore}
 class EventSubscriptionRunnable(eventstore: EventStore,
                                 handler: EventHandler,
                                 listener: EventSubscriptionListener = NoopSubscriptionListener,
-                                bufferExecutor: ExecutorService) extends Runnable {
+                                bufferExecutor: ExecutorService,
+                                bufferSize: Int) extends Runnable {
   private val eventStream = eventstore.fromAll(0)
 
   private var initialReplayDone = false
 
   private def initialReplay(): Unit = {
     listener.eventSubscriptionStarted()
-    new BufferingIterator(eventStream, bufferExecutor, 50000).foreach(applyToHandler)
+    new BufferingIterator(eventStream, bufferExecutor, bufferSize).foreach(applyToHandler)
     listener.initialReplayCompleted()
   }
 
