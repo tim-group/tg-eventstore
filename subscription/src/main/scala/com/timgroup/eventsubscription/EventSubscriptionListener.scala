@@ -1,7 +1,5 @@
 package com.timgroup.eventsubscription
 
-import com.timgroup.eventsubscription.healthcheck.EventStorePolled
-
 trait EventSubscriptionListener {
   def pollSucceeded(): Unit
 

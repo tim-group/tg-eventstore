@@ -34,16 +34,6 @@ trait EventFetcher {
   def fetchEventsFromDB(connection: Connection, version: Long = 0, batchSize: Option[Int] = None): Seq[EventInStream]
 }
 
-case class EventPage(events: Seq[EventInStream], isLastPage: Boolean) {
-  def eventData: Seq[EventData] = events.map(_.eventData)
-
-  def isEmpty = events.isEmpty
-
-  def size = events.size
-
-  def lastOption = events.lastOption
-}
-
 case class EventAtATime(effectiveTimestamp: DateTime, eventData: EventData)
 
 class SQLEventStore(connectionProvider: ConnectionProvider,
