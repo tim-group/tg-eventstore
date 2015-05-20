@@ -19,7 +19,7 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers {
     status.eventSubscriptionStarted()
 
     status.get() must be(ill)
-    status.getReport() must be(new Report(Status.WARNING, "Event subscription started"))
+    status.getReport() must be(new Report(Status.WARNING, "Event subscription started. Catching up."))
   }
 
   it("reports healthy once initial replay is completed") {

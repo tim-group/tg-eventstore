@@ -24,7 +24,7 @@ class EventSubscriptionStatus(name: String, clock: Clock = SystemClock) extends 
 
   override def eventSubscriptionStarted(): Unit = {
     startTime = clock.now()
-    currentState = new Report(WARNING, "Event subscription started")
+    currentState = new Report(WARNING, "Event subscription started. Catching up.")
   }
 
   override def initialReplayCompleted(): Unit = {
