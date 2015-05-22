@@ -14,7 +14,8 @@ class EventSubscriptionManager(
             eventstore: EventStore,
             handlers: List[EventHandler],
             listener: EventSubscriptionListener,
-            bufferSize: Int) {
+            bufferSize: Int,
+            runFrequency: Long) {
   private val executor = Executors.newScheduledThreadPool(2, new ThreadFactory {
     private val count = new AtomicInteger()
 
@@ -34,7 +35,7 @@ class EventSubscriptionManager(
                               bufferSize
     )
 
-    executor.scheduleWithFixedDelay(errorHandling(runnable), 0, 1000, TimeUnit.MILLISECONDS)
+    executor.scheduleWithFixedDelay(errorHandling(runnable), 0, runFrequency, TimeUnit.MILLISECONDS)
   }
 
   def stop() {
@@ -65,7 +66,8 @@ object EventSubscriptionManager {
             handlers: List[EventHandler],
             clock: Clock = SystemClock,
             listener: EventSubscriptionListener = NoopSubscriptionListener,
-            bufferSize: Int = 50000) = {
+            bufferSize: Int = 50000,
+            frequency: Long = 1000) = {
 
     val pollingHealth = new EventStorePollingHealth(name, clock)
     val subscriptionStatus = new EventSubscriptionStatus(name)
@@ -73,7 +75,7 @@ object EventSubscriptionManager {
 
     val manager =
       new EventSubscriptionManager(name, eventStore, handlers ++ List(versionComponent),
-        new BroadcastingListener(subscriptionStatus, pollingHealth, listener), bufferSize)
+        new BroadcastingListener(subscriptionStatus, pollingHealth, listener), bufferSize, frequency)
 
     SubscriptionSetup(subscriptionStatus, List(subscriptionStatus, pollingHealth, versionComponent), manager)
   }
