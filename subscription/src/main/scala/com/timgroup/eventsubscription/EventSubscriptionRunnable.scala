@@ -8,8 +8,9 @@ class EventSubscriptionRunnable(eventstore: EventStore,
                                 handler: EventHandler,
                                 listener: EventSubscriptionListener = NoopSubscriptionListener,
                                 bufferExecutor: ExecutorService,
-                                bufferSize: Int) extends Runnable {
-  private val eventStream = eventstore.fromAll(0)
+                                bufferSize: Int,
+                                fromVersion: Long) extends Runnable {
+  private val eventStream = eventstore.fromAll(fromVersion)
 
   private var initialReplayDone = false
 
