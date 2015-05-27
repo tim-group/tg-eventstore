@@ -29,6 +29,7 @@ object EventStoreBuild extends Build {
   val eventstore_mysql = Project(id = "eventstore-mysql", base = file("mysql"))
     .dependsOn(eventstore_api % "compile->compile; test->test")
     .settings(
+      parallelExecution in Test := false,
       compatibleScalaTestDependency,
       libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.20" % "test"
     )
