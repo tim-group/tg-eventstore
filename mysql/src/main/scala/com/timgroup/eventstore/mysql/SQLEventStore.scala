@@ -30,10 +30,6 @@ trait EventPersister {
   def saveEventsToDB(connection: Connection, newEvents: Seq[EventAtATime], expectedVersion: Option[Long] = None): Unit
 }
 
-trait EventFetcher {
-  def fetchEventsFromDB(connection: Connection, version: Long = 0, batchSize: Option[Int] = None): Seq[EventInStream]
-}
-
 case class EventAtATime(effectiveTimestamp: DateTime, eventData: EventData)
 
 object Utils {
@@ -57,7 +53,7 @@ object Utils {
 }
 
 class SQLEventStore(connectionProvider: ConnectionProvider,
-                    fetcher: EventFetcher,
+                    fetcher: SQLEventFetcher,
                     persister: EventPersister,
                     now: () => DateTime = () => DateTime.now(DateTimeZone.UTC),
                     batchSize: Option[Int] = None) extends EventStore {

@@ -7,7 +7,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.util.control.Exception.allCatch
 
-class SQLEventFetcher(tableName: String) extends EventFetcher {
+class SQLEventFetcher(tableName: String) {
   def fetchEventsFromDB(connection: Connection, version: Long = 0, batchSize: Option[Int] = None): Seq[EventInStream] = {
     val statement = connection.prepareStatement("select effective_timestamp, eventType, body, version from  %s where version > ? %s".format(tableName, batchSize.map("limit " + _).getOrElse("")))
     statement.setLong(1, version)
