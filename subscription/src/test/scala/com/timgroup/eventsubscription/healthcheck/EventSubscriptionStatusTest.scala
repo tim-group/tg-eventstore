@@ -9,29 +9,34 @@ import org.mockito.Mockito.{mock, when}
 import org.scalatest.{FunSpec, MustMatchers}
 
 class EventSubscriptionStatusTest extends FunSpec with MustMatchers {
-  it("initially reports ill") {
-    new EventSubscriptionStatus("").get() must be(ill)
-  }
-
   it("reports ill whilst initial replay is in progress") {
     val status = new EventSubscriptionStatus("")
 
-    status.eventSubscriptionStarted()
-
     status.get() must be(ill)
-    status.getReport() must be(new Report(Status.WARNING, "Event subscription started. Catching up."))
+    status.getReport() must be(new Report(Status.WARNING, "Stale, catching up."))
   }
 
   it("reports healthy once initial replay is completed") {
     val timestamp = new DateTime(2014, 2, 1, 0, 0, 0, UTC)
 
     val clock = mock(classOf[Clock])
+    when(clock.now()).thenReturn(timestamp)
+
     val status = new EventSubscriptionStatus("", clock)
 
-    when(clock.now()).thenReturn(timestamp)
-    status.eventSubscriptionStarted()
+    status.chaserReceived(1)
+    status.chaserReceived(2)
+    status.chaserReceived(3)
+    status.chaserUpToDate(3)
+
+    status.get() must be(ill)
+    status.getReport() must be(new Report(Status.WARNING, "Stale, catching up."))
+
     when(clock.now()).thenReturn(timestamp.plusSeconds(314))
-    status.initialReplayCompleted()
+    status.eventProcessed(1)
+    status.eventProcessed(2)
+    status.eventProcessed(3)
+
 
     status.get() must be(healthy)
     status.getReport() must be(new Report(Status.OK, "Caught up. Initial replay took 314s"))
@@ -40,21 +45,22 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers {
   it("reports warning if stale") {
     val status = new EventSubscriptionStatus("")
 
-    status.eventSubscriptionStarted()
-    status.initialReplayCompleted()
-    status.newEventsFound()
+    status.chaserUpToDate(5)
+    status.eventProcessed(5)
+    status.chaserReceived(6)
 
     status.get() must be(healthy)
-    status.getReport() must be(new Report(Status.WARNING, "Stale"))
+    status.getReport() must be(new Report(Status.WARNING, "Stale, catching up."))
   }
 
   it("reports OK once caught up again")  {
     val status = new EventSubscriptionStatus("")
 
-    status.eventSubscriptionStarted()
-    status.initialReplayCompleted()
-    status.newEventsFound()
-    status.caughtUp()
+    status.chaserReceived(1)
+    status.chaserReceived(2)
+    status.chaserUpToDate(2)
+    status.eventProcessed(1)
+    status.eventProcessed(2)
 
     status.get() must be(healthy)
     status.getReport().getStatus must be(Status.OK)
@@ -63,9 +69,9 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers {
   it("reports failure if subscription terminates") {
     val status = new EventSubscriptionStatus("")
 
-    status.eventSubscriptionStarted()
-    status.initialReplayCompleted()
-    status.eventHandlerFailure(new RuntimeException("Failure from handler"))
+    status.chaserReceived(1)
+    status.chaserUpToDate(1)
+    status.eventProcessingFailed(new RuntimeException("Failure from handler"))
 
     status.getReport() must be(new Report(Status.WARNING, "Event subscription terminated: Failure from handler"))
   }
