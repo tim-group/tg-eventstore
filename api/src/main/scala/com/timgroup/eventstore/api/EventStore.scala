@@ -6,6 +6,8 @@ trait EventStore {
   def save(newEvents: Seq[EventData], expectedVersion: Option[Long] = None): Unit
 
   def fromAll(version: Long = 0): EventStream
+
+  def fromAll(version: Long, eventHandler: EventInStream => Unit): Unit
 }
 
 trait EventStream extends Iterator[EventInStream]

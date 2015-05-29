@@ -54,3 +54,33 @@ class EventSubscriptionRunnable(eventstore: EventStore,
 }
 
 class EventHandlerFailed(e: Exception) extends RuntimeException(e)
+
+trait ChaserListener {
+  def transientFailure(e: Exception): Unit
+
+  def eventReceived(version: Long): Unit
+
+  def chaserCaughtUp(version: Long): Unit
+}
+
+class EventStoreChaser(eventStore: EventStore,
+                       fromVersion: Long,
+                       eventHandler: EventInStream => Unit,
+                       listener: ChaserListener) extends Runnable {
+  var lastVersion = fromVersion
+
+  override def run(): Unit = {
+    try {
+      eventStore.fromAll(lastVersion, nextEvent => {
+        listener.eventReceived(nextEvent.version)
+        lastVersion = nextEvent.version
+        eventHandler(nextEvent)
+      })
+      listener.chaserCaughtUp(lastVersion)
+    } catch {
+      case e: Exception => {
+        listener.transientFailure(e)
+      }
+    }
+  }
+}

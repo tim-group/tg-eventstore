@@ -29,6 +29,11 @@ class InMemoryEventStore(now: () => DateTime = () => DateTime.now(DateTimeZone.U
     override def hasNext: Boolean = events.size > currentVersion
   }
 
+
+  override def fromAll(version: Long, eventHandler: (EventInStream) => Unit): Unit = {
+    fromAll(version).foreach(eventHandler)
+  }
+
   def clear(): Unit = {
     events = Vector()
   }

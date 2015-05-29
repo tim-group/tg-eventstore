@@ -15,6 +15,7 @@ object AutoIncrementBasedEventStore {
       connectionProvider,
       new SQLEventFetcher(tableName),
       new AutoIncrementBasedEventPersister(tableName),
+      tableName,
       now,
       batchSize)
   }

@@ -1,6 +1,6 @@
 package com.timgroup.eventstore.mysql
 
-import java.sql.Connection
+import java.sql.{ResultSet, Statement, Connection}
 
 import com.timgroup.eventstore.api._
 import org.joda.time.{DateTime, DateTimeZone}
@@ -20,6 +20,7 @@ object SQLEventStore {
       connectionProvider,
       new SQLEventFetcher(tableName),
       new SQLEventPersister(tableName),
+      tableName,
       now,
       batchSize
     )
@@ -55,6 +56,7 @@ object Utils {
 class SQLEventStore(connectionProvider: ConnectionProvider,
                     fetcher: SQLEventFetcher,
                     persister: EventPersister,
+                    tableName: String,
                     now: () => DateTime = () => DateTime.now(DateTimeZone.UTC),
                     batchSize: Option[Int] = None) extends EventStore {
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {
@@ -90,6 +92,36 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
       if (!events.hasNext) {
         events = fetchPage(currentVersion, batchSize).iterator
       }
+    }
+  }
+
+  override def fromAll(version: Long, eventHandler: EventInStream => Unit): Unit = {
+    var connection: Connection = null
+    var statement: Statement = null
+    var results: ResultSet = null
+
+    try {
+      connection = connectionProvider.getConnection()
+      connection.setAutoCommit(false)
+      statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
+      statement.setFetchSize(Integer.MIN_VALUE)
+      results = statement.executeQuery("select effective_timestamp, eventType, body, version from  %s where version > %s".format(tableName, version))
+
+      while (results.next()) {
+        val nextEvent = EventInStream(
+          new DateTime(results.getTimestamp("effective_timestamp"), DateTimeZone.UTC),
+          EventData(
+            results.getString("eventType"),
+            results.getBytes("body")),
+          results.getLong("version")
+        )
+        eventHandler(nextEvent)
+      }
+
+    } finally {
+      allCatch opt { results.close() }
+      allCatch opt { statement.close() }
+      allCatch opt { connection.close() }
     }
   }
 }
