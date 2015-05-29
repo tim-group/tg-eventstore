@@ -16,10 +16,9 @@ class BackfillStitchingEventStore(backfill: EventStore, live: EventStore, liveCu
   }
 
   override def fromAll(version: Long, eventHandler: (EventInStream) => Unit): Unit = {
-    if (version > liveCuttoffVersion) {
-      live.fromAll(version, eventHandler)
-    } else {
+    if (version <= liveCuttoffVersion) {
       backfill.fromAll(version, eventHandler)
     }
+    live.fromAll(liveCuttoffVersion.max(version), eventHandler)
   }
 }
