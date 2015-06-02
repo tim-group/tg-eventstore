@@ -32,14 +32,39 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers {
     status.get() must be(ill)
     status.getReport() must be(new Report(Status.WARNING, "Stale, catching up."))
 
-    when(clock.now()).thenReturn(timestamp.plusSeconds(314))
+    when(clock.now()).thenReturn(timestamp.plusSeconds(100))
     status.eventProcessed(1)
     status.eventProcessed(2)
     status.eventProcessed(3)
 
 
     status.get() must be(healthy)
-    status.getReport() must be(new Report(Status.OK, "Caught up. Initial replay took 314s"))
+    status.getReport() must be(new Report(Status.OK, "Caught up. Initial replay took 100s"))
+  }
+
+  it("reports warning if initial replay took longer than 240s") {
+    val timestamp = new DateTime(2014, 2, 1, 0, 0, 0, UTC)
+
+    val clock = mock(classOf[Clock])
+    when(clock.now()).thenReturn(timestamp)
+
+    val status = new EventSubscriptionStatus("", clock)
+
+    status.chaserReceived(1)
+    status.chaserReceived(2)
+    status.chaserReceived(3)
+    status.chaserUpToDate(3)
+
+    status.get() must be(ill)
+    status.getReport() must be(new Report(Status.WARNING, "Stale, catching up."))
+
+    when(clock.now()).thenReturn(timestamp.plusSeconds(241))
+    status.eventProcessed(1)
+    status.eventProcessed(2)
+    status.eventProcessed(3)
+
+    status.get() must be(healthy)
+    status.getReport() must be(new Report(Status.WARNING, "Caught up. Initial replay took 241s. This is longer than expected limit of 240s."))
   }
 
   it("reports warning if stale") {

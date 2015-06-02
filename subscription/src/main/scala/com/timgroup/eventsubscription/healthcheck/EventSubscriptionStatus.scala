@@ -11,7 +11,6 @@ import org.joda.time.Seconds.secondsBetween
 import org.slf4j.LoggerFactory
 
 class EventSubscriptionStatus(name: String, clock: Clock = SystemClock) extends Component("event-subscription-status-" + name, "Event subscription status (" + name + ")") with Health with ChaserListener with EventProcessorListener {
-  private def caughtUpReport = new Report(OK, "Caught up. Initial replay took " + secondsBetween(startTime, finishTime).getSeconds + "s")
   private val staleReport = new Report(WARNING, "Stale, catching up.")
 
   private val startTime: DateTime = clock.now()
@@ -54,7 +53,11 @@ class EventSubscriptionStatus(name: String, clock: Clock = SystemClock) extends 
           finishTime = clock.now()
         }
         currentHealth = healthy
-        currentState = caughtUpReport
+        if (secondsBetween(startTime, finishTime).getSeconds < 240) {
+          currentState = new Report(OK, "Caught up. Initial replay took " + secondsBetween(startTime, finishTime).getSeconds + "s")
+        } else {
+          currentState = new Report(WARNING, "Caught up. Initial replay took " + secondsBetween(startTime, finishTime).getSeconds + "s. This is longer than expected limit of 240s.")
+        }
       }
     }
   }
