@@ -79,6 +79,8 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers with OneInst
     adapter.chaserUpToDate(1)
     adapter.eventProcessingFailed(1, new RuntimeException("Failure from handler"))
 
-    status.getReport() must be(new Report(Status.WARNING, "Event subscription terminated. Failed to process version 1: Failure from handler"))
+    status.getReport().getStatus must be(Status.WARNING)
+    status.getReport().getValue.asInstanceOf[String] must include("Event subscription terminated. Failed to process version 1: Failure from handler")
+    status.getReport.getValue.asInstanceOf[String] must include("EventSubscriptionStatusTest")
   }
 }

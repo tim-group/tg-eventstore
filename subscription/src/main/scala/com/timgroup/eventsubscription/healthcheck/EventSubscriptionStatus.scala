@@ -35,6 +35,6 @@ class EventSubscriptionStatus(name: String, clock: Clock) extends Component("eve
   }
 
   override def terminated(version: Long, e: Exception): Unit = {
-    terminatedReport = Some(new Report(Status.WARNING, "Event subscription terminated. Failed to process version " + version + ": " + e.getMessage))
+    terminatedReport = Some(new Report(Status.WARNING, "Event subscription terminated. Failed to process version " + version + ": " + e.getMessage + " at " + e.getStackTrace.apply(0)))
   }
 }

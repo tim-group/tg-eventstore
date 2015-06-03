@@ -88,7 +88,8 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     val component = setup.components.find(_.getId == "event-subscription-status-test").get
 
     eventually {
-      component.getReport must be(new Report(WARNING, "Event subscription terminated. Failed to process version 1: failure"))
+      component.getReport.getStatus must be(WARNING)
+      component.getReport.getValue.asInstanceOf[String] must include("Event subscription terminated. Failed to process version 1: failure")
     }
   }
 
@@ -113,13 +114,13 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     verify(failingHandler).apply(EventInStream(now, evt1, 1))
     verifyNoMoreInteractions(failingHandler)
-    component.getReport must be(new Report(WARNING, "Event subscription terminated. Failed to process version 1: failure"))
+    component.getReport.getValue.asInstanceOf[String] must include("Event subscription terminated. Failed to process version 1: failure")
 
     store.save(List(anEvent()))
 
     Thread.sleep(50)
 
-    component.getReport must be(new Report(WARNING, "Event subscription terminated. Failed to process version 1: failure"))
+    component.getReport.getValue.asInstanceOf[String] must include("Event subscription terminated. Failed to process version 1: failure")
   }
 
   class HangingEventStore extends EventStore {
