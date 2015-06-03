@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{ArrayBlockingQueue, Executors, ThreadFactory, TimeUnit}
 
 import com.timgroup.eventstore.api.{EventInStream, EventStore}
-import com.timgroup.eventsubscription.healthcheck.{ChaserHealth, EventStreamVersionComponent, EventSubscriptionStatus}
+import com.timgroup.eventsubscription.healthcheck.{SubscriptionListenerAdapter, ChaserHealth, EventStreamVersionComponent, EventSubscriptionStatus}
 import com.timgroup.eventsubscription.util.{Clock, SystemClock}
 import com.timgroup.tucker.info.{Component, Health}
 
@@ -80,12 +80,21 @@ object EventSubscriptionManager {
             fromVersion: Long = 0) = {
 
     val chaserHealth = new ChaserHealth(name, clock)
-    val subscriptionStatus = new EventSubscriptionStatus(name)
+    val subscriptionStatus = new EventSubscriptionStatus(name, clock)
     val versionComponent = new EventStreamVersionComponent(name)
 
+    val subscriptionListenerAdapter = new SubscriptionListenerAdapter(subscriptionStatus)
+
     val manager =
-      new EventSubscriptionManager(name, eventStore, handlers ++ List(versionComponent), new BroadcastingChaserListener(chaserHealth, subscriptionStatus),
-        subscriptionStatus, bufferSize, frequency, fromVersion)
+      new EventSubscriptionManager(
+        name,
+        eventStore,
+        handlers ++ List(versionComponent),
+        new BroadcastingChaserListener(chaserHealth, subscriptionListenerAdapter),
+        subscriptionListenerAdapter,
+        bufferSize,
+        frequency,
+        fromVersion)
 
     SubscriptionSetup(subscriptionStatus, List(subscriptionStatus, chaserHealth, versionComponent), manager)
   }

@@ -11,8 +11,8 @@ import com.timgroup.tucker.info.Report
 import com.timgroup.tucker.info.Status.{OK, WARNING}
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone._
+import org.mockito.Matchers
 import org.mockito.Mockito._
-import org.mockito.{Matchers, Mockito}
 import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.{BeforeAndAfterEach, FunSpec, MustMatchers}
 
@@ -21,21 +21,33 @@ import scala.util.Random
 class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
   var setup: SubscriptionSetup = _
 
-  it("reports ill until caught up") {
+  it("reports ill and warning on status page during initial replay") {
+    val clock = mock(classOf[Clock])
+    val startTimestamp = new DateTime()
+    when(clock.now()).thenReturn(startTimestamp)
     val store = new InMemoryEventStore()
     val eventProcessing = new BlockingEventHandler
 
     store.save(List(anEvent(), anEvent(), anEvent()))
 
-    setup = EventSubscriptionManager("test", store, List(eventProcessing), frequency = 1)
+    setup = EventSubscriptionManager("test", store, List(eventProcessing), frequency = 1, clock = clock)
     setup.subscriptionManager.start()
+    val component = setup.components.find(_.getId == "event-subscription-status-test").get
 
     setup.health.get() must be(ill)
+    component.getReport must be(new Report(WARNING, "Stale, catching up. No events processed yet."))
 
-    eventProcessing.allowProcessing(3)
+    eventProcessing.allowProcessing(1)
+    eventually {
+      component.getReport must be(new Report(WARNING, "Stale, catching up. Currently at version 1."))
+    }
+
+    when(clock.now()).thenReturn(startTimestamp.plusSeconds(123))
+    eventProcessing.allowProcessing(2)
 
     eventually {
       setup.health.get() must be(healthy)
+      component.getReport must be(new Report(OK, "Caught up at version 3. Initial replay took 123s."))
     }
   }
 
@@ -73,24 +85,6 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     eventStore.hangs()
     when(clock.now()).thenReturn(initialTime.plusSeconds(6))
     eventually { component.getReport.getStatus must be(WARNING) }
-  }
-
-  class HangingEventStore extends EventStore {
-    private val underlying = new InMemoryEventStore()
-    private var hanging = false
-
-    def hangs() = hanging = true
-
-    override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = underlying.save(newEvents, expectedVersion)
-
-    override def fromAll(version: Long): EventStream = underlying.fromAll(version)
-
-    override def fromAll(version: Long, eventHandler: (EventInStream) => Unit): Unit = {
-      if (hanging) {
-        Thread.sleep(10000)
-      }
-      underlying.fromAll(version, eventHandler)
-    }
   }
 
   it("reports failure when event subscription terminates due to an eventhandler failure") {
@@ -141,6 +135,23 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     component.getReport must be(new Report(WARNING, "Event subscription terminated: failure"))
   }
 
+  class HangingEventStore extends EventStore {
+    private val underlying = new InMemoryEventStore()
+    private var hanging = false
+
+    def hangs() = hanging = true
+
+    override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = underlying.save(newEvents, expectedVersion)
+
+    override def fromAll(version: Long): EventStream = underlying.fromAll(version)
+
+    override def fromAll(version: Long, eventHandler: (EventInStream) => Unit): Unit = {
+      if (hanging) {
+        Thread.sleep(10000)
+      }
+      underlying.fromAll(version, eventHandler)
+    }
+  }
 
   override protected def afterEach(): Unit = {
     setup.subscriptionManager.stop()
