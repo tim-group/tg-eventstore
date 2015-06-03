@@ -97,7 +97,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     val store = new InMemoryEventStore()
     val failingHandler = mock(classOf[EventHandler])
 
-    Mockito.doThrow(new RuntimeException("failure")).when(failingHandler).apply(Matchers.any())
+    doThrow(new RuntimeException("failure")).when(failingHandler).apply(Matchers.any())
 
     store.save(List(anEvent()))
 
@@ -109,6 +109,30 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     eventually {
       component.getReport must be(new Report(WARNING, "Event subscription terminated: failure"))
     }
+  }
+
+  it("does not continue processing events if event processing failed on a previous event") {
+    val now = DateTime.now()
+    val store = new InMemoryEventStore(() => now)
+    val failingHandler = mock(classOf[EventHandler])
+
+    val evt1 = anEvent()
+    val evt2 = anEvent()
+
+    doThrow(new RuntimeException("failure")).when(failingHandler).apply(EventInStream(now, evt1, 1))
+
+    store.save(List(evt1, evt2))
+
+    setup = EventSubscriptionManager("test", store, List(failingHandler))
+    setup.subscriptionManager.start()
+
+    val component = setup.components.find(_.getId == "event-subscription-status-test").get
+
+    Thread.sleep(50)
+
+    verify(failingHandler).apply(EventInStream(now, evt1, 1))
+    verifyNoMoreInteractions(failingHandler)
+    component.getReport must be(new Report(WARNING, "Event subscription terminated: failure"))
   }
 
 

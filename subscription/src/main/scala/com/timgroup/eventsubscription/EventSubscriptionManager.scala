@@ -24,7 +24,7 @@ class EventProcessor(eventHandler: EventHandler,
         eventHandler.apply(event)
         listener.eventProcessed(event.version)
       } catch {
-        case e: Exception => listener.eventProcessingFailed(e)
+        case e: Exception => listener.eventProcessingFailed(e); throw e
       }
     }
   }
