@@ -51,19 +51,6 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     }
   }
 
-  it("reports current version") {
-    val store = new InMemoryEventStore()
-    store.save(List(anEvent(), anEvent(), anEvent()))
-
-    setup = EventSubscriptionManager("test", store, Nil)
-    setup.subscriptionManager.start()
-    val component = setup.components.find(_.getId == "event-stream-version-test").get
-
-    eventually {
-      component.getReport.getValue must be(3)
-    }
-  }
-
   it("reports warning if event store was not polled recently") {
     val initialTime = new DateTime(2015, 2, 20, 15, 21, 50, UTC)
     val clock = mock(classOf[Clock])
