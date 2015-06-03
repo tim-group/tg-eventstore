@@ -15,21 +15,35 @@ class EventSubscriptionStatus(name: String, clock: Clock = SystemClock) extends 
 
   private val startTime: DateTime = clock.now()
 
+  @volatile private var initialReplayDuration: Option[Int] = None
   @volatile private var liveVersion: Option[Long] = None
   @volatile private var processorVersion: Option[Long] = None
+  @volatile private var subscriptionTerminated: Option[Exception] = None
 
-  @volatile private var currentHealth = ill
-  @volatile private var currentState = staleReport
-  @volatile private var finishTime: DateTime = null
+  override def getReport: Report = {
+    val upToDateAtVersion = for {
+      endOfStream <- liveVersion
+      lastProcessed <- processorVersion if endOfStream <= lastProcessed
+    } yield {
+      lastProcessed
+    }
 
+    if (subscriptionTerminated.isDefined) {
+      new Report(Status.WARNING, "Event subscription terminated: " + subscriptionTerminated.get.getMessage)
+    } else if (upToDateAtVersion.isEmpty) {
+      staleReport
+    } else {
+      if (initialReplayDuration.get < 240) {
+        new Report(OK, "Caught up. Initial replay took " + initialReplayDuration.get + "s")
+      } else {
+        new Report(WARNING, "Caught up. Initial replay took " + initialReplayDuration.get + "s. This is longer than expected limit of 240s.")
+      }
+    }
+  }
 
-
-  override def getReport: Report = currentState
-
-  override def get(): State = currentHealth
+  override def get(): State = if (initialReplayDuration.isDefined) healthy else ill
 
   override def chaserReceived(version: Long): Unit = {
-    currentState = staleReport
     liveVersion = None
   }
 
@@ -49,14 +63,8 @@ class EventSubscriptionStatus(name: String, clock: Clock = SystemClock) extends 
       lastProcessed <- processorVersion
     } yield {
       if (endOfStream <= lastProcessed) {
-        if (finishTime == null) {
-          finishTime = clock.now()
-        }
-        currentHealth = healthy
-        if (secondsBetween(startTime, finishTime).getSeconds < 240) {
-          currentState = new Report(OK, "Caught up. Initial replay took " + secondsBetween(startTime, finishTime).getSeconds + "s")
-        } else {
-          currentState = new Report(WARNING, "Caught up. Initial replay took " + secondsBetween(startTime, finishTime).getSeconds + "s. This is longer than expected limit of 240s.")
+        if (initialReplayDuration.isEmpty) {
+          initialReplayDuration = Some(secondsBetween(startTime, clock.now()).getSeconds)
         }
       }
     }
@@ -64,7 +72,7 @@ class EventSubscriptionStatus(name: String, clock: Clock = SystemClock) extends 
 
   override def eventProcessingFailed(e: Exception): Unit = {
     LoggerFactory.getLogger(getClass).warn("Event subscription terminated", e)
-    currentState = new Report(Status.WARNING, "Event subscription terminated: " + e.getMessage)
+    subscriptionTerminated = Some(e)
   }
 
   override def transientFailure(e: Exception): Unit = {}

@@ -123,7 +123,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(evt1, evt2))
 
-    setup = EventSubscriptionManager("test", store, List(failingHandler))
+    setup = EventSubscriptionManager("test", store, List(failingHandler), frequency = 5)
     setup.subscriptionManager.start()
 
     val component = setup.components.find(_.getId == "event-subscription-status-test").get
@@ -132,6 +132,12 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     verify(failingHandler).apply(EventInStream(now, evt1, 1))
     verifyNoMoreInteractions(failingHandler)
+    component.getReport must be(new Report(WARNING, "Event subscription terminated: failure"))
+
+    store.save(List(anEvent()))
+
+    Thread.sleep(50)
+
     component.getReport must be(new Report(WARNING, "Event subscription terminated: failure"))
   }
 
