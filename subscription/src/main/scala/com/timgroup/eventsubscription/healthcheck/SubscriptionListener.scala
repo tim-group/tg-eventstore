@@ -8,7 +8,7 @@ trait SubscriptionListener {
 
   def staleAtVersion(version: Option[Long]): Unit
 
-  def terminated(e: Exception): Unit
+  def terminated(version: Long, e: Exception): Unit
 }
 
 class SubscriptionListenerAdapter(listeners: SubscriptionListener*) extends ChaserListener with EventProcessorListener {
@@ -27,8 +27,8 @@ class SubscriptionListenerAdapter(listeners: SubscriptionListener*) extends Chas
     checkStaleness()
   }
 
-  override def eventProcessingFailed(e: Exception): Unit = {
-    listeners.foreach(_.terminated(e))
+  override def eventProcessingFailed(version: Long, e: Exception): Unit = {
+    listeners.foreach(_.terminated(version, e))
   }
 
   override def eventProcessed(version: Long): Unit = {

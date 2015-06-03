@@ -9,7 +9,7 @@ import com.timgroup.eventsubscription.util.{Clock, SystemClock}
 import com.timgroup.tucker.info.{Component, Health}
 
 trait EventProcessorListener {
-  def eventProcessingFailed(e: Exception): Unit
+  def eventProcessingFailed(version: Long, e: Exception): Unit
 
   def eventProcessed(version: Long)
 }
@@ -19,12 +19,13 @@ class EventProcessor(eventHandler: EventHandler,
                      listener: EventProcessorListener) extends Runnable {
   override def run(): Unit = {
     while (true) {
+      val event = eventQueue.take()
+
       try {
-        val event = eventQueue.take()
         eventHandler.apply(event)
         listener.eventProcessed(event.version)
       } catch {
-        case e: Exception => listener.eventProcessingFailed(e); throw e
+        case e: Exception => listener.eventProcessingFailed(event.version, e); throw e
       }
     }
   }

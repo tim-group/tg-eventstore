@@ -77,8 +77,8 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers with OneInst
   it("reports failure if subscription terminates") {
     adapter.chaserReceived(1)
     adapter.chaserUpToDate(1)
-    adapter.eventProcessingFailed(new RuntimeException("Failure from handler"))
+    adapter.eventProcessingFailed(1, new RuntimeException("Failure from handler"))
 
-    status.getReport() must be(new Report(Status.WARNING, "Event subscription terminated: Failure from handler"))
+    status.getReport() must be(new Report(Status.WARNING, "Event subscription terminated. Failed to process version 1: Failure from handler"))
   }
 }
