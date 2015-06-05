@@ -7,8 +7,8 @@ import com.timgroup.eventstore.memory.InMemoryEventStore
 import com.timgroup.eventsubscription.EventSubscriptionManager.SubscriptionSetup
 import com.timgroup.eventsubscription.util.Clock
 import com.timgroup.tucker.info.Health.State.{healthy, ill}
-import com.timgroup.tucker.info.Report
-import com.timgroup.tucker.info.Status.{OK, WARNING}
+import com.timgroup.tucker.info.{Status, Report}
+import com.timgroup.tucker.info.Status.{CRITICAL, OK, WARNING}
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone._
 import org.mockito.Matchers
@@ -90,7 +90,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     val component = setup.components.find(_.getId == "event-subscription-status-test").get
 
     eventually {
-      component.getReport.getStatus must be(WARNING)
+      component.getReport.getStatus must be(CRITICAL)
       component.getReport.getValue.asInstanceOf[String] must include("Event subscription terminated. Failed to process version 1: failure")
     }
   }
