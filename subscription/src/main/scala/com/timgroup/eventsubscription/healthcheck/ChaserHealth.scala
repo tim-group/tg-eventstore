@@ -2,6 +2,7 @@ package com.timgroup.eventsubscription.healthcheck
 
 import com.timgroup.eventsubscription.ChaserListener
 import com.timgroup.eventsubscription.util.Clock
+import com.timgroup.tucker.info.Status.{OK, WARNING, CRITICAL}
 import com.timgroup.tucker.info.{Component, Report, Status}
 import org.joda.time.{DateTime, Seconds}
 import org.slf4j.LoggerFactory
@@ -12,13 +13,15 @@ class ChaserHealth(name: String, clock: Clock) extends Component("event-store-ch
 
   override def getReport = {
     lastPollTimestamp match {
-      case None => new Report(Status.WARNING, "Awaiting initial catchup. Current version: " + currentVersion)
+      case None => new Report(WARNING, "Awaiting initial catchup. Current version: " + currentVersion)
       case Some(timestamp) => {
         val seconds = Seconds.secondsBetween(timestamp, clock.now()).getSeconds
-        if (seconds > 5) {
-          new Report(Status.WARNING, "potentially stale. Last up-to-date at at %s. (%s seconds ago).".format(timestamp, seconds))
+        if (seconds > 30) {
+          new Report(CRITICAL, "potentially stale. Last up-to-date at at %s. (%s seconds ago).".format(timestamp, seconds))
+        } else if (seconds > 5) {
+          new Report(WARNING, "potentially stale. Last up-to-date at at %s. (%s seconds ago).".format(timestamp, seconds))
         } else {
-          new Report(Status.OK, "up-to-date at at %s. (%s seconds ago). Current version: %s".format(timestamp, seconds, currentVersion))
+          new Report(OK, "up-to-date at at %s. (%s seconds ago). Current version: %s".format(timestamp, seconds, currentVersion))
         }
       }
     }

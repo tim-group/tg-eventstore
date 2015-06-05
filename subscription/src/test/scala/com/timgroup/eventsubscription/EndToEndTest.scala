@@ -34,8 +34,10 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     setup.subscriptionManager.start()
     val component = setup.components.find(_.getId == "event-subscription-status-test").get
 
-    setup.health.get() must be(ill)
-    component.getReport must be(new Report(WARNING, "Stale, catching up. No events processed yet."))
+    eventually {
+      setup.health.get() must be(ill)
+      component.getReport must be(new Report(WARNING, "Stale, catching up. No events processed yet."))
+    }
 
     eventProcessing.allowProcessing(1)
     eventually {
