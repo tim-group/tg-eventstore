@@ -29,7 +29,7 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers with OneInst
     adapter.chaserUpToDate(3)
 
     status.get() must be(ill)
-    status.getReport() must be(new Report(WARNING, "Stale, catching up. No events processed yet."))
+    status.getReport() must be(new Report(WARNING, "Stale, catching up. No events processed yet. (Stale for 0s)"))
 
     when(clock.now()).thenReturn(timestamp.plusSeconds(100))
     adapter.eventProcessed(1)
@@ -59,9 +59,18 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers with OneInst
     adapter.chaserUpToDate(5)
     adapter.eventProcessed(5)
     adapter.chaserReceived(6)
+    when(clock.now()).thenReturn(timestamp.plusSeconds(7))
 
-    status.get() must be(healthy)
-    status.getReport() must be(new Report(WARNING, "Stale, catching up. Currently at version 5."))
+    status.getReport() must be(new Report(WARNING, "Stale, catching up. Currently at version 5. (Stale for 7s)"))
+  }
+
+  it("reports critical if stale for over 30s") {
+    adapter.chaserUpToDate(5)
+    adapter.eventProcessed(5)
+    adapter.chaserReceived(6)
+
+    when(clock.now()).thenReturn(timestamp.plusSeconds(31))
+    status.getReport() must be(new Report(CRITICAL, "Stale, catching up. Currently at version 5. (Stale for 31s)"))
   }
 
   it("reports OK once caught up again")  {
@@ -71,7 +80,6 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers with OneInst
     adapter.eventProcessed(1)
     adapter.eventProcessed(2)
 
-    status.get() must be(healthy)
     status.getReport().getStatus must be(OK)
   }
 

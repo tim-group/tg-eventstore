@@ -36,12 +36,12 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     eventually {
       setup.health.get() must be(ill)
-      component.getReport must be(new Report(WARNING, "Stale, catching up. No events processed yet."))
+      component.getReport must be(new Report(WARNING, "Stale, catching up. No events processed yet. (Stale for 0s)"))
     }
 
     eventProcessing.allowProcessing(1)
     eventually {
-      component.getReport must be(new Report(WARNING, "Stale, catching up. Currently at version 1."))
+      component.getReport must be(new Report(WARNING, "Stale, catching up. Currently at version 1. (Stale for 0s)"))
     }
 
     when(clock.now()).thenReturn(startTimestamp.plusSeconds(123))
