@@ -18,7 +18,7 @@ import org.scalatest.{BeforeAndAfterEach, FunSpec, MustMatchers}
 import scala.util.Random
 
 class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
-  var setup: EventSubscriptionManager = _
+  var setup: EventSubscription = _
 
   it("reports ill and warning on status page during initial replay") {
     val clock = mock(classOf[Clock])
@@ -29,7 +29,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(anEvent(), anEvent(), anEvent()))
 
-    setup = new EventSubscriptionManager("test", store, List(eventProcessing), runFrequency = 1, clock = clock)
+    setup = new EventSubscription("test", store, List(eventProcessing), runFrequency = 1, clock = clock)
     setup.start()
     val component = setup.statusComponents.find(_.getId == "event-subscription-status-test").get
 
@@ -61,7 +61,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     eventStore.save(List(anEvent()))
 
-    setup = new EventSubscriptionManager("test", eventStore, Nil, clock)
+    setup = new EventSubscription("test", eventStore, Nil, clock)
     setup.start()
 
     eventually { setup.health.get() must be(healthy) }
@@ -83,7 +83,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(anEvent()))
 
-    setup = new EventSubscriptionManager("test", store, List(failingHandler))
+    setup = new EventSubscription("test", store, List(failingHandler))
     setup.start()
 
     val component = setup.statusComponents.find(_.getId == "event-subscription-status-test").get
@@ -106,7 +106,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(evt1, evt2))
 
-    setup = new EventSubscriptionManager("test", store, List(failingHandler), runFrequency = 5)
+    setup = new EventSubscription("test", store, List(failingHandler), runFrequency = 5)
     setup.start()
 
     val component = setup.statusComponents.find(_.getId == "event-subscription-status-test").get

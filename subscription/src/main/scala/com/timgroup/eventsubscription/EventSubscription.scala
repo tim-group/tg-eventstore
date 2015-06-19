@@ -31,7 +31,7 @@ class EventProcessor(eventHandler: EventHandler,
   }
 }
 
-class EventSubscriptionManager(
+class EventSubscription(
             name: String,
             eventstore: EventStore,
             handlers: List[EventHandler],
