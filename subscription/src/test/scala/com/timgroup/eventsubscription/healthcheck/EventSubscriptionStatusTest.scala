@@ -83,13 +83,23 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers with OneInst
     status.getReport().getStatus must be(OK)
   }
 
-  it("reports failure if subscription terminates") {
+  it("reports failure if subscription terminates (due to event handler failure)") {
     adapter.chaserReceived(1)
     adapter.chaserUpToDate(1)
     adapter.eventProcessingFailed(1, new RuntimeException("Failure from handler"))
 
     status.getReport().getStatus must be(CRITICAL)
     status.getReport().getValue.asInstanceOf[String] must include("Event subscription terminated. Failed to process version 1: Failure from handler")
+    status.getReport.getValue.asInstanceOf[String] must include("EventSubscriptionStatusTest")
+  }
+
+  it("reports failure if subscription terminates (due to deserialization failure)") {
+    adapter.chaserReceived(1)
+    adapter.chaserUpToDate(1)
+    adapter.eventDeserializationFailed(1, new RuntimeException("Failure from deserialization"))
+
+    status.getReport().getStatus must be(CRITICAL)
+    status.getReport().getValue.asInstanceOf[String] must include("Event subscription terminated. Failed to process version 1: Failure from deserialization")
     status.getReport.getValue.asInstanceOf[String] must include("EventSubscriptionStatusTest")
   }
 }

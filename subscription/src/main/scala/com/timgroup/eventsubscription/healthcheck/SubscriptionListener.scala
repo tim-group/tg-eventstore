@@ -36,6 +36,12 @@ class SubscriptionListenerAdapter(listeners: SubscriptionListener*) extends Chas
     checkStaleness()
   }
 
+  override def eventDeserializationFailed(version: Long, e: Exception): Unit = {
+    listeners.foreach(_.terminated(version, e))
+  }
+
+  override def eventDeserialized(version: Long): Unit = {}
+
   private def checkStaleness(): Unit = {
     (liveVersion, processorVersion) match {
       case (Some(live), Some(processed)) if live <= processed => listeners.foreach(_.caughtUpAt(processed))
