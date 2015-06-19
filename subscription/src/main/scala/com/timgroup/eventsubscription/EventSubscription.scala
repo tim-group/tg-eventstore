@@ -1,10 +1,12 @@
 package com.timgroup.eventsubscription
 
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.{ArrayBlockingQueue, Executors, ThreadFactory, TimeUnit}
+import java.util.concurrent.{Executors, ThreadFactory, TimeUnit}
 
+import com.lmax.disruptor.dsl.Disruptor
+import com.lmax.disruptor.{EventFactory, EventTranslator}
 import com.timgroup.eventstore.api.{EventInStream, EventStore}
-import com.timgroup.eventsubscription.healthcheck.{SubscriptionListenerAdapter, ChaserHealth, EventSubscriptionStatus}
+import com.timgroup.eventsubscription.healthcheck.{ChaserHealth, EventSubscriptionStatus, SubscriptionListenerAdapter}
 import com.timgroup.eventsubscription.util.{Clock, SystemClock}
 import com.timgroup.tucker.info.{Component, Health}
 
@@ -12,24 +14,6 @@ trait EventProcessorListener {
   def eventProcessingFailed(version: Long, e: Exception): Unit
 
   def eventProcessed(version: Long)
-}
-
-class EventProcessor[T](deserializer: EventInStream => T,
-                        eventHandler: EventHandler[T],
-                        eventQueue: ArrayBlockingQueue[EventInStream],
-                        listener: EventProcessorListener) extends Runnable {
-  override def run(): Unit = {
-    while (true) {
-      val event = eventQueue.take()
-
-      try {
-        eventHandler.apply(event, deserializer(event))
-        listener.eventProcessed(event.version)
-      } catch {
-        case e: Exception => listener.eventProcessingFailed(event.version, e); throw e
-      }
-    }
-  }
 }
 
 class EventSubscription[T](
@@ -60,21 +44,45 @@ class EventSubscription[T](
     }
   })
 
+  private val eventHandler = new BroadcastingEventHandler[T](handlers)
+
+  private val eventHandlerExecutor = Executors.newCachedThreadPool()
+  private val disruptor = new Disruptor[EventContainer](EventContainer, bufferSize, eventHandlerExecutor)
+
+  disruptor.handleEventsWith(new com.lmax.disruptor.EventHandler[EventContainer] {
+    override def onEvent(eventContainer: EventContainer, sequence: Long, endOfBatch: Boolean): Unit = {
+      try {
+        eventHandler.apply(eventContainer.event, deserializer(eventContainer.event))
+        processorListener.eventProcessed(eventContainer.event.version)
+      } catch {
+        case e: Exception => processorListener.eventProcessingFailed(eventContainer.event.version, e); throw e
+      }
+    }
+  })
+
   def start() {
-    val eventHandler = new BroadcastingEventHandler[T](handlers)
+    val chaser = new EventStoreChaser(eventstore, fromVersion, evt => disruptor.publishEvent(new SetEventInStream(evt)), chaserListener)
 
-    val eventQueue = new ArrayBlockingQueue[EventInStream](bufferSize)
-
-    val chaser = new EventStoreChaser(eventstore, fromVersion, eventQueue.put, chaserListener)
-
-    val eventProcessor = new EventProcessor(deserializer, eventHandler, eventQueue, processorListener)
+    disruptor.start()
 
     executor.scheduleWithFixedDelay(chaser, 0, runFrequency, TimeUnit.MILLISECONDS)
-    executor.submit(eventProcessor)
   }
 
   def stop() {
     executor.shutdown()
     executor.awaitTermination(1, TimeUnit.SECONDS)
+    disruptor.shutdown()
+    eventHandlerExecutor.shutdown()
+    eventHandlerExecutor.awaitTermination(1, TimeUnit.SECONDS)
   }
+}
+
+class EventContainer(var event: EventInStream)
+
+object EventContainer extends EventFactory[EventContainer] {
+  override def newInstance(): EventContainer = new EventContainer(null)
+}
+
+class SetEventInStream(evt: EventInStream) extends EventTranslator[EventContainer] {
+  override def translateTo(eventContainer: EventContainer, sequence: Long): Unit = eventContainer.event = evt
 }

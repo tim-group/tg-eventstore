@@ -45,6 +45,7 @@ object EventStoreBuild extends Build {
     .dependsOn(eventstore_api, eventstore_memory % "compile->test")
     .settings(libraryDependencies ++= Seq(
     "com.timgroup" % "Tucker" % "1.0.363",
+    "com.lmax" % "disruptor" % "3.3.2",
     "org.mockito" % "mockito-core" % "1.9.5" % "test"
   ))
 }
