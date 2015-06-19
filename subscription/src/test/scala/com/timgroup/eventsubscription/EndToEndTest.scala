@@ -8,8 +8,8 @@ import com.timgroup.eventsubscription.util.Clock
 import com.timgroup.tucker.info.Health.State.{healthy, ill}
 import com.timgroup.tucker.info.Report
 import com.timgroup.tucker.info.Status.{CRITICAL, OK, WARNING}
-import org.joda.time.DateTime
 import org.joda.time.DateTimeZone.UTC
+import org.joda.time.{DateTimeZone, DateTime}
 import org.mockito.Matchers
 import org.mockito.Mockito._
 import org.scalatest.concurrent.Eventually.eventually
@@ -29,7 +29,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(anEvent(), anEvent(), anEvent()))
 
-    setup = new EventSubscription("test", store, List(eventProcessing), runFrequency = 1, clock = clock)
+    setup = new EventSubscription("test", store, deserializer, List(eventProcessing), runFrequency = 1, clock = clock)
     setup.start()
     val component = setup.statusComponents.find(_.getId == "event-subscription-status-test").get
 
@@ -61,7 +61,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     eventStore.save(List(anEvent()))
 
-    setup = new EventSubscription("test", eventStore, Nil, clock)
+    setup = new EventSubscription("test", eventStore, deserializer, Nil, clock)
     setup.start()
 
     eventually { setup.health.get() must be(healthy) }
@@ -83,7 +83,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(anEvent()))
 
-    setup = new EventSubscription("test", store, List(failingHandler))
+    setup = new EventSubscription("test", store, deserializer, List(failingHandler))
     setup.start()
 
     val component = setup.statusComponents.find(_.getId == "event-subscription-status-test").get
@@ -102,18 +102,18 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     val evt1 = anEvent()
     val evt2 = anEvent()
 
-    doThrow(new RuntimeException("failure")).when(failingHandler).apply(EventInStream(now, evt1, 1), null)
+    doThrow(new RuntimeException("failure")).when(failingHandler).apply(EventInStream(now, evt1, 1), DeserializedVersionOf(EventInStream(now, evt1, 1)))
 
     store.save(List(evt1, evt2))
 
-    setup = new EventSubscription("test", store, List(failingHandler), runFrequency = 5)
+    setup = new EventSubscription("test", store, deserializer, List(failingHandler), runFrequency = 5)
     setup.start()
 
     val component = setup.statusComponents.find(_.getId == "event-subscription-status-test").get
 
     Thread.sleep(50)
 
-    verify(failingHandler).apply(EventInStream(now, evt1, 1), null)
+    verify(failingHandler).apply(EventInStream(now, evt1, 1), DeserializedVersionOf(EventInStream(now, evt1, 1)))
     verifyNoMoreInteractions(failingHandler)
     component.getReport.getValue.asInstanceOf[String] must include("Event subscription terminated. Failed to process version 1: failure")
 
@@ -122,6 +122,28 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     Thread.sleep(50)
 
     component.getReport.getValue.asInstanceOf[String] must include("Event subscription terminated. Failed to process version 1: failure")
+  }
+
+  it("invokes event handlers with both EventInStream and deserialized event") {
+    val timestamp = DateTime.now()
+
+    val store = new InMemoryEventStore(() => timestamp)
+
+    val event1 = anEvent()
+    val event2 = anEvent()
+
+    store.save(List(event1, event2))
+
+    val eventHandler = mock(classOf[EventHandler[Event]])
+    setup = new EventSubscription("test", store, deserializer, List(eventHandler), runFrequency = 1)
+    setup.start()
+
+    eventually {
+      setup.health.get() must be(healthy)
+    }
+
+    verify(eventHandler).apply(EventInStream(timestamp, event1, 1), DeserializedVersionOf(EventInStream(timestamp, event1, 1)))
+    verify(eventHandler).apply(EventInStream(timestamp, event2, 2), DeserializedVersionOf(EventInStream(timestamp, event2, 2)))
   }
 
   class HangingEventStore extends EventStore {
@@ -146,10 +168,14 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     setup.stop()
   }
 
+  def deserializer(evt: EventInStream) = DeserializedVersionOf(evt)
+
   def anEvent() = EventData("A", Body(Random.alphanumeric.take(10).mkString.getBytes("utf-8")))
 }
 
 trait Event
+
+case class DeserializedVersionOf(evt: EventInStream) extends Event
 
 class BlockingEventHandler extends EventHandler[Event] {
   val lock = new Semaphore(0)

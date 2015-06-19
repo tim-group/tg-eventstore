@@ -14,7 +14,8 @@ trait EventProcessorListener {
   def eventProcessed(version: Long)
 }
 
-class EventProcessor[T](eventHandler: EventHandler[T],
+class EventProcessor[T](deserializer: EventInStream => T,
+                        eventHandler: EventHandler[T],
                         eventQueue: ArrayBlockingQueue[EventInStream],
                         listener: EventProcessorListener) extends Runnable {
   override def run(): Unit = {
@@ -22,7 +23,7 @@ class EventProcessor[T](eventHandler: EventHandler[T],
       val event = eventQueue.take()
 
       try {
-        eventHandler.apply(event, null.asInstanceOf[T])
+        eventHandler.apply(event, deserializer(event))
         listener.eventProcessed(event.version)
       } catch {
         case e: Exception => listener.eventProcessingFailed(event.version, e); throw e
@@ -34,6 +35,7 @@ class EventProcessor[T](eventHandler: EventHandler[T],
 class EventSubscription[T](
             name: String,
             eventstore: EventStore,
+            deserializer: EventInStream => T,
             handlers: List[EventHandler[T]],
             clock: Clock = SystemClock,
             bufferSize: Int = 1024,
@@ -65,7 +67,7 @@ class EventSubscription[T](
 
     val chaser = new EventStoreChaser(eventstore, fromVersion, eventQueue.put, chaserListener)
 
-    val eventProcessor = new EventProcessor(eventHandler, eventQueue, processorListener)
+    val eventProcessor = new EventProcessor(deserializer, eventHandler, eventQueue, processorListener)
 
     executor.scheduleWithFixedDelay(chaser, 0, runFrequency, TimeUnit.MILLISECONDS)
     executor.submit(eventProcessor)
