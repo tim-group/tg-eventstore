@@ -4,13 +4,12 @@ import java.util.concurrent.Semaphore
 
 import com.timgroup.eventstore.api._
 import com.timgroup.eventstore.memory.InMemoryEventStore
-import com.timgroup.eventsubscription.EventSubscriptionManager.SubscriptionSetup
 import com.timgroup.eventsubscription.util.Clock
 import com.timgroup.tucker.info.Health.State.{healthy, ill}
-import com.timgroup.tucker.info.{Status, Report}
+import com.timgroup.tucker.info.Report
 import com.timgroup.tucker.info.Status.{CRITICAL, OK, WARNING}
-import org.joda.time.DateTime
-import org.joda.time.DateTimeZone._
+import org.joda.time.DateTimeZone.UTC
+import org.joda.time.{DateTime}
 import org.mockito.Matchers
 import org.mockito.Mockito._
 import org.scalatest.concurrent.Eventually.eventually
@@ -19,7 +18,7 @@ import org.scalatest.{BeforeAndAfterEach, FunSpec, MustMatchers}
 import scala.util.Random
 
 class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
-  var setup: SubscriptionSetup = _
+  var setup: EventSubscriptionManager = _
 
   it("reports ill and warning on status page during initial replay") {
     val clock = mock(classOf[Clock])
@@ -30,9 +29,9 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(anEvent(), anEvent(), anEvent()))
 
-    setup = EventSubscriptionManager("test", store, List(eventProcessing), frequency = 1, clock = clock)
-    setup.subscriptionManager.start()
-    val component = setup.components.find(_.getId == "event-subscription-status-test").get
+    setup = new EventSubscriptionManager("test", store, List(eventProcessing), runFrequency = 1, clock = clock)
+    setup.start()
+    val component = setup.statusComponents.find(_.getId == "event-subscription-status-test").get
 
     eventually {
       setup.health.get() must be(ill)
@@ -62,12 +61,12 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     eventStore.save(List(anEvent()))
 
-    setup = EventSubscriptionManager("test", eventStore, Nil, clock)
-    setup.subscriptionManager.start()
+    setup = new EventSubscriptionManager("test", eventStore, Nil, clock)
+    setup.start()
 
     eventually { setup.health.get() must be(healthy) }
 
-    val component = setup.components.find(_.getId == "event-store-chaser-test").get
+    val component = setup.statusComponents.find(_.getId == "event-store-chaser-test").get
 
     component.getReport.getStatus must be(OK)
 
@@ -84,10 +83,10 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(anEvent()))
 
-    setup = EventSubscriptionManager("test", store, List(failingHandler))
-    setup.subscriptionManager.start()
+    setup = new EventSubscriptionManager("test", store, List(failingHandler))
+    setup.start()
 
-    val component = setup.components.find(_.getId == "event-subscription-status-test").get
+    val component = setup.statusComponents.find(_.getId == "event-subscription-status-test").get
 
     eventually {
       component.getReport.getStatus must be(CRITICAL)
@@ -107,10 +106,10 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(evt1, evt2))
 
-    setup = EventSubscriptionManager("test", store, List(failingHandler), frequency = 5)
-    setup.subscriptionManager.start()
+    setup = new EventSubscriptionManager("test", store, List(failingHandler), runFrequency = 5)
+    setup.start()
 
-    val component = setup.components.find(_.getId == "event-subscription-status-test").get
+    val component = setup.statusComponents.find(_.getId == "event-subscription-status-test").get
 
     Thread.sleep(50)
 
@@ -144,7 +143,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
   }
 
   override protected def afterEach(): Unit = {
-    setup.subscriptionManager.stop()
+    setup.stop()
   }
 
   def anEvent() = EventData("A", Body(Random.alphanumeric.take(10).mkString.getBytes("utf-8")))

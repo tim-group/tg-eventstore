@@ -35,11 +35,19 @@ class EventSubscriptionManager(
             name: String,
             eventstore: EventStore,
             handlers: List[EventHandler],
-            chaserListener: ChaserListener,
-            processorListener: EventProcessorListener,
-            bufferSize: Int,
-            runFrequency: Long,
-            fromVersion: Long) {
+            clock: Clock = SystemClock,
+            bufferSize: Int = 1024,
+            runFrequency: Long = 1000,
+            fromVersion: Long = 0) {
+  private val chaserHealth = new ChaserHealth(name, clock)
+  private val subscriptionStatus = new EventSubscriptionStatus(name, clock)
+
+  private val processorListener = new SubscriptionListenerAdapter(subscriptionStatus)
+  private val chaserListener = new BroadcastingChaserListener(chaserHealth, processorListener)
+
+  val statusComponents: List[Component] = List(subscriptionStatus, chaserHealth)
+  val health: Health = subscriptionStatus
+
   private val executor = Executors.newScheduledThreadPool(2, new ThreadFactory {
     private val count = new AtomicInteger()
 
@@ -66,36 +74,5 @@ class EventSubscriptionManager(
   def stop() {
     executor.shutdown()
     executor.awaitTermination(1, TimeUnit.SECONDS)
-  }
-}
-
-object EventSubscriptionManager {
-  case class SubscriptionSetup(health: Health, components: List[Component], subscriptionManager: EventSubscriptionManager)
-
-  def apply(name: String,
-            eventStore: EventStore,
-            handlers: List[EventHandler],
-            clock: Clock = SystemClock,
-            bufferSize: Int = 50000,
-            frequency: Long = 1000,
-            fromVersion: Long = 0) = {
-
-    val chaserHealth = new ChaserHealth(name, clock)
-    val subscriptionStatus = new EventSubscriptionStatus(name, clock)
-
-    val subscriptionListenerAdapter = new SubscriptionListenerAdapter(subscriptionStatus)
-
-    val manager =
-      new EventSubscriptionManager(
-        name,
-        eventStore,
-        handlers,
-        new BroadcastingChaserListener(chaserHealth, subscriptionListenerAdapter),
-        subscriptionListenerAdapter,
-        bufferSize,
-        frequency,
-        fromVersion)
-
-    SubscriptionSetup(subscriptionStatus, List(subscriptionStatus, chaserHealth), manager)
   }
 }
