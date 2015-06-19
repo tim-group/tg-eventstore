@@ -8,8 +8,8 @@ import com.timgroup.eventsubscription.util.Clock
 import com.timgroup.tucker.info.Health.State.{healthy, ill}
 import com.timgroup.tucker.info.Report
 import com.timgroup.tucker.info.Status.{CRITICAL, OK, WARNING}
+import org.joda.time.DateTime
 import org.joda.time.DateTimeZone.UTC
-import org.joda.time.{DateTime}
 import org.mockito.Matchers
 import org.mockito.Mockito._
 import org.scalatest.concurrent.Eventually.eventually
@@ -18,7 +18,7 @@ import org.scalatest.{BeforeAndAfterEach, FunSpec, MustMatchers}
 import scala.util.Random
 
 class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
-  var setup: EventSubscription = _
+  var setup: EventSubscription[Event] = _
 
   it("reports ill and warning on status page during initial replay") {
     val clock = mock(classOf[Clock])
@@ -77,9 +77,9 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
   it("reports failure when event subscription terminates due to an eventhandler failure") {
     val store = new InMemoryEventStore()
-    val failingHandler = mock(classOf[EventHandler])
+    val failingHandler = mock(classOf[EventHandler[Event]])
 
-    doThrow(new RuntimeException("failure")).when(failingHandler).apply(Matchers.any())
+    doThrow(new RuntimeException("failure")).when(failingHandler).apply(Matchers.any(), Matchers.any())
 
     store.save(List(anEvent()))
 
@@ -97,12 +97,12 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
   it("does not continue processing events if event processing failed on a previous event") {
     val now = DateTime.now()
     val store = new InMemoryEventStore(() => now)
-    val failingHandler = mock(classOf[EventHandler])
+    val failingHandler = mock(classOf[EventHandler[Event]])
 
     val evt1 = anEvent()
     val evt2 = anEvent()
 
-    doThrow(new RuntimeException("failure")).when(failingHandler).apply(EventInStream(now, evt1, 1))
+    doThrow(new RuntimeException("failure")).when(failingHandler).apply(EventInStream(now, evt1, 1), null)
 
     store.save(List(evt1, evt2))
 
@@ -113,7 +113,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     Thread.sleep(50)
 
-    verify(failingHandler).apply(EventInStream(now, evt1, 1))
+    verify(failingHandler).apply(EventInStream(now, evt1, 1), null)
     verifyNoMoreInteractions(failingHandler)
     component.getReport.getValue.asInstanceOf[String] must include("Event subscription terminated. Failed to process version 1: failure")
 
@@ -149,10 +149,12 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
   def anEvent() = EventData("A", Body(Random.alphanumeric.take(10).mkString.getBytes("utf-8")))
 }
 
-class BlockingEventHandler extends EventHandler {
+trait Event
+
+class BlockingEventHandler extends EventHandler[Event] {
   val lock = new Semaphore(0)
 
-  override def apply(event: EventInStream): Unit = {
+  override def apply(event: EventInStream, deserialized: Event): Unit = {
     lock.acquire()
   }
 

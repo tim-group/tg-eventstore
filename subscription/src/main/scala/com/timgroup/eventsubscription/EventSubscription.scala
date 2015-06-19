@@ -14,15 +14,15 @@ trait EventProcessorListener {
   def eventProcessed(version: Long)
 }
 
-class EventProcessor(eventHandler: EventHandler,
-                     eventQueue: ArrayBlockingQueue[EventInStream],
-                     listener: EventProcessorListener) extends Runnable {
+class EventProcessor[T](eventHandler: EventHandler[T],
+                        eventQueue: ArrayBlockingQueue[EventInStream],
+                        listener: EventProcessorListener) extends Runnable {
   override def run(): Unit = {
     while (true) {
       val event = eventQueue.take()
 
       try {
-        eventHandler.apply(event)
+        eventHandler.apply(event, null.asInstanceOf[T])
         listener.eventProcessed(event.version)
       } catch {
         case e: Exception => listener.eventProcessingFailed(event.version, e); throw e
@@ -31,10 +31,10 @@ class EventProcessor(eventHandler: EventHandler,
   }
 }
 
-class EventSubscription(
+class EventSubscription[T](
             name: String,
             eventstore: EventStore,
-            handlers: List[EventHandler],
+            handlers: List[EventHandler[T]],
             clock: Clock = SystemClock,
             bufferSize: Int = 1024,
             runFrequency: Long = 1000,
@@ -59,7 +59,7 @@ class EventSubscription(
   })
 
   def start() {
-    val eventHandler = new BroadcastingEventHandler(handlers)
+    val eventHandler = new BroadcastingEventHandler[T](handlers)
 
     val eventQueue = new ArrayBlockingQueue[EventInStream](bufferSize)
 
