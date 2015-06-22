@@ -18,7 +18,7 @@ class SQLEventStoreTest extends FunSpec with EventStoreTest with MustMatchers wi
     conn.close()
   }
 
-  val eventStore = SQLEventStore(connectionProvider, now = () => effectiveTimestamp)
+  val eventStore = new SQLEventStore(connectionProvider, "Event", () => effectiveTimestamp, None)
 
   it should behave like anEventStore(eventStore)
 

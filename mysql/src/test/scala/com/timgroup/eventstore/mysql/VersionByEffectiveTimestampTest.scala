@@ -21,7 +21,7 @@ class VersionByEffectiveTimestampTest extends FunSpec with MustMatchers with Bef
 
   it("fetches the version before the first event after the specified effective timestamp cuttoff") {
     val clock = new FixedClock
-    val eventStore = SQLEventStore(connectionProvider, now = clock)
+    val eventStore = new SQLEventStore(connectionProvider, "Event", now = clock, None)
 
     clock.currentTimeIs(beforeCuttoff)
     eventStore.save(Seq(EventData("Blah", "{}".getBytes("utf-8"))))
@@ -38,7 +38,7 @@ class VersionByEffectiveTimestampTest extends FunSpec with MustMatchers with Bef
 
   it("if there are no new events after the cuttoff returns the last eventversion") {
     val clock = new FixedClock
-    val eventStore = SQLEventStore(connectionProvider, now = clock)
+    val eventStore = new SQLEventStore(connectionProvider, "Event", now = clock, None)
 
     clock.currentTimeIs(beforeCuttoff)
     eventStore.save(Seq(EventData("Blah", "{}".getBytes("utf-8"))))

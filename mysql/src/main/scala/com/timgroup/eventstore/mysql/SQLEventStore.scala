@@ -11,22 +11,6 @@ trait ConnectionProvider {
   def getConnection(): Connection
 }
 
-object SQLEventStore {
-  def apply(connectionProvider: ConnectionProvider,
-            tableName: String = "Event",
-            now: () => DateTime = () => DateTime.now(DateTimeZone.UTC),
-            batchSize: Option[Int] = None) = {
-    new SQLEventStore(
-      connectionProvider,
-      new SQLEventFetcher(tableName),
-      new SQLEventPersister(tableName),
-      tableName,
-      now,
-      batchSize
-    )
-  }
-}
-
 trait EventPersister {
   def saveEventsToDB(connection: Connection, newEvents: Seq[EventAtATime], expectedVersion: Option[Long] = None): Unit
 }
@@ -59,6 +43,24 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
                     tableName: String,
                     now: () => DateTime = () => DateTime.now(DateTimeZone.UTC),
                     batchSize: Option[Int] = None) extends EventStore {
+
+  def this(connectionProvider: ConnectionProvider,
+           tableName: String,
+           now: () => DateTime,
+           batchSize: Option[Int]) {
+    this(connectionProvider,
+         new SQLEventFetcher(tableName),
+         new SQLEventPersister(tableName),
+         tableName,
+         now,
+         batchSize)
+  }
+  def this(connectionProvider: ConnectionProvider,
+           tableName: String,
+           now: () => DateTime) {
+    this(connectionProvider, tableName, now, None)
+  }
+
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {
     Utils.transactionallyUsing(connectionProvider) { connection =>
       val effectiveTimestamp = now()
