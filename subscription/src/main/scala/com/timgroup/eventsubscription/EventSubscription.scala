@@ -9,6 +9,7 @@ import com.timgroup.eventstore.api.{EventInStream, EventStore}
 import com.timgroup.eventsubscription.healthcheck.{ChaserHealth, EventSubscriptionStatus, SubscriptionListenerAdapter}
 import com.timgroup.eventsubscription.util.{Clock, SystemClock}
 import com.timgroup.tucker.info.{Component, Health}
+import scala.collection.JavaConversions._
 
 trait EventProcessorListener {
   def eventProcessingFailed(version: Long, e: Exception): Unit
@@ -20,6 +21,10 @@ trait EventProcessorListener {
   def eventDeserialized(version: Long): Unit
 }
 
+trait Deserializer[T] {
+  def deserialize(eventInStream: EventInStream): T
+}
+
 class EventSubscription[T](
             name: String,
             eventstore: EventStore,
@@ -29,6 +34,25 @@ class EventSubscription[T](
             bufferSize: Int = 1024,
             runFrequency: Long = 1000,
             fromVersion: Long = 0) {
+
+  def this(name: String,
+           eventstore: EventStore,
+           deserializer: Deserializer[T],
+           handlers: java.lang.Iterable[EventHandler[T]],
+           clock: Clock,
+           bufferSize: java.lang.Integer,
+           runFrequency: java.lang.Long,
+           fromVersion: java.lang.Long) {
+    this(name,
+         eventstore,
+         deserializer.deserialize _,
+         handlers.toList,
+         clock,
+         bufferSize,
+         runFrequency,
+         fromVersion)
+  }
+
   private val chaserHealth = new ChaserHealth(name, clock)
   private val subscriptionStatus = new EventSubscriptionStatus(name, clock)
 
