@@ -1,6 +1,6 @@
 package com.timgroup.eventsubscription.healthcheck
 
-import com.timgroup.eventsubscription.util.Clock
+import com.timgroup.eventstore.api.Clock
 import com.timgroup.tucker.info.Health.State.{healthy, ill}
 import com.timgroup.tucker.info.Status.{CRITICAL, OK, WARNING}
 import com.timgroup.tucker.info.{Component, Health, Report}

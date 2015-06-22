@@ -1,6 +1,6 @@
-package com.timgroup.eventsubscription.util
+package com.timgroup.eventstore.api
 
-import org.joda.time.{DateTimeZone, DateTime}
+import org.joda.time.{DateTime, DateTimeZone}
 
 trait Clock {
   def now(): DateTime

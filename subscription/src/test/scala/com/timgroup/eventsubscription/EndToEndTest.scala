@@ -4,7 +4,6 @@ import java.util.concurrent.Semaphore
 
 import com.timgroup.eventstore.api._
 import com.timgroup.eventstore.memory.InMemoryEventStore
-import com.timgroup.eventsubscription.util.Clock
 import com.timgroup.tucker.info.Health.State.{healthy, ill}
 import com.timgroup.tucker.info.Report
 import com.timgroup.tucker.info.Status.{CRITICAL, OK, WARNING}

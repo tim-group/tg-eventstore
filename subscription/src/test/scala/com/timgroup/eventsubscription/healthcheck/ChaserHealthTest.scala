@@ -1,6 +1,6 @@
 package com.timgroup.eventsubscription.healthcheck
 
-import com.timgroup.eventsubscription.util.Clock
+import com.timgroup.eventstore.api.Clock
 import com.timgroup.tucker.info.Status
 import com.timgroup.tucker.info.Status.{CRITICAL, WARNING, OK}
 import org.joda.time.DateTime

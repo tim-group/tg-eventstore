@@ -57,8 +57,8 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
   }
   def this(connectionProvider: ConnectionProvider,
            tableName: String,
-           now: () => DateTime) {
-    this(connectionProvider, tableName, now, None)
+           clock: Clock) {
+    this(connectionProvider, tableName, () => clock.now, None)
   }
 
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {

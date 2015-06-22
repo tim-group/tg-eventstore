@@ -5,9 +5,8 @@ import java.util.concurrent.{Executors, ThreadFactory, TimeUnit}
 
 import com.lmax.disruptor.dsl.{Disruptor, ProducerType}
 import com.lmax.disruptor.{BlockingWaitStrategy, EventFactory, EventTranslator, WorkHandler}
-import com.timgroup.eventstore.api.{EventInStream, EventStore}
+import com.timgroup.eventstore.api.{SystemClock, Clock, EventInStream, EventStore}
 import com.timgroup.eventsubscription.healthcheck.{ChaserHealth, EventSubscriptionStatus, SubscriptionListenerAdapter}
-import com.timgroup.eventsubscription.util.{Clock, SystemClock}
 import com.timgroup.tucker.info.{Component, Health}
 import scala.collection.JavaConversions._
 
