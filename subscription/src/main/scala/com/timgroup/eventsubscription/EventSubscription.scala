@@ -3,8 +3,8 @@ package com.timgroup.eventsubscription
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{Executors, ThreadFactory, TimeUnit}
 
-import com.lmax.disruptor.dsl.Disruptor
-import com.lmax.disruptor.{EventFactory, EventTranslator, WorkHandler}
+import com.lmax.disruptor.dsl.{Disruptor, ProducerType}
+import com.lmax.disruptor.{BlockingWaitStrategy, EventFactory, EventTranslator, WorkHandler}
 import com.timgroup.eventstore.api.{EventInStream, EventStore}
 import com.timgroup.eventsubscription.healthcheck.{ChaserHealth, EventSubscriptionStatus, SubscriptionListenerAdapter}
 import com.timgroup.eventsubscription.util.{Clock, SystemClock}
@@ -38,11 +38,11 @@ class EventSubscription[T](
   val statusComponents: List[Component] = List(subscriptionStatus, chaserHealth)
   val health: Health = subscriptionStatus
 
-  private val executor = Executors.newScheduledThreadPool(2, new ThreadFactory {
+  private val executor = Executors.newScheduledThreadPool(1, new ThreadFactory {
     private val count = new AtomicInteger()
 
     override def newThread(r: Runnable) = {
-      val thread = new Thread(r, "EventSubscriptionRunner-" + name + "-" + count.getAndIncrement)
+      val thread = new Thread(r, "EventChaser-" + name + "-" + count.getAndIncrement)
       thread.setDaemon(true)
       thread
     }
@@ -50,8 +50,17 @@ class EventSubscription[T](
 
   private val eventHandler = new BroadcastingEventHandler[T](handlers)
 
-  private val eventHandlerExecutor = Executors.newCachedThreadPool()
-  private val disruptor = new Disruptor[EventContainer[T]](new EventContainerFactory[T], bufferSize, eventHandlerExecutor)
+  private val eventHandlerExecutor = Executors.newCachedThreadPool(new ThreadFactory {
+    private val count = new AtomicInteger()
+
+    override def newThread(r: Runnable) = {
+      val thread = new Thread(r, "EventSubscription-" + name + "-" + count.getAndIncrement)
+      thread.setDaemon(true)
+      thread
+    }
+  })
+
+  private val disruptor = new Disruptor[EventContainer[T]](new EventContainerFactory[T], bufferSize, eventHandlerExecutor, ProducerType.SINGLE, new BlockingWaitStrategy())
 
   private val deserializeWorker = new WorkHandler[EventContainer[T]] {
     override def onEvent(eventContainer: EventContainer[T]): Unit = {
@@ -76,8 +85,7 @@ class EventSubscription[T](
 
   }
 
-  disruptor.handleEventsWithWorkerPool(deserializeWorker, deserializeWorker, deserializeWorker)
-           .then(invokeEventHandlers)
+  disruptor.handleEventsWithWorkerPool(deserializeWorker, deserializeWorker).then(invokeEventHandlers)
 
   def start() {
     val chaser = new EventStoreChaser(eventstore, fromVersion, evt => disruptor.publishEvent(new SetEventInStream(evt)), chaserListener)
