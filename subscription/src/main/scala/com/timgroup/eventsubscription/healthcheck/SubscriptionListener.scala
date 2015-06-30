@@ -12,18 +12,18 @@ trait SubscriptionListener {
 }
 
 class SubscriptionListenerAdapter(listeners: SubscriptionListener*) extends ChaserListener with EventProcessorListener {
-  @volatile private var liveVersion: Option[Long] = None
-  @volatile private var processorVersion: Option[Long] = None
+  @volatile private var latestFetchedVersion: Option[Long] = None
+  @volatile private var latestProcessedVersion: Option[Long] = None
 
   override def transientFailure(e: Exception): Unit = {}
 
   override def chaserReceived(version: Long): Unit = {
-    liveVersion = None
+    latestFetchedVersion = None
     checkStaleness()
   }
 
   override def chaserUpToDate(version: Long): Unit = {
-    liveVersion = Some(version)
+    latestFetchedVersion = Some(version)
     checkStaleness()
   }
 
@@ -32,7 +32,7 @@ class SubscriptionListenerAdapter(listeners: SubscriptionListener*) extends Chas
   }
 
   override def eventProcessed(version: Long): Unit = {
-    processorVersion = Some(version)
+    latestProcessedVersion = Some(version)
     checkStaleness()
   }
 
@@ -43,9 +43,9 @@ class SubscriptionListenerAdapter(listeners: SubscriptionListener*) extends Chas
   override def eventDeserialized(version: Long): Unit = {}
 
   private def checkStaleness(): Unit = {
-    (liveVersion, processorVersion) match {
-      case (Some(live), Some(processed)) if live <= processed => listeners.foreach(_.caughtUpAt(processed))
-      case (_, Some(processed)) => listeners.foreach(_.staleAtVersion(Some(processed)))
+    (latestFetchedVersion, latestProcessedVersion) match {
+      case (Some(fetchedVersion), Some(processedVersion)) if processedVersion >= fetchedVersion => listeners.foreach(_.caughtUpAt(processedVersion))
+      case (_, Some(processedVersion)) => listeners.foreach(_.staleAtVersion(Some(processedVersion)))
       case _ => listeners.foreach(_.staleAtVersion(None))
     }
   }
