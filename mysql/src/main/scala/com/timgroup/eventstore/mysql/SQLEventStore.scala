@@ -25,7 +25,7 @@ object Utils {
       connection.setAutoCommit(false)
       val result = code(connection)
       connection.commit()
-      return result
+      result
     } catch {
       case e: Exception => {
         connection.rollback()
@@ -58,7 +58,7 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
   def this(connectionProvider: ConnectionProvider,
            tableName: String,
            clock: Clock) {
-    this(connectionProvider, tableName, () => clock.now, None)
+    this(connectionProvider, tableName, () => clock.now(), None)
   }
 
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {
