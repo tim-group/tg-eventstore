@@ -4,7 +4,7 @@ organization in ThisBuild := "com.timgroup"
 
 scalaVersion in ThisBuild := "2.11.5"
 
-crossScalaVersions in ThisBuild := Seq("2.9.1", "2.10.4", "2.11.5")
+crossScalaVersions in ThisBuild := Seq("2.10.4", "2.11.5")
 
 publishTo in ThisBuild := Some("publish-repo" at "http://repo.youdevise.com:8081/nexus/content/repositories/yd-release-candidates")
 

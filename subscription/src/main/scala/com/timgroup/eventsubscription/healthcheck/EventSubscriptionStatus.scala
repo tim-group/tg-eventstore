@@ -23,12 +23,14 @@ class EventSubscriptionStatus(name: String, clock: Clock, maxInitialReplayDurati
       case (Some(stale), _) => {
         val staleSeconds = secondsBetween(stale, clock.now()).getSeconds
         val status = if (staleSeconds > 30) { CRITICAL } else { WARNING }
-        new Report(status, "Stale, catching up. " + currentVersion.map(v => "Currently at version " + v + ".").getOrElse("No events processed yet.") + " (Stale for " + staleSeconds +"s)")
+        val currentVersionText = currentVersion.map(v => "Currently at version " + v + ".").getOrElse("No events processed yet.")
+        new Report(status, s"Stale, catching up. ${currentVersionText} (Stale for ${staleSeconds}s)")
       }
       case (None, Some(initialDuration)) => if (initialDuration < maxInitialReplayDuration) {
-        new Report(OK, "Caught up at version " + currentVersion.getOrElse("") + ". Initial replay took " + initialDuration + "s.")
+        new Report(OK, s"Caught up at version ${currentVersion.getOrElse("")}. Initial replay took ${initialDuration}s.")
       } else {
-        new Report(WARNING, "Caught up at version " + currentVersion.getOrElse("") + ". Initial replay took " + initialDuration + s"s. This is longer than expected limit of ${maxInitialReplayDuration}s.")
+        new Report(WARNING, s"Caught up at version ${currentVersion.getOrElse("")}. Initial replay took ${initialDuration}s. " +
+                            s"This is longer than expected limit of ${maxInitialReplayDuration}s.")
       }
       case (None, None) => new Report(WARNING, "Awaiting events.")
     }
