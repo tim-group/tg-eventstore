@@ -42,7 +42,8 @@ class EventSubscription[T](
            clock: Clock,
            bufferSize: java.lang.Integer,
            runFrequency: java.lang.Long,
-           fromVersion: java.lang.Long) {
+           fromVersion: java.lang.Long,
+           maxInitialReplayDuration: java.lang.Integer) {
     this(name,
          eventstore,
          deserializer.deserialize _,
@@ -50,7 +51,8 @@ class EventSubscription[T](
          clock,
          bufferSize,
          runFrequency,
-         fromVersion)
+         fromVersion,
+         maxInitialReplayDuration)
   }
 
   private val chaserHealth = new ChaserHealth(name, clock)
