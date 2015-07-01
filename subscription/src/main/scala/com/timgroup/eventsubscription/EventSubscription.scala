@@ -32,7 +32,8 @@ class EventSubscription[T](
             clock: Clock = SystemClock,
             bufferSize: Int = 1024,
             runFrequency: Long = 1000,
-            fromVersion: Long = 0) {
+            fromVersion: Long = 0,
+            maxInitialReplayDuration: Int = 240) {
 
   def this(name: String,
            eventstore: EventStore,
@@ -53,7 +54,7 @@ class EventSubscription[T](
   }
 
   private val chaserHealth = new ChaserHealth(name, clock)
-  private val subscriptionStatus = new EventSubscriptionStatus(name, clock)
+  private val subscriptionStatus = new EventSubscriptionStatus(name, clock, maxInitialReplayDuration)
 
   private val processorListener = new SubscriptionListenerAdapter(subscriptionStatus)
   private val chaserListener = new BroadcastingChaserListener(chaserHealth, processorListener)

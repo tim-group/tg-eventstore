@@ -7,7 +7,9 @@ import com.timgroup.tucker.info.{Component, Health, Report}
 import org.joda.time.DateTime
 import org.joda.time.Seconds.secondsBetween
 
-class EventSubscriptionStatus(name: String, clock: Clock) extends Component("event-subscription-status-" + name, "Event subscription status (" + name + ")") with Health with SubscriptionListener {
+class EventSubscriptionStatus(name: String, clock: Clock, maxInitialReplayDuration: Int)
+        extends Component("event-subscription-status-" + name, "Event subscription status (" + name + ")") with Health with SubscriptionListener
+{
   private val startTime: DateTime = clock.now()
 
   @volatile private var terminatedReport: Option[Report] = None
@@ -23,10 +25,10 @@ class EventSubscriptionStatus(name: String, clock: Clock) extends Component("eve
         val status = if (staleSeconds > 30) { CRITICAL } else { WARNING }
         new Report(status, "Stale, catching up. " + currentVersion.map(v => "Currently at version " + v + ".").getOrElse("No events processed yet.") + " (Stale for " + staleSeconds +"s)")
       }
-      case (None, Some(initialDuration)) => if (initialDuration < 240) {
+      case (None, Some(initialDuration)) => if (initialDuration < maxInitialReplayDuration) {
         new Report(OK, "Caught up at version " + currentVersion.getOrElse("") + ". Initial replay took " + initialDuration + "s.")
       } else {
-        new Report(WARNING, "Caught up at version " + currentVersion.getOrElse("") + ". Initial replay took " + initialDuration + "s. This is longer than expected limit of 240s.")
+        new Report(WARNING, "Caught up at version " + currentVersion.getOrElse("") + ". Initial replay took " + initialDuration + s"s. This is longer than expected limit of ${maxInitialReplayDuration}s.")
       }
       case (None, None) => new Report(WARNING, "Awaiting events.")
     }

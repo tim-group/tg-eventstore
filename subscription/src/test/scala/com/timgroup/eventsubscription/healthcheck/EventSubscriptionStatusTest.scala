@@ -3,7 +3,7 @@ package com.timgroup.eventsubscription.healthcheck
 import com.timgroup.eventstore.api.Clock
 import com.timgroup.tucker.info.Health.State.{healthy, ill}
 import com.timgroup.tucker.info.Status.{OK, WARNING, CRITICAL}
-import com.timgroup.tucker.info.{Report, Status}
+import com.timgroup.tucker.info.Report
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone.UTC
 import org.mockito.Mockito.{mock, when}
@@ -14,7 +14,7 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers with OneInst
 
   val clock = mock(classOf[Clock])
   when(clock.now()).thenReturn(timestamp)
-  val status = new EventSubscriptionStatus("", clock)
+  val status = new EventSubscriptionStatus("", clock, maxInitialReplayDuration = 123)
   val adapter = new SubscriptionListenerAdapter(status)
 
   it("reports ill whilst initial replay is in progress") {
@@ -40,19 +40,19 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers with OneInst
     status.getReport() must be(new Report(OK, "Caught up at version 3. Initial replay took 100s."))
   }
 
-  it("reports warning if initial replay took longer than 240s") {
+  it("reports warning if initial replay took longer than configured maximum duration") {
     adapter.chaserReceived(1)
     adapter.chaserReceived(2)
     adapter.chaserReceived(3)
     adapter.chaserUpToDate(3)
 
-    when(clock.now()).thenReturn(timestamp.plusSeconds(241))
+    when(clock.now()).thenReturn(timestamp.plusSeconds(124))
     adapter.eventProcessed(1)
     adapter.eventProcessed(2)
     adapter.eventProcessed(3)
 
     status.get() must be(healthy)
-    status.getReport() must be(new Report(WARNING, "Caught up at version 3. Initial replay took 241s. This is longer than expected limit of 240s."))
+    status.getReport() must be(new Report(WARNING, "Caught up at version 3. Initial replay took 124s. This is longer than expected limit of 123s."))
   }
 
   it("reports warning if stale") {
