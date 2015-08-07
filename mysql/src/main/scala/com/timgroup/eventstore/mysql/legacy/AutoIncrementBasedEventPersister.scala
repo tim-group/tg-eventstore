@@ -42,10 +42,6 @@ class AutoIncrementBasedEventPersister(tableName: String) extends EventPersister
       if (batches.size != newEvents.size) {
         throw new RuntimeException("We wrote " + batches.size + " but we were supposed to write: " + newEvents.size + " events")
       }
-
-      if (batches.filter(_ != 1).nonEmpty) {
-        throw new RuntimeException("Error executing batch")
-      }
     } finally {
       statement.close()
     }

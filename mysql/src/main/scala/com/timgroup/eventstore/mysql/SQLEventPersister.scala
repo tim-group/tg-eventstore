@@ -1,17 +1,16 @@
 package com.timgroup.eventstore.mysql
 
-import java.io.ByteArrayInputStream
-import java.sql.{Connection, Timestamp}
+import java.sql.{SQLException, Connection, Timestamp}
 
 import com.timgroup.eventstore.api.OptimisticConcurrencyFailure
 
 import scala.util.control.Exception._
 
-class SQLEventPersister(tableName: String = "Event") extends EventPersister {
+class SQLEventPersister(tableName: String = "Event", lastVersionFetcher: LastVersionFetcher = new LastVersionFetcher("Event")) extends EventPersister {
   def saveEventsToDB(connection: Connection, newEvents: Seq[EventAtATime], expectedVersion: Option[Long] = None): Unit = {
-    val statement = connection.prepareStatement("insert ignore into " + tableName + "(eventType,body,effective_timestamp,version) values(?,?,?,?)")
+    val statement = connection.prepareStatement("insert into " + tableName + "(eventType,body,effective_timestamp,version) values(?,?,?,?)")
 
-    val currentVersion = fetchCurrentVersion(connection)
+    val currentVersion = lastVersionFetcher.fetchCurrentVersion(connection)
 
     if (expectedVersion.map(_ != currentVersion).getOrElse(false)) {
       throw new OptimisticConcurrencyFailure()
@@ -34,16 +33,16 @@ class SQLEventPersister(tableName: String = "Event") extends EventPersister {
       if (batches.size != newEvents.size) {
         throw new RuntimeException("We wrote " + batches.size + " but we were supposed to write: " + newEvents.size + " events")
       }
-
-      if (batches.filter(_ != 1).nonEmpty) {
-        throw new OptimisticConcurrencyFailure()
-      }
+    } catch {
+      case e: SQLException if e.getMessage.contains("Duplicate") => throw new OptimisticConcurrencyFailure()
     } finally {
       statement.close()
     }
   }
+}
 
-  private def fetchCurrentVersion(connection: Connection): Long = {
+class LastVersionFetcher(tableName: String = "Event") {
+  def fetchCurrentVersion(connection: Connection): Long = {
     val statement = connection.prepareStatement("select max(version) from " + tableName)
     val results = statement.executeQuery()
 
