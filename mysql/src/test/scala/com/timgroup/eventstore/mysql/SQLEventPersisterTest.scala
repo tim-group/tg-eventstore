@@ -2,7 +2,7 @@ package com.timgroup.eventstore.mysql
 
 import java.sql.{DriverManager, Connection}
 
-import com.timgroup.eventstore.api.{OptimisticConcurrencyFailure, Body, EventData}
+import com.timgroup.eventstore.api.{SystemClock, OptimisticConcurrencyFailure, Body, EventData}
 import org.joda.time.DateTime
 import org.scalatest.{BeforeAndAfterEach, MustMatchers, FunSpec, FunSuite}
 
@@ -29,7 +29,7 @@ class SQLEventPersisterTest extends FunSpec with MustMatchers with BeforeAndAfte
         override def fetchCurrentVersion(connection: Connection): Long = {
           val version = super.fetchCurrentVersion(connection)
 
-          SQLEventStore(connectionProvider).save(Seq(EventData("Event", Body(Array[Byte]()))))
+          new SQLEventStore(connectionProvider, "Event", SystemClock).save(Seq(EventData("Event", Body(Array[Byte]()))))
 
           version
         }
