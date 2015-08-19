@@ -3,7 +3,7 @@ package com.timgroup.eventstore.memory
 import com.timgroup.eventstore.api._
 import org.joda.time.{DateTime, DateTimeZone}
 
-class InMemoryEventStore(now: () => DateTime = () => DateTime.now(DateTimeZone.UTC)) extends EventStore {
+class InMemoryEventStore(now: Clock = SystemClock) extends EventStore {
   var events = Vector[EventInStream]()
 
 
@@ -14,7 +14,7 @@ class InMemoryEventStore(now: () => DateTime = () => DateTime.now(DateTimeZone.U
       throw new OptimisticConcurrencyFailure()
     }
 
-    events = events ++ newEvents.zipWithIndex.map { case (evt, index) => EventInStream(now(), evt, currentVersion + index + 1) }
+    events = events ++ newEvents.zipWithIndex.map { case (evt, index) => EventInStream(now.now(), evt, currentVersion + index + 1) }
   }
 
   override def fromAll(version: Long): EventStream = new EventStream {

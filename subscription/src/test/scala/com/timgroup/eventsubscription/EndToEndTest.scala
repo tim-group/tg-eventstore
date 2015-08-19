@@ -94,14 +94,14 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
   }
 
   it("does not continue processing events if event processing failed on a previous event") {
-    val now = DateTime.now()
-    val store = new InMemoryEventStore(() => now)
+    val timestamp = DateTime.now()
+    val store = new InMemoryEventStore(new Clock { def now() = timestamp })
     val failingHandler = mock(classOf[EventHandler[Event]])
 
     val evt1 = anEvent()
     val evt2 = anEvent()
 
-    doThrow(new RuntimeException("failure")).when(failingHandler).apply(EventInStream(now, evt1, 1), DeserializedVersionOf(EventInStream(now, evt1, 1)))
+    doThrow(new RuntimeException("failure")).when(failingHandler).apply(EventInStream(timestamp, evt1, 1), DeserializedVersionOf(EventInStream(timestamp, evt1, 1)))
 
     store.save(List(evt1, evt2))
 
@@ -112,7 +112,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     Thread.sleep(50)
 
-    verify(failingHandler).apply(EventInStream(now, evt1, 1), DeserializedVersionOf(EventInStream(now, evt1, 1)))
+    verify(failingHandler).apply(EventInStream(timestamp, evt1, 1), DeserializedVersionOf(EventInStream(timestamp, evt1, 1)))
     verifyNoMoreInteractions(failingHandler)
     component.getReport.getValue.asInstanceOf[String] must include("Event subscription terminated. Failed to process version 1: failure")
 
@@ -126,7 +126,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
   it("invokes event handlers with both EventInStream and deserialized event") {
     val timestamp = DateTime.now()
 
-    val store = new InMemoryEventStore(() => timestamp)
+    val store = new InMemoryEventStore(new Clock { def now() = timestamp })
 
     val event1 = anEvent()
     val event2 = anEvent()
