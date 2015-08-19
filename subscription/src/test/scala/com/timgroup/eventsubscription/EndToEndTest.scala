@@ -145,6 +145,30 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     verify(eventHandler).apply(EventInStream(timestamp, event2, 2), DeserializedVersionOf(EventInStream(timestamp, event2, 2)))
   }
 
+  it("starts up healthy when there are no events") {
+    val store = new InMemoryEventStore()
+
+    setup = new EventSubscription("test", store, deserializer, List(), runFrequency = 1, fromVersion = 0)
+    setup.start()
+
+    eventually {
+      setup.health.get() must be(healthy)
+    }
+  }
+
+  it("starts up healthy when there are no events after fromVersion") {
+    val store = new InMemoryEventStore()
+
+    store.save(List(anEvent(), anEvent(), anEvent()))
+
+    setup = new EventSubscription("test", store, deserializer, List(), runFrequency = 1, fromVersion = 3)
+    setup.start()
+
+    eventually {
+      setup.health.get() must be(healthy)
+    }
+  }
+
   class HangingEventStore extends EventStore {
     private val underlying = new InMemoryEventStore()
     private var hanging = false

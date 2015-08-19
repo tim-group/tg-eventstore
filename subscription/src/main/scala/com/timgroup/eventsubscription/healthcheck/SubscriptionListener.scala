@@ -11,7 +11,7 @@ trait SubscriptionListener {
   def terminated(version: Long, e: Exception): Unit
 }
 
-class SubscriptionListenerAdapter(listeners: SubscriptionListener*) extends ChaserListener with EventProcessorListener {
+class SubscriptionListenerAdapter(fromVersion: Long, listeners: SubscriptionListener*) extends ChaserListener with EventProcessorListener {
   @volatile private var latestFetchedVersion: Option[Long] = None
   @volatile private var latestProcessedVersion: Option[Long] = None
 
@@ -45,6 +45,7 @@ class SubscriptionListenerAdapter(listeners: SubscriptionListener*) extends Chas
   private def checkStaleness(): Unit = {
     (latestFetchedVersion, latestProcessedVersion) match {
       case (Some(fetchedVersion), Some(processedVersion)) if processedVersion >= fetchedVersion => listeners.foreach(_.caughtUpAt(processedVersion))
+      case (Some(`fromVersion`), None) => listeners.foreach(_.caughtUpAt(fromVersion))
       case (_, Some(processedVersion)) => listeners.foreach(_.staleAtVersion(Some(processedVersion)))
       case _ => listeners.foreach(_.staleAtVersion(None))
     }

@@ -58,7 +58,7 @@ class EventSubscription[T](
   private val chaserHealth = new ChaserHealth(name, clock)
   private val subscriptionStatus = new EventSubscriptionStatus(name, clock, maxInitialReplayDuration)
 
-  private val processorListener = new SubscriptionListenerAdapter(subscriptionStatus)
+  private val processorListener = new SubscriptionListenerAdapter(fromVersion, subscriptionStatus)
   private val chaserListener = new BroadcastingChaserListener(chaserHealth, processorListener)
 
   val statusComponents: List[Component] = List(subscriptionStatus, chaserHealth)
