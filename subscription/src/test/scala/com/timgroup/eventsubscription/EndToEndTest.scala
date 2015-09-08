@@ -78,7 +78,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     val store = new InMemoryEventStore()
     val failingHandler = mock(classOf[EventHandler[Event]])
 
-    doThrow(new RuntimeException("failure")).when(failingHandler).apply(Matchers.any(), Matchers.any())
+    doThrow(new RuntimeException("failure")).when(failingHandler).apply(Matchers.any(), Matchers.any(), Matchers.any())
 
     store.save(List(anEvent()))
 
@@ -101,7 +101,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     val evt1 = anEvent()
     val evt2 = anEvent()
 
-    doThrow(new RuntimeException("failure")).when(failingHandler).apply(EventInStream(timestamp, evt1, 1), DeserializedVersionOf(EventInStream(timestamp, evt1, 1)))
+    doThrow(new RuntimeException("failure")).when(failingHandler).apply(EventInStream(timestamp, evt1, 1), DeserializedVersionOf(EventInStream(timestamp, evt1, 1)), false)
 
     store.save(List(evt1, evt2))
 
@@ -112,7 +112,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     Thread.sleep(50)
 
-    verify(failingHandler).apply(EventInStream(timestamp, evt1, 1), DeserializedVersionOf(EventInStream(timestamp, evt1, 1)))
+    verify(failingHandler).apply(EventInStream(timestamp, evt1, 1), DeserializedVersionOf(EventInStream(timestamp, evt1, 1)), false)
     verifyNoMoreInteractions(failingHandler)
     component.getReport.getValue.asInstanceOf[String] must include("Event subscription terminated. Failed to process version 1: failure")
 
@@ -141,8 +141,8 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
       setup.health.get() must be(healthy)
     }
 
-    verify(eventHandler).apply(EventInStream(timestamp, event1, 1), DeserializedVersionOf(EventInStream(timestamp, event1, 1)))
-    verify(eventHandler).apply(EventInStream(timestamp, event2, 2), DeserializedVersionOf(EventInStream(timestamp, event2, 2)))
+    verify(eventHandler).apply(EventInStream(timestamp, event1, 1), DeserializedVersionOf(EventInStream(timestamp, event1, 1)), false)
+    verify(eventHandler).apply(EventInStream(timestamp, event2, 2), DeserializedVersionOf(EventInStream(timestamp, event2, 2)), true)
   }
 
   it("starts up healthy when there are no events") {
@@ -203,7 +203,7 @@ case class DeserializedVersionOf(evt: EventInStream) extends Event
 class BlockingEventHandler extends EventHandler[Event] {
   val lock = new Semaphore(0)
 
-  override def apply(event: EventInStream, deserialized: Event): Unit = {
+  override def apply(event: EventInStream, deserialized: Event, endOfBatch: Boolean): Unit = {
     lock.acquire()
   }
 

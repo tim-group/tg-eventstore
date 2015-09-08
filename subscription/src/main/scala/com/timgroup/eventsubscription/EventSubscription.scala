@@ -102,7 +102,7 @@ class EventSubscription[T](
   private val invokeEventHandlers = new com.lmax.disruptor.EventHandler[EventContainer[T]] {
     override def onEvent(eventContainer: EventContainer[T], sequence: Long, endOfBatch: Boolean): Unit = {
       try {
-        eventHandler.apply(eventContainer.event, eventContainer.deserializedEvent)
+        eventHandler.apply(eventContainer.event, eventContainer.deserializedEvent, endOfBatch)
         processorListener.eventProcessed(eventContainer.event.version)
       } catch {
         case e: Exception => processorListener.eventProcessingFailed(eventContainer.event.version, e); throw e
