@@ -101,7 +101,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     val evt1 = anEvent()
     val evt2 = anEvent()
 
-    doThrow(new RuntimeException("failure")).when(failingHandler).apply(EventInStream(timestamp, evt1, 1), DeserializedVersionOf(EventInStream(timestamp, evt1, 1)), false)
+    doThrow(new RuntimeException("failure")).when(failingHandler).apply(Matchers.eq(EventInStream(timestamp, evt1, 1)), Matchers.eq(DeserializedVersionOf(EventInStream(timestamp, evt1, 1))), Matchers.anyBoolean())
 
     store.save(List(evt1, evt2))
 
@@ -112,7 +112,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     Thread.sleep(50)
 
-    verify(failingHandler).apply(EventInStream(timestamp, evt1, 1), DeserializedVersionOf(EventInStream(timestamp, evt1, 1)), false)
+    verify(failingHandler).apply(Matchers.eq(EventInStream(timestamp, evt1, 1)), Matchers.eq(DeserializedVersionOf(EventInStream(timestamp, evt1, 1))), Matchers.anyBoolean())
     verifyNoMoreInteractions(failingHandler)
     component.getReport.getValue.asInstanceOf[String] must include("Event subscription terminated. Failed to process version 1: failure")
 
@@ -140,9 +140,9 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     eventually {
       setup.health.get() must be(healthy)
     }
-
-    verify(eventHandler).apply(EventInStream(timestamp, event1, 1), DeserializedVersionOf(EventInStream(timestamp, event1, 1)), false)
-    verify(eventHandler).apply(EventInStream(timestamp, event2, 2), DeserializedVersionOf(EventInStream(timestamp, event2, 2)), true)
+ 
+    verify(eventHandler).apply(Matchers.eq(EventInStream(timestamp, event1, 1)), Matchers.eq(DeserializedVersionOf(EventInStream(timestamp, event1, 1))), Matchers.anyBoolean())
+    verify(eventHandler).apply(Matchers.eq(EventInStream(timestamp, event2, 2)), Matchers.eq(DeserializedVersionOf(EventInStream(timestamp, event2, 2))), Matchers.eq(true))
   }
 
   it("starts up healthy when there are no events") {
