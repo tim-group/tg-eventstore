@@ -123,6 +123,33 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     component.getReport.getValue.asInstanceOf[String] must include("Event subscription terminated. Failed to process version 1: failure")
   }
 
+  it("does not continue processing events if deserialization failed on a previous event") {
+    val timestamp = DateTime.now()
+    val store = new InMemoryEventStore(new Clock { def now() = timestamp })
+    val handler = mock(classOf[EventHandler[Event]])
+
+    val evt1 = anEvent()
+    val evt2 = anEvent()
+    val evt3 = anEvent()
+
+    store.save(List(evt1, evt2, evt3))
+
+    val failingDeserializer: (EventInStream) => DeserializedVersionOf = evt => {
+      if (evt.version == 1) {
+        throw new scala.RuntimeException("Failed to deserialize event 1")
+      } else {
+        deserializer(evt)
+      }
+    }
+
+    setup = new EventSubscription("test", store, failingDeserializer, List(handler), runFrequency = 5)
+    setup.start()
+
+    Thread.sleep(50)
+
+    verifyNoMoreInteractions(handler)
+  }
+
   it("invokes event handlers with both EventInStream and deserialized event") {
     val timestamp = DateTime.now()
 

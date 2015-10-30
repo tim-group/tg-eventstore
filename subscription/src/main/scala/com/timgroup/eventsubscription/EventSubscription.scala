@@ -94,7 +94,10 @@ class EventSubscription[T](
         eventContainer.deserializedEvent = deserializer(eventContainer.event)
         processorListener.eventDeserialized(eventContainer.event.version)
       } catch {
-        case e: Exception => processorListener.eventDeserializationFailed(eventContainer.event.version, e)
+        case e: Exception => {
+          processorListener.eventDeserializationFailed(eventContainer.event.version, e)
+          throw e
+        }
       }
     }
   }
@@ -124,7 +127,7 @@ class EventSubscription[T](
   def stop() {
     executor.shutdown()
     executor.awaitTermination(1, TimeUnit.SECONDS)
-    disruptor.shutdown()
+    disruptor.halt
     eventHandlerExecutor.shutdown()
     eventHandlerExecutor.awaitTermination(1, TimeUnit.SECONDS)
   }
