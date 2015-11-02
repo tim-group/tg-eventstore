@@ -50,7 +50,7 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
            batchSize: Option[Int]) {
     this(connectionProvider,
          new SQLEventFetcher(tableName),
-         new SQLEventPersister(tableName),
+         new SQLEventPersister(tableName, new LastVersionFetcher(tableName)),
          tableName,
          now,
          batchSize)
