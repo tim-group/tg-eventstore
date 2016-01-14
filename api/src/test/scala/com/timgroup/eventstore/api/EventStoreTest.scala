@@ -46,18 +46,21 @@ trait EventStoreTest { this: FunSpec with MustMatchers =>
       stream.hasNext must be(false)
     }
 
-    it("has more elements when new events arrive") {
+    it("need to get another stream if new events arrive after end of iterator") {
       eventStore.save(serialized(ExampleEvent(1), ExampleEvent(2)))
       val stream = eventStore.fromAll()
 
       stream.next()
-      stream.next()
+      val lastVersion = stream.next().version
       stream.hasNext must be(false)
 
       eventStore.save(serialized(ExampleEvent(3)))
 
-      stream.hasNext must be(true)
-      deserialize(stream.next().eventData) must be(ExampleEvent(3))
+      stream.hasNext must be(false)
+
+      val newStream = eventStore.fromAll(lastVersion)
+      newStream.hasNext must be(true)
+      deserialize(newStream.next().eventData) must be(ExampleEvent(3))
     }
 
     it("writes events to the current version of the stream when no expected version is specified") {

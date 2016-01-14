@@ -39,7 +39,8 @@ object EventStoreBuild extends Build {
     .dependsOn(eventstore_api % "compile->compile; test->test")
 
   val eventstore_stitching = Project(id = "eventstore-stitching", base = file("stitching"))
-    .dependsOn(eventstore_api, eventstore_memory % "compile->test")
+    .dependsOn(eventstore_api % "compile->compile,test->test", eventstore_memory % "test")
+    .settings(compatibleScalaTestDependency)
 
   val eventstore_subscription = Project(id = "eventstore-subscription", base = file("subscription"))
     .dependsOn(eventstore_api, eventstore_memory % "compile->test")

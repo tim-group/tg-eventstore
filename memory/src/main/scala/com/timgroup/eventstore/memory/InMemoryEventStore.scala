@@ -1,7 +1,6 @@
 package com.timgroup.eventstore.memory
 
 import com.timgroup.eventstore.api._
-import org.joda.time.{DateTime, DateTimeZone}
 
 class InMemoryEventStore(now: Clock = SystemClock) extends EventStore {
   var events = Vector[EventInStream]()
@@ -19,6 +18,7 @@ class InMemoryEventStore(now: Clock = SystemClock) extends EventStore {
 
   override def fromAll(version: Long): EventStream = new EventStream {
     private var currentVersion: Int = version.toInt
+    private var hadNext = true
 
     override def next(): EventInStream = {
       val event = events(currentVersion)
@@ -26,7 +26,12 @@ class InMemoryEventStore(now: Clock = SystemClock) extends EventStore {
       event
     }
 
-    override def hasNext: Boolean = events.size > currentVersion
+    override def hasNext: Boolean = {
+      if (hadNext) {
+        hadNext = events.size > currentVersion
+      }
+      hadNext
+    }
   }
 
 

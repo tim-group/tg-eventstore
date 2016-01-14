@@ -1,10 +1,11 @@
 package com.timgroup.eventstore.stitching
 
-import com.timgroup.eventstore.api.{EventInStream, EventData}
+import com.timgroup.eventstore.api.{Clock, EventStore, EventData, EventStoreTest}
 import com.timgroup.eventstore.memory.InMemoryEventStore
-import org.scalatest.{FunSpec, MustMatchers}
+import org.joda.time.DateTime
+import org.scalatest.{BeforeAndAfterEach, FunSpec, MustMatchers}
 
-class BackfillStitchingEventStoreTest extends FunSpec with MustMatchers {
+class BackfillStitchingEventStoreTest extends FunSpec with MustMatchers with EventStoreTest with BeforeAndAfterEach {
   it("reads all events from backfill, and those required from live when querying entire eventstream") {
     val backfill = new InMemoryEventStore()
     val live = new InMemoryEventStore()
@@ -82,5 +83,24 @@ class BackfillStitchingEventStoreTest extends FunSpec with MustMatchers {
     events.next.eventData mustBe event("L2")
   }
 
+  val live = new InMemoryEventStore(
+    now = new Clock {
+      override def now(): DateTime = effectiveTimestamp
+    }
+  )
+
+  val eventStore = {
+    val backfill = new InMemoryEventStore()
+    new BackfillStitchingEventStore(backfill, live, 0)
+  }
+
+  it should behave like anEventStore(eventStore)
+
+  it should behave like optimisticConcurrencyControl(eventStore)
+
   def event(eventType: String) = EventData(eventType, eventType.getBytes("UTF-8"))
+
+  override protected def afterEach(): Unit = {
+    live.clear()
+  }
 }

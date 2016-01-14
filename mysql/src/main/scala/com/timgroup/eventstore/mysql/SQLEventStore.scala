@@ -77,6 +77,7 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
   override def fromAll(version: Long): EventStream = new EventStream {
     private var events: Iterator[EventInStream] = Iterator.empty
     private var currentVersion = version
+    private var hadNext = true
 
     override def next(): EventInStream = {
       potentiallyFetchMore()
@@ -91,8 +92,9 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
     }
 
     private def potentiallyFetchMore(): Unit = {
-      if (!events.hasNext) {
+      if (!events.hasNext && hadNext) {
         events = fetchPage(currentVersion, batchSize).iterator
+        hadNext = events.hasNext
       }
     }
   }
