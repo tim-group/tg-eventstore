@@ -59,5 +59,28 @@ class BackfillStitchingEventStoreTest extends FunSpec with MustMatchers {
     ))
   }
 
+  it("does not interleave events if additional events are added to backfill") {
+    val backfill = new InMemoryEventStore()
+    val live = new InMemoryEventStore()
+
+    backfill.save(Seq(event("B1")))
+    live.save(Seq(event("L1"), event("L2")))
+
+    val eventStore = new BackfillStitchingEventStore(backfill, live, 0)
+
+    val events = eventStore.fromAll(0)
+
+    events.hasNext mustBe true
+    events.next.eventData mustBe event("B1")
+    events.hasNext mustBe true
+    events.next.eventData mustBe event("L1")
+
+    // Add another event to backfill
+    backfill.save(Seq(event("B2")))
+
+    events.hasNext mustBe true
+    events.next.eventData mustBe event("L2")
+  }
+
   def event(eventType: String) = EventData(eventType, eventType.getBytes("UTF-8"))
 }

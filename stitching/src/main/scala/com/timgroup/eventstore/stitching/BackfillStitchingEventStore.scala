@@ -7,7 +7,8 @@ class BackfillStitchingEventStore(backfill: EventStore, live: EventStore, liveCu
 
   override def fromAll(version: Long): EventStream = {
     new EventStream {
-      val events = backfill.fromAll(version) ++ live.fromAll(liveCuttoffVersion.max(version))
+      val events = Iterator.empty ++ // Note: Workaround for https://issues.scala-lang.org/browse/SI-9623
+        backfill.fromAll(version) ++ live.fromAll(liveCuttoffVersion.max(version))
 
       override def next(): EventInStream = events.next()
 
