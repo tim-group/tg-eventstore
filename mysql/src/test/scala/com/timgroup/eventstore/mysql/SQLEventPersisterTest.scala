@@ -2,7 +2,7 @@ package com.timgroup.eventstore.mysql
 
 import java.sql.{DriverManager, Connection}
 
-import com.timgroup.eventstore.api.{SystemClock, OptimisticConcurrencyFailure, Body, EventData}
+import com.timgroup.eventstore.api._
 import org.joda.time.DateTime
 import org.scalatest.{BeforeAndAfterEach, MustMatchers, FunSpec, FunSuite}
 
@@ -43,4 +43,85 @@ class SQLEventPersisterTest extends FunSpec with MustMatchers with BeforeAndAfte
       connection.close()
     }
   }
+
+  it("throws IdempotentWriteFailure when we write different stuff with the same version") {
+    val connection = connectionProvider.getConnection()
+    try {
+      connection.setAutoCommit(false)
+
+      val persister = new IdempotentSQLEventPersister("Event")
+
+      intercept[IdempotentWriteFailure] {
+        persister.saveEventsToDB(connection, Seq(EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte]())))), None)
+        persister.saveEventsToDB(connection, Seq(EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](1))))), None)
+      }
+    } finally {
+      connection.close()
+    }
+  }
+
+  it("Idempotent Write allowed if the second write overlaps with the first") {
+
+    Template.exec { case (persister, connection) =>
+       persister.saveEventsToDB(connection,
+          Seq(
+            EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](1)))),
+            EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](2))))
+          ), Some(0L))
+
+        persister.saveEventsToDB(connection,
+          Seq(
+            EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](2))))
+          ), Some(2L))
+      }
+  }
+
+  it("Idempotent Write base case") {
+
+    Template.exec { case (persister, connection) =>
+        persister.saveEventsToDB(connection,
+          Seq(
+            EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](1)))),
+            EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](2))))
+          ), Some(0L))
+
+        persister.saveEventsToDB(connection,
+          Seq(
+            EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](1)))),
+            EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](2))))
+          ), Some(0L))
+      }
+  }
+
+
+
+  it("allows idempotent writes when the same stuff is written with the same version") {
+    val connection = connectionProvider.getConnection()
+    try {
+      connection.setAutoCommit(false)
+
+      val persister = new IdempotentSQLEventPersister("Event")
+
+      persister.saveEventsToDB(connection, Seq(EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte]())))), None)
+      persister.saveEventsToDB(connection, Seq(EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte]())))), None)
+    } finally {
+      connection.close()
+    }
+  }
+
+  object Template {
+
+    def exec(f: (IdempotentSQLEventPersister, Connection) => Unit): Unit = {
+      val connection = connectionProvider.getConnection()
+      try {
+        connection.setAutoCommit(false)
+        val persister = new IdempotentSQLEventPersister("Event")
+        f(persister, connection)
+      } finally {
+        connection.close()
+      }
+    }
+
+  }
+
 }
