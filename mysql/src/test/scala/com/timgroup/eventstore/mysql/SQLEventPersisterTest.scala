@@ -1,10 +1,13 @@
 package com.timgroup.eventstore.mysql
 
+import java.io.File
 import java.sql.{DriverManager, Connection}
 
 import com.timgroup.eventstore.api._
 import org.joda.time.DateTime
 import org.scalatest.{BeforeAndAfterEach, MustMatchers, FunSpec, FunSuite}
+
+import scala.io.Source
 
 class SQLEventPersisterTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
   private val connectionProvider = new ConnectionProvider {
@@ -125,3 +128,39 @@ class SQLEventPersisterTest extends FunSpec with MustMatchers with BeforeAndAfte
   }
 
 }
+
+object PerfTest extends App {
+
+  def deserializeEvents(file: File): Iterator[EventInStream] = {
+    Source.fromFile(file, "UTF8").getLines().map { line =>
+      val fields = line.split("\t")
+      EventInStream(DateTime.parse(fields(1)), EventData(fields(2), fields(3).getBytes), fields(0).toLong)
+    }
+  }
+
+  private val connectionProvider = new ConnectionProvider {
+    override def getConnection(): Connection = {
+      DriverManager.registerDriver(new com.mysql.jdbc.Driver())
+      DriverManager.getConnection("jdbc:mysql://localhost:3306/sql_eventstore?useGmtMillisForDatetimes=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&useTimezone=true&serverTimezone=UTC")
+    }
+  }
+
+  //val es = new SQLEventStore(connectionProvider, new SQLEventFetcher("PerfEvent"), new SQLEventPersister("PerfEvent", new LastVersionFetcher("PerfEvent")), "PerfEvent")
+
+  val es = new SQLEventStore(connectionProvider, new SQLEventFetcher("PerfEvent"), new IdempotentSQLEventPersister("PerfEvent", new LastVersionFetcher("PerfEvent")), "PerfEvent")
+
+  val eventsToWrite = deserializeEvents(new File("historyhead.json"))
+
+  val st = System.currentTimeMillis()
+  var expectedVersion: Option[Long] = None
+  while(eventsToWrite.hasNext) {
+    val batch = eventsToWrite.take(10000).map(_.eventData).toSeq
+    es.save(batch, expectedVersion)
+    expectedVersion = Some(expectedVersion.getOrElse(0L) + batch.size)
+  }
+
+  val et = System.currentTimeMillis()
+
+  println(s"${et - st}ms")
+}
+
