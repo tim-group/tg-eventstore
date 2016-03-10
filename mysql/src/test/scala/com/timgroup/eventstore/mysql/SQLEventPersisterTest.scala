@@ -55,8 +55,12 @@ class SQLEventPersisterTest extends FunSpec with MustMatchers with BeforeAndAfte
       val persister = new IdempotentSQLEventPersister("Event")
 
       intercept[IdempotentWriteFailure] {
-        persister.saveEventsToDB(connection, Seq(EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte]())))), None)
-        persister.saveEventsToDB(connection, Seq(EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](1))))), None)
+        persister.saveEventsToDB(connection,
+          Seq(EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte]())))), None
+        )
+        persister.saveEventsToDB(connection,
+          Seq(EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](1))))), None
+        )
       }
     } finally {
       connection.close()

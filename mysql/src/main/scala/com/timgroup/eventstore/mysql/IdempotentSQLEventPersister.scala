@@ -9,12 +9,6 @@ class IdempotentSQLEventPersister(tableName: String = "Event", lastVersionFetche
   def _saveEventsToDB(connection: Connection, newEvents: Seq[EventAtATime], expectedVersion: Option[Long] = None): Unit = {
     val statement = connection.prepareStatement("insert into " + tableName + "(eventType,body,effective_timestamp,version) values(?,?,?,?)")
 
-//    val currentVersion = lastVersionFetcher.fetchCurrentVersion(connection)
-
-  //  if (expectedVersion.map(_ != currentVersion).getOrElse(false)) {
-    //  throw new OptimisticConcurrencyFailure()
-    //}
-
     try {
       newEvents.zipWithIndex.foreach {
         case (effectiveEvent, index) => {
@@ -47,20 +41,15 @@ class IdempotentSQLEventPersister(tableName: String = "Event", lastVersionFetche
 
     if (currentBatch.nonEmpty) {
       if (currentBatch.size != newBatch.size) {
-        println(currentBatch.size)
-        println(newBatch.size)
         throw new IdempotentWriteFailure("batch sizes must match")
       }
 
-      Range(1, currentBatch.size).foreach { i =>
+      Range(0, currentBatch.size).foreach { i =>
         if (currentBatch(i).body != newBatch(i).eventData.body)
           throw new IdempotentWriteFailure("event bodies do not match")
       }
     } else {
       if (lastVersion != expectedVersion.getOrElse(0L)) {
-        println(lastVersion)
-        println(expectedVersion)
-        println(currentBatch.size)
         throw new OptimisticConcurrencyFailure()
       }
       _saveEventsToDB(connection, newEvents, expectedVersion)
