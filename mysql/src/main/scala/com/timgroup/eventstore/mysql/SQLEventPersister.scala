@@ -34,7 +34,7 @@ class SQLEventPersister(tableName: String = "Event", lastVersionFetcher: LastVer
         throw new RuntimeException("We wrote " + batches.size + " but we were supposed to write: " + newEvents.size + " events")
       }
     } catch {
-      case e: SQLException if e.getMessage.contains("Duplicate") => throw new OptimisticConcurrencyFailure()
+      case e: SQLException if e.getMessage.contains("Duplicate") => throw new OptimisticConcurrencyFailure(e)
     } finally {
       statement.close()
     }
