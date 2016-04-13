@@ -10,7 +10,7 @@ class InMemoryEventStore(now: Clock = SystemClock) extends EventStore {
     val currentVersion = events.size
 
     if (expectedVersion.exists(_ != currentVersion)) {
-      throw new OptimisticConcurrencyFailure()
+      throw new OptimisticConcurrencyFailure(None)
     }
 
     events = events ++ newEvents.zipWithIndex.map { case (evt, index) => EventInStream(now.now(), evt, currentVersion + index + 1) }

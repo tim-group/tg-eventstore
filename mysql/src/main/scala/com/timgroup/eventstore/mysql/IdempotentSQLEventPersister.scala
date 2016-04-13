@@ -27,7 +27,7 @@ class IdempotentSQLEventPersister(tableName: String = "Event", lastVersionFetche
         throw new RuntimeException("We wrote " + batches.size + " but we were supposed to write: " + newEvents.size + " events")
       }
     } catch {
-      case e: SQLException if e.getMessage.contains("Duplicate") => throw new OptimisticConcurrencyFailure()
+      case e: SQLException if e.getMessage.contains("Duplicate") => throw new OptimisticConcurrencyFailure(None)
     } finally {
       statement.close()
     }
@@ -44,13 +44,13 @@ class IdempotentSQLEventPersister(tableName: String = "Event", lastVersionFetche
         throw new IdempotentWriteFailure("batch sizes must match")
       }
 
-      Range(0, currentBatch.size).foreach { i =>
+      currentBatch.indices.foreach { i =>
         if (currentBatch(i).body != newBatch(i).eventData.body)
           throw new IdempotentWriteFailure("event bodies do not match")
       }
     } else {
       if (lastVersion != expectedVersion.getOrElse(0L)) {
-        throw new OptimisticConcurrencyFailure()
+        throw new OptimisticConcurrencyFailure(None)
       }
       _saveEventsToDB(connection, newEvents, expectedVersion)
     }

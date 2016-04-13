@@ -13,7 +13,7 @@ class SQLEventPersister(tableName: String = "Event", lastVersionFetcher: LastVer
     val currentVersion = lastVersionFetcher.fetchCurrentVersion(connection)
 
     if (expectedVersion.map(_ != currentVersion).getOrElse(false)) {
-      throw new OptimisticConcurrencyFailure()
+      throw new OptimisticConcurrencyFailure(None)
     }
 
     try {
@@ -34,7 +34,7 @@ class SQLEventPersister(tableName: String = "Event", lastVersionFetcher: LastVer
         throw new RuntimeException("We wrote " + batches.size + " but we were supposed to write: " + newEvents.size + " events")
       }
     } catch {
-      case e: SQLException if e.getMessage.contains("Duplicate") => throw new OptimisticConcurrencyFailure(e)
+      case e: SQLException if e.getMessage.contains("Duplicate") => throw new OptimisticConcurrencyFailure(Some(e))
     } finally {
       statement.close()
     }
