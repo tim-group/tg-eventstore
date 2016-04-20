@@ -9,3 +9,5 @@ crossScalaVersions in ThisBuild := Seq("2.10.4", "2.11.5")
 publishTo in ThisBuild := Some("publish-repo" at "http://repo.youdevise.com:8081/nexus/content/repositories/yd-release-candidates")
 
 credentials in ThisBuild += Credentials(new File("/etc/sbt/credentials"))
+
+overridePublishSettings
