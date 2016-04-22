@@ -11,14 +11,13 @@ class IdempotentSQLEventPersister(tableName: String = "Event", lastVersionFetche
 
     try {
       newEvents.zipWithIndex.foreach {
-        case (effectiveEvent, index) => {
+        case (effectiveEvent, index) =>
           statement.clearParameters()
           statement.setString(1, effectiveEvent.eventData.eventType)
           statement.setBytes(2, effectiveEvent.eventData.body.data)
           statement.setTimestamp(3, new Timestamp(effectiveEvent.effectiveTimestamp.getMillis))
           statement.setLong(4, expectedVersion.getOrElse(0L) + index + 1)
           statement.addBatch()
-        }
       }
 
       val batches = statement.executeBatch()
@@ -46,7 +45,7 @@ class IdempotentSQLEventPersister(tableName: String = "Event", lastVersionFetche
 
       currentBatch.indices.foreach { i =>
         if (currentBatch(i).body != newBatch(i).eventData.body) {
-          val version = fromVersion + i
+          val version = fromVersion + i + 1
           val currentBody = new String(currentBatch(i).body.data, "UTF-8")
           val newBody = new String(newBatch(i).eventData.body.data, "UTF-8")
           throw new IdempotentWriteFailure(s"event bodies do not match for version $version\n" +
