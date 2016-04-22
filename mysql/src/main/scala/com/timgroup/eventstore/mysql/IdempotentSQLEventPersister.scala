@@ -35,8 +35,8 @@ class IdempotentSQLEventPersister(tableName: String = "Event", lastVersionFetche
 
 
   def saveEventsToDB(connection: Connection, newEvents: Seq[EventAtATime], expectedVersion: Option[Long] = None): Unit = {
-
-    val (lastVersion, currentBatch) = lastVersionFetcher.fetchBatch(connection, expectedVersion.getOrElse(0L), newEvents.size)
+    val fromVersion = expectedVersion.getOrElse(0L)
+    val (lastVersion, currentBatch) = lastVersionFetcher.fetchBatch(connection, fromVersion, newEvents.size)
     val newBatch = newEvents.toVector
 
     if (currentBatch.nonEmpty) {
@@ -45,11 +45,17 @@ class IdempotentSQLEventPersister(tableName: String = "Event", lastVersionFetche
       }
 
       currentBatch.indices.foreach { i =>
-        if (currentBatch(i).body != newBatch(i).eventData.body)
-          throw new IdempotentWriteFailure("event bodies do not match")
+        if (currentBatch(i).body != newBatch(i).eventData.body) {
+          val version = fromVersion + i
+          val currentBody = new String(currentBatch(i).body.data, "UTF-8")
+          val newBody = new String(newBatch(i).eventData.body.data, "UTF-8")
+          throw new IdempotentWriteFailure(s"event bodies do not match for version $version\n" +
+                                           s"current: $currentBody\n" +
+                                           s"    new: $newBody")
+        }
       }
     } else {
-      if (lastVersion != expectedVersion.getOrElse(0L)) {
+      if (lastVersion != fromVersion) {
         throw new OptimisticConcurrencyFailure(None)
       }
       _saveEventsToDB(connection, newEvents, expectedVersion)
