@@ -43,10 +43,8 @@ class SQLEventPersister(tableName: String = "Event", lastVersionFetcher: LastVer
 
 class LastVersionFetcher(tableName: String = "Event") {
   def fetchBatch(connection: Connection, fromVersion: Long, batchsize: Int): (Long, Vector[EventData]) = {
-    val statement = connection.prepareStatement(
-      s"select version, eventType, body from ${tableName} where version>=${fromVersion} limit ${batchsize+1}")
-
-    val results = statement.executeQuery()
+    val statement = connection.createStatement()
+    val results = statement.executeQuery(s"select version, eventType, body from ${tableName} where version>=${fromVersion} limit ${batchsize+1}")
 
     var batch = Vector[EventData]()
     var lastVersion = 0L
@@ -65,8 +63,8 @@ class LastVersionFetcher(tableName: String = "Event") {
       }
       (lastVersion, batch)
     } finally {
-      allCatch opt { results.close() }
-      allCatch opt { statement.close() }
+      allCatch { results.close() }
+      allCatch { statement.close() }
     }
   }
 
