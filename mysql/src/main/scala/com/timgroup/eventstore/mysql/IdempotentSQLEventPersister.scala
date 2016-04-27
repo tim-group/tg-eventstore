@@ -39,10 +39,6 @@ class IdempotentSQLEventPersister(tableName: String = "Event", lastVersionFetche
     val newBatch = newEvents.toVector
 
     if (currentBatch.nonEmpty) {
-      if (currentBatch.size != newBatch.size) {
-        throw new IdempotentWriteFailure("batch sizes must match")
-      }
-
       currentBatch.indices.foreach { i =>
         if (currentBatch(i).body != newBatch(i).eventData.body) {
           val version = fromVersion + i + 1

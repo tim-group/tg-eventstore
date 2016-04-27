@@ -5,7 +5,7 @@ import java.sql.{DriverManager, Connection}
 
 import com.timgroup.eventstore.api._
 import org.joda.time.DateTime
-import org.scalatest.{BeforeAndAfterEach, MustMatchers, FunSpec, FunSuite}
+import org.scalatest.{BeforeAndAfterEach, MustMatchers, FunSpec}
 
 import scala.io.Source
 
@@ -82,6 +82,42 @@ class SQLEventPersisterTest extends FunSpec with MustMatchers with BeforeAndAfte
             EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](2))))
           ), Some(2L))
       }
+  }
+
+  it("Idempotent Write allowed if the second write overlaps and extends the first") {
+
+    Template.exec { case (persister, connection) =>
+       persister.saveEventsToDB(connection,
+          Seq(
+            EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](1)))),
+            EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](2))))
+          ), Some(0L))
+
+        persister.saveEventsToDB(connection,
+          Seq(
+            EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](2)))),
+            EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](3))))
+          ), Some(1L))
+      }
+  }
+
+  it("Idempotent Write not allowed if the second write overlaps but doesn't match the first") {
+
+    Template.exec { case (persister, connection) =>
+      persister.saveEventsToDB(connection,
+        Seq(
+          EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](1)))),
+          EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](2))))
+        ), Some(0L))
+
+      intercept[IdempotentWriteFailure] {
+        persister.saveEventsToDB(connection,
+          Seq(
+            EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](2, 2)))),
+            EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](3))))
+          ), Some(1L))
+      }
+    }
   }
 
   it("Idempotent Write base case") {
