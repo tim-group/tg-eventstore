@@ -53,7 +53,7 @@ class IdempotentSQLEventPersister(tableName: String = "Event", lastVersionFetche
       }
     } else {
       if (lastVersion != fromVersion) {
-        throw new OptimisticConcurrencyFailure(Some(new RuntimeException(s"lastVersion $lastVersion not equal to fromVersion $fromVersion") with NoStackTrace))
+        throw new OptimisticConcurrencyFailure(Some(new RuntimeException(s"lastVersion $lastVersion not equal to fromVersion $fromVersion, expectedVersion ${expectedVersion}, newEvents size ${newBatch.size}, currentBatch size ${currentBatch.size}") with NoStackTrace))
       }
       _saveEventsToDB(connection, newEvents, expectedVersion)
     }
