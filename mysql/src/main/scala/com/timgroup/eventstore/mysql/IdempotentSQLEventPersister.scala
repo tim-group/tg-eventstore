@@ -4,9 +4,11 @@ import java.sql.{Connection, SQLException, Timestamp}
 
 import com.timgroup.eventstore.api.{IdempotentWriteFailure, OptimisticConcurrencyFailure}
 
+import scala.util.control.NoStackTrace
+
 class IdempotentSQLEventPersister(tableName: String = "Event", lastVersionFetcher: LastVersionFetcher = new LastVersionFetcher("Event")) extends EventPersister {
 
-  def _saveEventsToDB(connection: Connection, newEvents: Seq[EventAtATime], expectedVersion: Option[Long] = None): Unit = {
+  private def _saveEventsToDB(connection: Connection, newEvents: Seq[EventAtATime], expectedVersion: Option[Long] = None): Unit = {
     val statement = connection.prepareStatement("insert into " + tableName + "(eventType,body,effective_timestamp,version) values(?,?,?,?)")
 
     try {
@@ -51,7 +53,7 @@ class IdempotentSQLEventPersister(tableName: String = "Event", lastVersionFetche
       }
     } else {
       if (lastVersion != fromVersion) {
-        throw new OptimisticConcurrencyFailure(None)
+        throw new OptimisticConcurrencyFailure(Some(new RuntimeException(s"lastVersion $lastVersion not equal to fromVersion $fromVersion") with NoStackTrace))
       }
       _saveEventsToDB(connection, newEvents, expectedVersion)
     }
