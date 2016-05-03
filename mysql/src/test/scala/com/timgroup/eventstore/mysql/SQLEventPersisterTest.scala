@@ -183,6 +183,31 @@ class SQLEventPersisterTest extends FunSpec with MustMatchers with BeforeAndAfte
     }
   }
 
+  it("idempotent writes when writing past end of database but matching some at start of 1") {
+    val connection = connectionProvider.getConnection()
+    try {
+      val persister = new IdempotentSQLEventPersister("Event")
+
+      persister.saveEventsToDB(connection, Seq(
+        EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](1)))),
+        EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](2))))),
+      None)
+
+      persister.saveEventsToDB(connection, Seq(
+        EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](2)))),
+        EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](3))))),
+      Some(1))
+
+      val es = new SQLEventStore(connectionProvider, new SQLEventFetcher("Event"), new IdempotentSQLEventPersister("Event", new LastVersionFetcher("Event")), "Event")
+      val savedEvents = es.fromAll(0).toList
+
+      savedEvents.length mustBe 3
+      savedEvents.map(_.eventData.body.data.head) must equal (Seq(1, 2, 3))
+    } finally {
+      connection.close()
+    }
+  }
+
   object Template {
 
     def exec(f: (IdempotentSQLEventPersister, Connection) => Unit): Unit = {
