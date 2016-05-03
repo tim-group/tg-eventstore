@@ -51,6 +51,9 @@ class IdempotentSQLEventPersister(tableName: String = "Event", lastVersionFetche
                                            s"    new: $newBody")
         }
       }
+      val eventsAlreadyInDb = currentBatch.size
+      val eventsNotYetInDb = newEvents.drop(eventsAlreadyInDb)
+      _saveEventsToDB(connection, eventsNotYetInDb, Some(fromVersion + eventsAlreadyInDb))
     } else {
       if (lastVersion != fromVersion) {
         throw new OptimisticConcurrencyFailure(Some(new RuntimeException(s"lastVersion $lastVersion not equal to fromVersion $fromVersion, expectedVersion ${expectedVersion}, newEvents size ${newBatch.size}, currentBatch size ${currentBatch.size}") with NoStackTrace))

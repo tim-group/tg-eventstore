@@ -71,7 +71,9 @@ class SQLEventPersisterTest extends FunSpec with MustMatchers with BeforeAndAfte
   it("Idempotent Write allowed if the second write overlaps with the first") {
 
     Template.exec { case (persister, connection) =>
-       persister.saveEventsToDB(connection,
+      connection.setAutoCommit(true)
+
+      persister.saveEventsToDB(connection,
           Seq(
             EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](1)))),
             EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](2))))
@@ -80,23 +82,30 @@ class SQLEventPersisterTest extends FunSpec with MustMatchers with BeforeAndAfte
         persister.saveEventsToDB(connection,
           Seq(
             EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](2))))
-          ), Some(2L))
-      }
+          ), Some(1L))
+
+      val es = new SQLEventStore(connectionProvider, new SQLEventFetcher("Event"), new IdempotentSQLEventPersister("Event", new LastVersionFetcher("Event")), "Event")
+      val savedEvents = es.fromAll(0).toList
+
+      savedEvents.length mustBe 2
+    }
   }
 
   it("Idempotent Write allowed if the second write overlaps and extends the first") {
-
     Template.exec { case (persister, connection) =>
-       persister.saveEventsToDB(connection,
-          Seq(
-            EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](1)))),
-            EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](2))))
-          ), Some(0L))
+      connection.setAutoCommit(true)
+      val now = new DateTime()
 
-        persister.saveEventsToDB(connection,
+      persister.saveEventsToDB(connection,
           Seq(
-            EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](2)))),
-            EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](3))))
+            EventAtATime(now, EventData("Event", Body(Array[Byte](1)))),
+            EventAtATime(now, EventData("Event", Body(Array[Byte](2))))
+          ), None)
+
+        new IdempotentSQLEventPersister("Event", new LastVersionFetcher("Event")).saveEventsToDB(connection,
+          Seq(
+            EventAtATime(now, EventData("Event", Body(Array[Byte](2)))),
+            EventAtATime(now, EventData("Event", Body(Array[Byte](3))))
           ), Some(1L))
       }
   }
@@ -104,11 +113,13 @@ class SQLEventPersisterTest extends FunSpec with MustMatchers with BeforeAndAfte
   it("Idempotent Write not allowed if the second write overlaps but doesn't match the first") {
 
     Template.exec { case (persister, connection) =>
+      connection.setAutoCommit(true)
+
       persister.saveEventsToDB(connection,
         Seq(
           EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](1)))),
           EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](2))))
-        ), Some(0L))
+        ), None)
 
       intercept[IdempotentWriteFailure] {
         persister.saveEventsToDB(connection,
@@ -148,6 +159,25 @@ class SQLEventPersisterTest extends FunSpec with MustMatchers with BeforeAndAfte
 
       persister.saveEventsToDB(connection, Seq(EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte]())))), None)
       persister.saveEventsToDB(connection, Seq(EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte]())))), None)
+    } finally {
+      connection.close()
+    }
+  }
+
+  it("idempotent writes when writing past end of database but matching some at start") {
+    val connection = connectionProvider.getConnection()
+    try {
+      val persister = new IdempotentSQLEventPersister("Event")
+
+      persister.saveEventsToDB(connection, Seq(EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](1))))), None)
+      persister.saveEventsToDB(connection, Seq(EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](1)))),
+        EventAtATime(new DateTime(), EventData("Event", Body(Array[Byte](2))))
+      ), None)
+
+      val es = new SQLEventStore(connectionProvider, new SQLEventFetcher("Event"), new IdempotentSQLEventPersister("Event", new LastVersionFetcher("Event")), "Event")
+      val savedEvents = es.fromAll(0).toList
+
+      savedEvents.length mustBe 2
     } finally {
       connection.close()
     }
