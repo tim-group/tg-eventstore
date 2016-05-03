@@ -7,6 +7,8 @@ import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.util.control.Exception.allCatch
 
+import org.slf4j.LoggerFactory
+
 trait ConnectionProvider {
   def getConnection(): Connection
 }
@@ -17,7 +19,7 @@ trait EventPersister {
 
 case class EventAtATime(effectiveTimestamp: DateTime, eventData: EventData)
 
-object Utils {
+object Utils extends CloseWithLogging {
   def transactionallyUsing[T](connectionProvider: ConnectionProvider)(code: Connection => T): T = {
     val connection = connectionProvider.getConnection()
 
@@ -32,9 +34,23 @@ object Utils {
         throw e
       }
     } finally {
-      allCatch opt { connection.close() }
+      closeWithLogging(connection)
     }
   }
+}
+
+trait CloseWithLogging {
+  private val logger = LoggerFactory.getLogger(getClass)
+
+  protected[this] def closeWithLogging(c: {def close()}) = {
+    (allCatch withTry {
+      c.close()
+    }).failed
+      .foreach(logger.info(s"Failure closing", _))
+  }
+}
+object CloseWithLogging {
+  lazy val shouldLog = java.lang.Boolean.getBoolean("")
 }
 
 class SQLEventStore(connectionProvider: ConnectionProvider,
@@ -42,7 +58,7 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
                     persister: EventPersister,
                     tableName: String,
                     now: () => DateTime = () => DateTime.now(DateTimeZone.UTC),
-                    batchSize: Option[Int] = None) extends EventStore {
+                    batchSize: Option[Int] = None) extends EventStore with CloseWithLogging {
 
   def this(connectionProvider: ConnectionProvider,
            tableName: String,
@@ -123,9 +139,9 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
       }
 
     } finally {
-      allCatch opt { results.close() }
-      allCatch opt { statement.close() }
-      allCatch opt { connection.close() }
+      closeWithLogging(results)
+      closeWithLogging(statement)
+      closeWithLogging(connection)
     }
   }
 }

@@ -40,7 +40,8 @@ val eventstore_mysql = Project(id = "eventstore-mysql", base = file("mysql"))
   .settings(
     parallelExecution in Test := false,
     compatibleScalaTestDependency,
-    libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.20" % "test"
+    libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.20" % "test",
+    libraryDependencies += "com.timgroup" %% "tim-slogger" % autobump
   )
   .settings(CreateDatabase.settings :_*)
   .settings(overridePublishSettings)

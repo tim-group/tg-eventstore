@@ -3,9 +3,8 @@ package com.timgroup.eventstore.mysql
 import java.sql.{Timestamp, ResultSet, PreparedStatement}
 
 import org.joda.time.DateTime
-import scala.util.control.Exception.allCatch
 
-class VersionByEffectiveTimestamp(connectionProvider: ConnectionProvider, tableName: String = "Event") {
+class VersionByEffectiveTimestamp(connectionProvider: ConnectionProvider, tableName: String = "Event") extends CloseWithLogging {
   def versionFor(cuttoff: DateTime): Long = {
     val connection = connectionProvider.getConnection()
     var statement: PreparedStatement = null
@@ -19,8 +18,8 @@ class VersionByEffectiveTimestamp(connectionProvider: ConnectionProvider, tableN
 
       resultSet.getLong(1)
     } finally {
-      allCatch opt { statement.close() }
-      allCatch opt { connection.close() }
+      closeWithLogging(statement)
+      closeWithLogging(connection)
     }
   }
 }

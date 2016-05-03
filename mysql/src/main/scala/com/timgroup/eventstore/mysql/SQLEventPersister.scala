@@ -4,8 +4,6 @@ import java.sql.{SQLException, Connection, Timestamp}
 
 import com.timgroup.eventstore.api.{EventData, OptimisticConcurrencyFailure}
 
-import scala.util.control.Exception._
-
 class SQLEventPersister(tableName: String = "Event", lastVersionFetcher: LastVersionFetcher = new LastVersionFetcher("Event")) extends EventPersister {
   def saveEventsToDB(connection: Connection, newEvents: Seq[EventAtATime], expectedVersion: Option[Long] = None): Unit = {
     val statement = connection.prepareStatement("insert into " + tableName + "(eventType,body,effective_timestamp,version) values(?,?,?,?)")
@@ -41,7 +39,7 @@ class SQLEventPersister(tableName: String = "Event", lastVersionFetcher: LastVer
   }
 }
 
-class LastVersionFetcher(tableName: String = "Event") {
+class LastVersionFetcher(tableName: String = "Event") extends CloseWithLogging {
   def fetchBatch(connection: Connection, fromVersion: Long, batchsize: Int): (Long, Vector[EventData]) = {
     val statement = connection.createStatement()
     val results = statement.executeQuery(s"select version, eventType, body from ${tableName} where version>=${fromVersion} limit ${batchsize+1}")
@@ -63,8 +61,8 @@ class LastVersionFetcher(tableName: String = "Event") {
       }
       (lastVersion, batch)
     } finally {
-      allCatch { results.close() }
-      allCatch { statement.close() }
+      closeWithLogging(results)
+      closeWithLogging(statement)
     }
   }
 
@@ -76,8 +74,8 @@ class LastVersionFetcher(tableName: String = "Event") {
       results.next()
       results.getLong(1)
     } finally {
-      allCatch opt { results.close() }
-      allCatch opt { statement.close() }
+      closeWithLogging(results)
+      closeWithLogging(statement)
     }
   }
 }
