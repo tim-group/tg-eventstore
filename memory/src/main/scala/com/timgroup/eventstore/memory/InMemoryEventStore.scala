@@ -5,8 +5,7 @@ import com.timgroup.eventstore.api._
 class InMemoryEventStore(now: Clock = SystemClock) extends EventStore {
   var events = Vector[EventInStream]()
 
-
-  override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit =  {
+  def saveWithTime(now: Clock = SystemClock, newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit =  {
     val currentVersion = events.size
 
     if (expectedVersion.exists(_ != currentVersion)) {
@@ -14,6 +13,10 @@ class InMemoryEventStore(now: Clock = SystemClock) extends EventStore {
     }
 
     events = events ++ newEvents.zipWithIndex.map { case (evt, index) => EventInStream(now.now(), evt, currentVersion + index + 1) }
+  }
+
+  override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit =  {
+    saveWithTime(now, newEvents, expectedVersion)
   }
 
   override def fromAll(version: Long): EventStream = new EventStream {
