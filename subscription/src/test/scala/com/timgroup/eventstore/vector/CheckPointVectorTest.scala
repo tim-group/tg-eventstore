@@ -47,25 +47,25 @@ class CheckPointVectorTest extends FunSpec with MustMatchers with BeforeAndAfter
 //        checkpointVector.executeBatch
 
 
-  it("consumes one iteration of all event streams") {
-
-    new EventStore {override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = ???
-      override def fromAll(version: Long): EventStream = ???
-      override def fromAll(version: Long, eventHandler: (EventInStream) => Unit): Unit = ???
-    }
-
-    val e1 = EventInStream(DateTime.parse(""), null, 0)
-
-    val eventstore1: EventStore = new InMemoryEventStore()
-    val eventstore2: EventStore = new InMemoryEventStore()
-    val checkpointVector = CheckPointVector.build(List(eventstore1, eventstore2))
-
-    var eventsReceived = List()
-    val eventHandler: (EventInStream => Unit) = { eis =>
-      eventsReceived :+ eis
-    }
-
-    checkpointVector.executeBatch(eventHandler)
-  }
+//  it("consumes one iteration of all event streams") {
+//
+//    new EventStore {override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = ???
+//      override def fromAll(version: Long): EventStream = ???
+//      override def fromAll(version: Long, eventHandler: (EventInStream) => Unit): Unit = ???
+//    }
+//
+//    val e1 = EventInStream(DateTime.parse(""), null, 0)
+//
+//    val eventstore1: EventStore = new InMemoryEventStore()
+//    val eventstore2: EventStore = new InMemoryEventStore()
+//    val checkpointVector = CheckPointVector.build(List(eventstore1, eventstore2))
+//
+//    var eventsReceived = List()
+//    val eventHandler: (EventInStream => Unit) = { eis =>
+//      eventsReceived :+ eis
+//    }
+//
+//    checkpointVector.executeBatch(eventHandler)
+//  }
 
 }
