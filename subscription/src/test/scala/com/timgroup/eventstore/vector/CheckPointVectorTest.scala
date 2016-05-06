@@ -70,4 +70,29 @@ class CheckPointVectorTest extends FunSpec with MustMatchers with BeforeAndAfter
     eventsReceived.map {eis => new String(eis.eventData.body.data)} must be(List("1","2","3","4"))
   }
 
+  it("finds more on the second run") {
+    val eventstore1 = new InMemoryEventStore()
+    val eventstore2 = new InMemoryEventStore()
+    val checkpointVector = CheckPointVector.build(List(eventstore1, eventstore2))
+
+    var eventsReceived = List[EventInStream]()
+    val eventHandler: (EventInStream => Unit) = { eis =>
+      eventsReceived = eventsReceived :+ eis
+    }
+
+    checkpointVector.executeBatch(eventHandler)
+
+    eventsReceived.map {eis => new String(eis.eventData.body.data)} must be(List.empty)
+
+    eventstore1.saveWithTime(time(1), someData(1), None)
+    eventstore2.saveWithTime(time(2), someData(2), None)
+    eventstore1.saveWithTime(time(3), someData(3), None)
+    eventstore2.saveWithTime(time(4), someData(4), None)
+
+    checkpointVector.executeBatch(eventHandler)
+
+    eventsReceived.map {eis => new String(eis.eventData.body.data)} must be(List("1","2","3","4"))
+  }
+
+
 }
