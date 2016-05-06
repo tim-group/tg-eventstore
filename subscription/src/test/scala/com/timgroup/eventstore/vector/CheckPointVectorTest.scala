@@ -1,6 +1,6 @@
 package com.timgroup.eventstore.vector
 
-import com.timgroup.eventstore.api.{EventData, EventStream, EventInStream, EventStore}
+import com.timgroup.eventstore.api._
 import com.timgroup.eventstore.memory.InMemoryEventStore
 import org.joda.time.DateTime
 import org.scalatest.{BeforeAndAfterEach, FunSpec, MustMatchers}
@@ -15,8 +15,8 @@ class CheckPointVectorTest extends FunSpec with MustMatchers with BeforeAndAfter
   case class CheckPointVector(var checkpoints: Seq[CheckPoint]) {
     def executeBatch(eventHandler: (EventInStream => Unit)): Unit = {
       val iterators = checkpoints.map(_.iterator)
-      //val iterator = new CombinedIterator[EventInStream](iterators)(EffectiveEventOrdering)
-      //iterator.foreach( x => f(x))
+      val iterator = new CombinedIterator[EventInStream](iterators.toList)(EffectiveEventOrdering)
+      iterator.foreach( event => eventHandler(event))
       this.checkpoints = iterators.map(_.newCheckpoint)
     }
   }
@@ -42,30 +42,32 @@ class CheckPointVectorTest extends FunSpec with MustMatchers with BeforeAndAfter
     def newCheckpoint = CheckPoint(checkPoint.eventstore, checkPointPosition)
   }
 
+  def time(t: Int) = {
+    new Clock {
+      override def now(): DateTime = new DateTime(0L).plusHours(t)
+    }
+  }
 
-  def f(eis: EventInStream) = {println(eis)}
-//        checkpointVector.executeBatch
+  def someData(dat: Int) = Seq[EventData](new EventData("Example", Body(dat.toString.getBytes)))
 
+  it("consumes one iteration of all event streams") {
+    val eventstore1 = new InMemoryEventStore()
+    val eventstore2 = new InMemoryEventStore()
+    val checkpointVector = CheckPointVector.build(List(eventstore1, eventstore2))
 
-//  it("consumes one iteration of all event streams") {
-//
-//    new EventStore {override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = ???
-//      override def fromAll(version: Long): EventStream = ???
-//      override def fromAll(version: Long, eventHandler: (EventInStream) => Unit): Unit = ???
-//    }
-//
-//    val e1 = EventInStream(DateTime.parse(""), null, 0)
-//
-//    val eventstore1: EventStore = new InMemoryEventStore()
-//    val eventstore2: EventStore = new InMemoryEventStore()
-//    val checkpointVector = CheckPointVector.build(List(eventstore1, eventstore2))
-//
-//    var eventsReceived = List()
-//    val eventHandler: (EventInStream => Unit) = { eis =>
-//      eventsReceived :+ eis
-//    }
-//
-//    checkpointVector.executeBatch(eventHandler)
-//  }
+    eventstore1.saveWithTime(time(1), someData(1), None)
+    eventstore2.saveWithTime(time(2), someData(2), None)
+    eventstore1.saveWithTime(time(3), someData(3), None)
+    eventstore2.saveWithTime(time(4), someData(4), None)
+
+    var eventsReceived = List[EventInStream]()
+    val eventHandler: (EventInStream => Unit) = { eis =>
+      eventsReceived = eventsReceived :+ eis
+    }
+
+    checkpointVector.executeBatch(eventHandler)
+
+    eventsReceived.map {eis => new String(eis.eventData.body.data)} must be(List("1","2","3","4"))
+  }
 
 }
