@@ -2,9 +2,9 @@ version in ThisBuild := "0.0." + sys.env.getOrElse("BUILD_NUMBER", "0-SNAPSHOT")
 
 organization in ThisBuild := "com.timgroup"
 
-scalaVersion in ThisBuild := "2.11.5"
+scalaVersion in ThisBuild := "2.11.8"
 
-crossScalaVersions in ThisBuild := Seq("2.10.4", "2.11.5")
+crossScalaVersions in ThisBuild := Seq("2.10.4", "2.11.8")
 
 publishTo in ThisBuild := Some("publish-repo" at "http://repo.youdevise.com:8081/nexus/content/repositories/yd-release-candidates")
 
@@ -17,7 +17,7 @@ val joda = Seq(
 
 val compatibleScalaTestDependency = libraryDependencies <<= (libraryDependencies, scalaVersion) { (ld, sv) =>
   (sv match {
-    case "2.11.5" => Seq(
+    case "2.11.8" => Seq(
       "org.scalatest" %% "scalatest" % "2.1.3" % "test",
       "org.scala-lang.modules" %% "scala-xml" % "1.0.2" % "test")
     case "2.10.4" => Seq(
