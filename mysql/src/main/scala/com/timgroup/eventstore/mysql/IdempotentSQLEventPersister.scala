@@ -2,11 +2,12 @@ package com.timgroup.eventstore.mysql
 
 import java.sql.{Connection, SQLException, Timestamp}
 
-import com.timgroup.eventstore.api.{IdempotentWriteFailure, OptimisticConcurrencyFailure}
+import com.timgroup.eventstore.api.{IdempotentWriteFailure, OptimisticConcurrencyFailure, CompatibilityPredicate}
 
 import scala.util.control.NoStackTrace
 
-class IdempotentSQLEventPersister(tableName: String = "Event", lastVersionFetcher: LastVersionFetcher = new LastVersionFetcher("Event")) extends EventPersister {
+class IdempotentSQLEventPersister(tableName: String = "Event", lastVersionFetcher: LastVersionFetcher = new LastVersionFetcher("Event"),
+                     compatibility: CompatibilityPredicate = CompatibilityPredicate.BytewiseEqual) extends EventPersister {
 
   private def _saveEventsToDB(connection: Connection, newEvents: Seq[EventAtATime], expectedVersion: Option[Long] = None): Unit = {
     val statement = connection.prepareStatement("insert into " + tableName + "(eventType,body,effective_timestamp,version) values(?,?,?,?)")
@@ -42,8 +43,8 @@ class IdempotentSQLEventPersister(tableName: String = "Event", lastVersionFetche
 
     if (currentBatch.nonEmpty) {
       currentBatch.indices.foreach { i =>
-        if (currentBatch(i).body != newBatch(i).eventData.body) {
-          val version = fromVersion + i + 1
+        val version = fromVersion + i + 1
+        if (!compatibility.test(version, currentBatch(i), newBatch(i).eventData)) {
           val currentBody = new String(currentBatch(i).body.data, "UTF-8")
           val newBody = new String(newBatch(i).eventData.body.data, "UTF-8")
           throw new IdempotentWriteFailure(s"event bodies do not match for version $version\n" +
