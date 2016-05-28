@@ -32,42 +32,51 @@ object JsonEventCompatibility extends CompatibilityPredicate {
     }
   }
 
-  def compareObjects(currentObject: ObjectNode, newObject: ObjectNode, ctx: Context): Unit = {
-    merge(sortedFields(newObject).iterator.buffered, sortedFields(currentObject).iterator.buffered,
-                                    (fieldName: String) => compareNodes(currentObject.get(fieldName), newObject.get(fieldName), ctx.appendField(fieldName)),
-                                    (newFieldName: String) => Unit,
-                                    (currentFieldName: String) => {
-                                      val currentNode = currentObject.get(currentFieldName)
-                                      if (!currentNode.isNull)
-                                        throw ctx.appendField(currentFieldName).idempotentWriteFailure("Element in current version, but not new version")
-                                    })
+  def compareObjects(currentObject: ObjectNode, newObject: ObjectNode, ctx: Context): Unit =
+    new MergeTraversable(sortedFields(currentObject), sortedFields(newObject)).foreach {
+      case Both(fieldName, currentNode, newNode) => compareNodes(currentNode, newNode, ctx.appendField(fieldName))
+      case Left(fieldName, currentNode) =>
+        if (!currentNode.isNull) throw ctx.appendField(fieldName).idempotentWriteFailure("Element in current version, but not new version")
+      case Right(fieldName, newNode) => Unit
+    }
+
+  class MergeTraversable[K : Ordering, V](val left: Seq[(K, V)], val right: Seq[(K, V)]) extends Traversable[Merged[K, V]] {
+    val ordering = implicitly[Ordering[K]]
+    def foreach[U](f: Merged[K, V] => U) = {
+      var leftPtr = left
+      var rightPtr = right
+      while (!leftPtr.isEmpty && !rightPtr.isEmpty) {
+        val n = ordering.compare(leftPtr.head._1, rightPtr.head._1)
+        if (n < 0) {
+          f(Left(leftPtr.head._1, leftPtr.head._2))
+          leftPtr = leftPtr.tail
+        }
+        else if (n > 0) {
+          f(Right(rightPtr.head._1, rightPtr.head._2))
+          rightPtr = rightPtr.tail
+        }
+        else {
+          f(Both(leftPtr.head._1, leftPtr.head._2, rightPtr.head._2))
+          leftPtr = leftPtr.tail
+          rightPtr = rightPtr.tail
+        }
+      }
+      leftPtr.foreach(l => f(Left(l._1, l._2)))
+      rightPtr.foreach(r => f(Right(r._1, r._2)))
+    }
   }
 
-  def merge[T: Ordering](left: BufferedIterator[T], right: BufferedIterator[T], emitEqual: (T) => Unit, emitLeftOnly: (T) => Unit, emitRightOnly: (T) => Unit): Unit = {
-    val ordering = implicitly[Ordering[T]]
-    while (left.hasNext && right.hasNext) {
-      if (ordering.equiv(left.head, right.head)) {
-        val value = left.next
-        right.next
-        emitEqual(value)
-      }
-      else if (ordering.lt(left.head, right.head)) {
-        emitLeftOnly(left.next)
-      }
-      else {
-        emitRightOnly(right.next)
-      }
-    }
-    while (left.hasNext) emitLeftOnly(left.next)
-    while (right.hasNext) emitRightOnly(right.next)
-  }
+  sealed trait Merged[K, V]
+  case class Both[K, V](key: K, left: V, right: V) extends Merged[K, V]
+  case class Left[K, V](key: K, value: V) extends Merged[K, V]
+  case class Right[K, V](key: K, value: V) extends Merged[K, V]
 
   def compareArrays(currentArray: ArrayNode, newArray: ArrayNode, ctx: Context): Unit = {
     if (currentArray.size != newArray.size()) throw ctx.idempotentWriteFailure("Array lengths do not match")
     (0 to (currentArray.size - 1)).foreach{ index => compareNodes(currentArray.get(index), newArray.get(index), ctx.appendIndex(index) ) }
   }
 
-  def sortedFields(obj: ObjectNode) = obj.fieldNames.toList.sorted
+  def sortedFields(obj: ObjectNode) = obj.fieldNames.toList.sorted.map(name => (name, obj.get(name)))
 
   def parse(input: EventData, errorMessage: String): ObjectNode = {
     try {
