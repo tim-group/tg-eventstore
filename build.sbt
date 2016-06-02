@@ -8,8 +8,6 @@ scalaVersion in ThisBuild := "2.11.8"
 
 javaVersion in ThisBuild := "1.8"
 
-publishArtifact in (Compile, packageDoc) := false
-
 crossScalaVersions in ThisBuild := Seq("2.10.4", "2.11.8")
 
 publishTo in ThisBuild := Some("publish-repo" at "http://repo.youdevise.com:8081/nexus/content/repositories/yd-release-candidates")
@@ -40,6 +38,7 @@ val eventstore_api = Project(id = "eventstore-api", base = file("api"))
   .settings(libraryDependencies ++= joda)
   .settings(compatibleScalaTestDependency)
   .settings(overridePublishSettings)
+  .settings(publishArtifact in (Compile, packageDoc) := false)
 
 val eventstore_mysql = Project(id = "eventstore-mysql", base = file("mysql"))
   .dependsOn(eventstore_api % "compile->compile; test->test")
@@ -51,15 +50,21 @@ val eventstore_mysql = Project(id = "eventstore-mysql", base = file("mysql"))
   )
   .settings(CreateDatabase.settings :_*)
   .settings(overridePublishSettings)
+  .settings(publishArtifact in (Compile, packageDoc) := false)
+
 
 val eventstore_memory = Project(id = "eventstore-memory", base = file("memory"))
   .dependsOn(eventstore_api % "compile->compile; test->test")
   .settings(overridePublishSettings)
+  .settings(publishArtifact in (Compile, packageDoc) := false)
+
 
 val eventstore_stitching = Project(id = "eventstore-stitching", base = file("stitching"))
   .dependsOn(eventstore_api % "compile->compile; test->test", eventstore_memory % "test")
   .settings(compatibleScalaTestDependency)
   .settings(overridePublishSettings)
+  .settings(publishArtifact in (Compile, packageDoc) := false)
+
 
 val eventstore_subscription = Project(id = "eventstore-subscription", base = file("subscription"))
   .dependsOn(eventstore_api, eventstore_memory % "compile->test")
@@ -69,3 +74,4 @@ val eventstore_subscription = Project(id = "eventstore-subscription", base = fil
   "org.mockito" % "mockito-core" % "1.9.5" % "test"
 ))
   .settings(overridePublishSettings)
+  .settings(publishArtifact in (Compile, packageDoc) := false)
