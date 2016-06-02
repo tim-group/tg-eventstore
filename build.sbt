@@ -8,6 +8,8 @@ scalaVersion in ThisBuild := "2.11.8"
 
 javaVersion in ThisBuild := "1.8"
 
+publishArtifact in (Compile, packageDoc) := false
+
 crossScalaVersions in ThisBuild := Seq("2.10.4", "2.11.8")
 
 publishTo in ThisBuild := Some("publish-repo" at "http://repo.youdevise.com:8081/nexus/content/repositories/yd-release-candidates")
