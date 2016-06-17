@@ -5,9 +5,10 @@ import java.util.concurrent.{Executors, ThreadFactory, TimeUnit}
 
 import com.lmax.disruptor.dsl.{Disruptor, ProducerType}
 import com.lmax.disruptor.{BlockingWaitStrategy, EventFactory, EventTranslator, WorkHandler}
-import com.timgroup.eventstore.api.{SystemClock, Clock, EventInStream, EventStore}
-import com.timgroup.eventsubscription.healthcheck.{ChaserHealth, EventSubscriptionStatus, SubscriptionListenerAdapter}
+import com.timgroup.eventstore.api.{Clock, EventInStream, EventStore, SystemClock}
+import com.timgroup.eventsubscription.healthcheck.{ChaserHealth, EventSubscriptionStatus, SubscriptionListener, SubscriptionListenerAdapter}
 import com.timgroup.tucker.info.{Component, Health}
+
 import scala.collection.JavaConversions._
 
 trait EventProcessorListener {
@@ -33,7 +34,16 @@ class EventSubscription[T](
             bufferSize: Int = 1024,
             runFrequency: Long = 1000,
             fromVersion: Long = 0,
-            maxInitialReplayDuration: Int = 240) {
+            maxInitialReplayDuration: Int = 240,
+            listeners: List[SubscriptionListener] = List.empty) {
+
+  private val chaserHealth = new ChaserHealth(name, clock)
+  private val subscriptionStatus = new EventSubscriptionStatus(name, clock, maxInitialReplayDuration)
+  private val processorListener = new SubscriptionListenerAdapter(fromVersion, subscriptionStatus.asInstanceOf[SubscriptionListener] +: listeners:_*)
+  private val chaserListener = new BroadcastingChaserListener(chaserHealth, processorListener)
+
+  val statusComponents: List[Component] = List(subscriptionStatus, chaserHealth)
+  val health: Health = subscriptionStatus
 
   def this(name: String,
            eventstore: EventStore,
@@ -55,14 +65,27 @@ class EventSubscription[T](
          maxInitialReplayDuration)
   }
 
-  private val chaserHealth = new ChaserHealth(name, clock)
-  private val subscriptionStatus = new EventSubscriptionStatus(name, clock, maxInitialReplayDuration)
-
-  private val processorListener = new SubscriptionListenerAdapter(fromVersion, subscriptionStatus)
-  private val chaserListener = new BroadcastingChaserListener(chaserHealth, processorListener)
-
-  val statusComponents: List[Component] = List(subscriptionStatus, chaserHealth)
-  val health: Health = subscriptionStatus
+  def this(name: String,
+           eventstore: EventStore,
+           deserializer: Deserializer[T],
+           handlers: java.lang.Iterable[EventHandler[T]],
+           listeners: java.lang.Iterable[SubscriptionListener],
+           clock: Clock,
+           bufferSize: java.lang.Integer,
+           runFrequency: java.lang.Long,
+           fromVersion: java.lang.Long,
+           maxInitialReplayDuration: java.lang.Integer) {
+    this(name,
+      eventstore,
+      deserializer.deserialize _,
+      handlers.toList,
+      clock,
+      bufferSize,
+      runFrequency,
+      fromVersion,
+      maxInitialReplayDuration,
+      listeners.toList)
+  }
 
   private val executor = Executors.newScheduledThreadPool(1, new ThreadFactory {
     private val count = new AtomicInteger()
