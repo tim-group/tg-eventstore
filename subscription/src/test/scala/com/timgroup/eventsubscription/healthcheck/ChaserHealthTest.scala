@@ -1,8 +1,7 @@
 package com.timgroup.eventsubscription.healthcheck
 
 import com.timgroup.eventstore.api.Clock
-import com.timgroup.tucker.info.Status
-import com.timgroup.tucker.info.Status.{CRITICAL, WARNING, OK}
+import com.timgroup.tucker.info.Status.{CRITICAL, OK, WARNING}
 import org.joda.time.DateTime
 import org.mockito.Mockito.{mock, when}
 import org.scalatest.{FunSpec, MustMatchers}
@@ -14,11 +13,12 @@ class ChaserHealthTest extends FunSpec with MustMatchers {
     val health = new ChaserHealth("", clock)
 
     when(clock.now()).thenReturn(now)
-    health.chaserUpToDate(1)
+    health.chaserUpToDate(134)
 
     when(clock.now()).thenReturn(now.plusSeconds(4))
 
     health.getReport.getStatus must be(OK)
+    health.getReport.getValue.toString must (endWith("Current version: 134"))
   }
 
   it("reports WARNING if chaser did not poll eventstore in over 5s") {

@@ -36,6 +36,7 @@ class ChaserHealth(name: String, clock: Clock) extends Component("event-store-ch
   }
 
   override def chaserUpToDate(version: Long): Unit = {
+    currentVersion = version
     lastPollTimestamp = Some(clock.now())
   }
 }
