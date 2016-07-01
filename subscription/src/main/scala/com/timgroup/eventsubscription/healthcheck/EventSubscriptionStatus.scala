@@ -20,11 +20,13 @@ class EventSubscriptionStatus(name: String, clock: Clock, maxInitialReplayDurati
 
   override def getReport = terminatedReport.getOrElse {
     (staleSince, initialReplayDuration) match {
-      case (Some(stale), _) => {
+      case (Some(stale), maybeInitialDuration) => {
         val staleSeconds = secondsBetween(stale, clock.now()).getSeconds
-        val status = if (staleSeconds > 30) { CRITICAL } else { WARNING }
+        val status = maybeInitialDuration
+                      .map(_ => if (staleSeconds > 30) { CRITICAL } else { WARNING })
+                      .getOrElse(if (staleSeconds > maxInitialReplayDuration) { CRITICAL } else { OK })
         val currentVersionText = currentVersion.map(v => "Currently at version " + v + ".").getOrElse("No events processed yet.")
-        new Report(status, s"Stale, catching up. ${currentVersionText} (Stale for ${staleSeconds}s)")
+        new Report(status, s"Stale, catching up. $currentVersionText (Stale for ${staleSeconds}s)")
       }
       case (None, Some(initialDuration)) => if (initialDuration < maxInitialReplayDuration) {
         new Report(OK, s"Caught up at version ${currentVersion.getOrElse("")}. Initial replay took ${initialDuration}s.")
