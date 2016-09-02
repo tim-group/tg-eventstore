@@ -10,13 +10,11 @@ import org.joda.time.Seconds.secondsBetween
 class EventSubscriptionStatus(name: String, clock: Clock, maxInitialReplayDuration: Int)
         extends Component("event-subscription-status-" + name, "Event subscription status (" + name + ")") with Health with SubscriptionListener
 {
-  private val startTime: DateTime = clock.now()
-
-  @volatile private var terminatedReport: Option[Report] = None
-
+  @volatile private var startTime: DateTime = clock.now()
   @volatile private var staleSince: Option[DateTime] = None
   @volatile private var currentVersion: Option[Long] = None
   @volatile private var initialReplayDuration: Option[Int] = None
+  @volatile private var terminatedReport: Option[Report] = None
 
   override def getReport = terminatedReport.getOrElse {
     (staleSince, initialReplayDuration) match {
@@ -59,5 +57,13 @@ class EventSubscriptionStatus(name: String, clock: Clock, maxInitialReplayDurati
 
   override def terminated(version: Long, e: Exception): Unit = {
     terminatedReport = Some(new Report(CRITICAL, "Event subscription terminated. Failed to process version " + version + ": " + e.getMessage + " at " + e.getStackTrace.apply(0)))
+  }
+
+  def reset: Unit = {
+    startTime = clock.now()
+    staleSince = None
+    currentVersion = None
+    initialReplayDuration = None
+    terminatedReport = None
   }
 }
