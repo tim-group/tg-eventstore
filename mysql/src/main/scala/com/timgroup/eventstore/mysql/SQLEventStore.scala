@@ -4,7 +4,6 @@ import java.sql.{Connection, ResultSet}
 
 import com.timgroup.eventstore.api._
 import org.joda.time.{DateTime, DateTimeZone}
-import org.slf4j.LoggerFactory
 
 trait ConnectionProvider {
   def getConnection(): Connection
@@ -15,53 +14,6 @@ trait EventPersister {
 }
 
 case class EventAtATime(effectiveTimestamp: DateTime, eventData: EventData)
-
-object Utils {
-  private val logger = LoggerFactory.getLogger(getClass)
-
-  def transactionallyUsing[T](connectionProvider: ConnectionProvider)(code: Connection => T): T = {
-    withResource(connectionProvider.getConnection()) { connection =>
-      try {
-        connection.setAutoCommit(false)
-        val result = code(connection)
-        connection.commit()
-        result
-      } catch {
-        case e: Exception =>
-          connection.rollback()
-          throw e
-      }
-    }
-  }
-
-  def withResource[A <: AutoCloseable, B](open: => A)(usage: A => B): B = {
-    val resource = open
-    var throwing = false
-    try {
-      usage(resource)
-    } catch {
-      case ex: Throwable =>
-        throwing = true
-        try {
-          resource.close()
-        } catch {
-          case rex: Throwable =>
-            logger.info(s"Failure closing $resource", rex)
-            ex.addSuppressed(rex)
-        }
-        throw ex
-    } finally {
-      if (!throwing) {
-        try {
-          resource.close()
-        } catch {
-          case rex: Throwable =>
-            logger.info(s"Failure closing $resource (IGNORED)", rex)
-        }
-      }
-    }
-  }
-}
 
 class SQLEventStore(connectionProvider: ConnectionProvider,
                     fetcher: SQLEventFetcher,
@@ -88,14 +40,14 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
   }
 
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {
-    Utils.transactionallyUsing(connectionProvider) { connection =>
+    ResourceManagement.transactionallyUsing(connectionProvider) { connection =>
       val effectiveTimestamp = now()
       persister.saveEventsToDB(connection, newEvents.map(EventAtATime(effectiveTimestamp, _)), expectedVersion)
     }
   }
 
   private def fetchPage(version: Long, batchSize: Option[Int]) = {
-    Utils.transactionallyUsing(connectionProvider) { connection =>
+    ResourceManagement.transactionallyUsing(connectionProvider) { connection =>
       fetcher.fetchEventsFromDB(connection, version, batchSize)
     }
   }
@@ -126,7 +78,7 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
   }
 
   override def fromAll(version: Long, eventHandler: EventInStream => Unit): Unit = {
-    import Utils.withResource
+    import ResourceManagement.withResource
 
     withResource(connectionProvider.getConnection()) { connection =>
       connection.setAutoCommit(false)

@@ -7,7 +7,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 
 class SQLEventFetcher(tableName: String) {
   def fetchEventsFromDB(connection: Connection, version: Long = 0, batchSize: Option[Int] = None): Seq[EventInStream] = {
-    import Utils.withResource
+    import ResourceManagement.withResource
 
     withResource(connection.prepareStatement("select effective_timestamp, eventType, body, version from  %s where version > ? %s".format(tableName, batchSize.map("limit " + _).getOrElse("")))) {
       statement =>

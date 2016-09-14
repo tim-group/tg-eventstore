@@ -2,7 +2,7 @@ package com.timgroup.eventstore.mysql
 
 import java.sql.Timestamp
 
-import com.timgroup.eventstore.mysql.Utils.withResource
+import com.timgroup.eventstore.mysql.ResourceManagement.withResource
 import org.joda.time.DateTime
 
 class VersionByEffectiveTimestamp(connectionProvider: ConnectionProvider, tableName: String = "Event") {

@@ -3,7 +3,7 @@ package com.timgroup.eventstore.mysql
 import java.sql.{Connection, SQLException, Timestamp}
 
 import com.timgroup.eventstore.api.{EventData, OptimisticConcurrencyFailure}
-import com.timgroup.eventstore.mysql.Utils.withResource
+import com.timgroup.eventstore.mysql.ResourceManagement.withResource
 
 class SQLEventPersister(tableName: String = "Event", lastVersionFetcher: LastVersionFetcher = new LastVersionFetcher("Event")) extends EventPersister {
 
