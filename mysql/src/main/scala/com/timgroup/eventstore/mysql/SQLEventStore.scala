@@ -1,12 +1,9 @@
 package com.timgroup.eventstore.mysql
 
-import java.sql.{ResultSet, Connection}
+import java.sql.{Connection, ResultSet}
 
 import com.timgroup.eventstore.api._
 import org.joda.time.{DateTime, DateTimeZone}
-
-import scala.util.control.Exception.allCatch
-
 import org.slf4j.LoggerFactory
 
 trait ConnectionProvider {
@@ -19,7 +16,7 @@ trait EventPersister {
 
 case class EventAtATime(effectiveTimestamp: DateTime, eventData: EventData)
 
-object Utils extends CloseWithLogging {
+object Utils {
   private val logger = LoggerFactory.getLogger(getClass)
 
   def transactionallyUsing[T](connectionProvider: ConnectionProvider)(code: Connection => T): T = {
@@ -55,24 +52,15 @@ object Utils extends CloseWithLogging {
         throw ex
     } finally {
       if (!throwing) {
-        closeWithLogging(resource)
+        try {
+          resource.close()
+        } catch {
+          case rex: Throwable =>
+            logger.info(s"Failure closing $resource (IGNORED)", rex)
+        }
       }
     }
   }
-}
-
-trait CloseWithLogging {
-  private val logger = LoggerFactory.getLogger(getClass)
-
-  protected[this] def closeWithLogging(c: AutoCloseable) = {
-    (allCatch withTry {
-      c.close()
-    }).failed
-      .foreach(logger.info(s"Failure closing", _))
-  }
-}
-object CloseWithLogging {
-  lazy val shouldLog = java.lang.Boolean.getBoolean("")
 }
 
 class SQLEventStore(connectionProvider: ConnectionProvider,
@@ -80,7 +68,7 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
                     persister: EventPersister,
                     tableName: String,
                     now: () => DateTime = () => DateTime.now(DateTimeZone.UTC),
-                    batchSize: Option[Int] = None) extends EventStore with CloseWithLogging {
+                    batchSize: Option[Int] = None) extends EventStore {
 
   def this(connectionProvider: ConnectionProvider,
            tableName: String,

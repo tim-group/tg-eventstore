@@ -1,25 +1,19 @@
 package com.timgroup.eventstore.mysql
 
-import java.sql.{Timestamp, ResultSet, PreparedStatement}
+import java.sql.Timestamp
 
+import com.timgroup.eventstore.mysql.Utils.withResource
 import org.joda.time.DateTime
 
-class VersionByEffectiveTimestamp(connectionProvider: ConnectionProvider, tableName: String = "Event") extends CloseWithLogging {
-  def versionFor(cuttoff: DateTime): Long = {
-    val connection = connectionProvider.getConnection()
-    var statement: PreparedStatement = null
-    var resultSet: ResultSet = null
-
-    try {
-      statement = connection.prepareStatement("select max(version) from " + tableName + " where effective_timestamp < ?")
-      statement.setTimestamp(1, new Timestamp(cuttoff.getMillis))
-      resultSet = statement.executeQuery()
-      resultSet.next()
-
-      resultSet.getLong(1)
-    } finally {
-      closeWithLogging(statement)
-      closeWithLogging(connection)
+class VersionByEffectiveTimestamp(connectionProvider: ConnectionProvider, tableName: String = "Event") {
+  def versionFor(cutoff: DateTime): Long =
+    withResource(connectionProvider.getConnection()) { connection =>
+      withResource(connection.prepareStatement("select max(version) from " + tableName + " where effective_timestamp < ?")) { statement =>
+        statement.setTimestamp(1, new Timestamp(cutoff.getMillis))
+        withResource(statement.executeQuery()) { resultSet =>
+          resultSet.next()
+          resultSet.getLong(1)
+        }
+      }
     }
-  }
 }

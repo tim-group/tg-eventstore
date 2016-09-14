@@ -5,7 +5,7 @@ import java.sql.Connection
 import com.timgroup.eventstore.api.{EventInStream, EventData}
 import org.joda.time.{DateTime, DateTimeZone}
 
-class SQLEventFetcher(tableName: String) extends CloseWithLogging {
+class SQLEventFetcher(tableName: String) {
   def fetchEventsFromDB(connection: Connection, version: Long = 0, batchSize: Option[Int] = None): Seq[EventInStream] = {
     import Utils.withResource
 
