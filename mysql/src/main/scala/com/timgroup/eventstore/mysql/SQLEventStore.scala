@@ -20,6 +20,8 @@ trait EventPersister {
 case class EventAtATime(effectiveTimestamp: DateTime, eventData: EventData)
 
 object Utils extends CloseWithLogging {
+  private val logger = LoggerFactory.getLogger(getClass)
+
   def transactionallyUsing[T](connectionProvider: ConnectionProvider)(code: Connection => T): T = {
     withResource(connectionProvider.getConnection()) { connection =>
       try {
@@ -37,10 +39,24 @@ object Utils extends CloseWithLogging {
 
   def withResource[A <: AutoCloseable, B](open: => A)(usage: A => B): B = {
     val resource = open
+    var throwing = false
     try {
       usage(resource)
+    } catch {
+      case ex: Throwable =>
+        throwing = true
+        try {
+          resource.close()
+        } catch {
+          case rex: Throwable =>
+            logger.info(s"Failure closing $resource", rex)
+            ex.addSuppressed(rex)
+        }
+        throw ex
     } finally {
-      closeWithLogging(resource)
+      if (!throwing) {
+        closeWithLogging(resource)
+      }
     }
   }
 }
