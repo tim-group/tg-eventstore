@@ -19,7 +19,7 @@ import scala.util.Random
 class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
   var setup: EventSubscription[Event] = _
 
-  it("reports ill and warning on status page during initial replay") {
+  it("reports ill during initial replay") {
     val clock = mock(classOf[Clock])
     val startTimestamp = new DateTime()
     when(clock.now()).thenReturn(startTimestamp)
@@ -34,12 +34,12 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     eventually {
       setup.health.get() must be(ill)
-      component.getReport must be(new Report(WARNING, "Stale, catching up. No events processed yet. (Stale for 0s)"))
+      component.getReport must be(new Report(OK, "Stale, catching up. No events processed yet. (Stale for 0s)"))
     }
 
     eventProcessing.allowProcessing(1)
     eventually {
-      component.getReport must be(new Report(WARNING, "Stale, catching up. Currently at version 1. (Stale for 0s)"))
+      component.getReport must be(new Report(OK, "Stale, catching up. Currently at version 1. (Stale for 0s)"))
     }
 
     when(clock.now()).thenReturn(startTimestamp.plusSeconds(123))
