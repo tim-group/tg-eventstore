@@ -1,6 +1,6 @@
 package com.timgroup.eventstore.mysql
 
-import java.sql.{ResultSet, Statement, Connection}
+import java.sql.{ResultSet, Connection}
 
 import com.timgroup.eventstore.api._
 import org.joda.time.{DateTime, DateTimeZone}
@@ -21,20 +21,26 @@ case class EventAtATime(effectiveTimestamp: DateTime, eventData: EventData)
 
 object Utils extends CloseWithLogging {
   def transactionallyUsing[T](connectionProvider: ConnectionProvider)(code: Connection => T): T = {
-    val connection = connectionProvider.getConnection()
-
-    try {
-      connection.setAutoCommit(false)
-      val result = code(connection)
-      connection.commit()
-      result
-    } catch {
-      case e: Exception => {
-        connection.rollback()
-        throw e
+    withResource(connectionProvider.getConnection()) { connection =>
+      try {
+        connection.setAutoCommit(false)
+        val result = code(connection)
+        connection.commit()
+        result
+      } catch {
+        case e: Exception =>
+          connection.rollback()
+          throw e
       }
+    }
+  }
+
+  def withResource[A <: AutoCloseable, B](open: => A)(usage: A => B): B = {
+    val resource = open
+    try {
+      usage(resource)
     } finally {
-      closeWithLogging(connection)
+      closeWithLogging(resource)
     }
   }
 }
@@ -42,7 +48,7 @@ object Utils extends CloseWithLogging {
 trait CloseWithLogging {
   private val logger = LoggerFactory.getLogger(getClass)
 
-  protected[this] def closeWithLogging(c: {def close()}) = {
+  protected[this] def closeWithLogging(c: AutoCloseable) = {
     (allCatch withTry {
       c.close()
     }).failed
@@ -116,32 +122,25 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
   }
 
   override def fromAll(version: Long, eventHandler: EventInStream => Unit): Unit = {
-    var connection: Connection = null
-    var statement: Statement = null
-    var results: ResultSet = null
+    import Utils.withResource
 
-    try {
-      connection = connectionProvider.getConnection()
+    withResource(connectionProvider.getConnection()) { connection =>
       connection.setAutoCommit(false)
-      statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
-      statement.setFetchSize(Integer.MIN_VALUE)
-      results = statement.executeQuery("select effective_timestamp, eventType, body, version from  %s where version > %s".format(tableName, version))
-
-      while (results.next()) {
-        val nextEvent = EventInStream(
-          new DateTime(results.getTimestamp("effective_timestamp"), DateTimeZone.UTC),
-          EventData(
-            results.getString("eventType"),
-            results.getBytes("body")),
-          results.getLong("version")
-        )
-        eventHandler(nextEvent)
+      withResource(connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) { statement =>
+        statement.setFetchSize(Integer.MIN_VALUE)
+        withResource(statement.executeQuery("select effective_timestamp, eventType, body, version from  %s where version > %s".format(tableName, version))) { results =>
+          while (results.next()) {
+            val nextEvent = EventInStream(
+              new DateTime(results.getTimestamp("effective_timestamp"), DateTimeZone.UTC),
+              EventData(
+                results.getString("eventType"),
+                results.getBytes("body")),
+              results.getLong("version")
+            )
+            eventHandler(nextEvent)
+          }
+        }
       }
-
-    } finally {
-      closeWithLogging(results)
-      closeWithLogging(statement)
-      closeWithLogging(connection)
     }
   }
 }
