@@ -11,19 +11,6 @@ import com.timgroup.tucker.info.{Component, Health}
 
 import scala.collection.JavaConversions._
 
-trait EventProcessorListener {
-  def eventProcessingFailed(version: Long, e: Exception): Unit
-
-  def eventProcessed(version: Long): Unit
-
-  def eventDeserializationFailed(version: Long, e: Exception): Unit
-
-  def eventDeserialized(version: Long): Unit
-}
-
-trait Deserializer[T] {
-  def deserialize(eventInStream: EventInStream): T
-}
 
 class EventSubscription[T](
             name: String,
