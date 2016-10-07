@@ -101,6 +101,7 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
     try {
       connection.setAutoCommit(false)
       statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
+      statement.setFetchSize(Integer.MIN_VALUE)
       resultSet = statement.executeQuery("select effective_timestamp, eventType, body, version from  %s where version > %s".format(tableName, version))
 
       return StreamSupport.stream(new Spliterator[EventInStream] {
