@@ -11,6 +11,7 @@ import com.timgroup.eventsubscription.healthcheck.{ChaserHealth, EventSubscripti
 import com.timgroup.tucker.info.{Component, Health}
 
 import scala.collection.JavaConversions._
+import scala.collection.mutable
 
 
 class EventSubscription[T](
@@ -27,7 +28,10 @@ class EventSubscription[T](
 
   private val chaserHealth = new ChaserHealth(name, clock)
   private val subscriptionStatus = new EventSubscriptionStatus(name, clock, maxInitialReplayDuration)
-  private val processorListener = new SubscriptionListenerAdapter(fromVersion, subscriptionStatus.asInstanceOf[SubscriptionListener] +: listeners:_*)
+
+  import scala.collection.JavaConversions._
+  private val subListeners: java.util.List[SubscriptionListener] = subscriptionStatus.asInstanceOf[SubscriptionListener] +: listeners
+  private val processorListener = new SubscriptionListenerAdapter(fromVersion, subListeners)
   private val chaserListener = new BroadcastingChaserListener(chaserHealth, processorListener)
 
   val statusComponents: List[Component] = List(subscriptionStatus, chaserHealth)

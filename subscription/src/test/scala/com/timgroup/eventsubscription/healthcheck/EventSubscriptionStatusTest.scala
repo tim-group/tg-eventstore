@@ -1,13 +1,15 @@
 package com.timgroup.eventsubscription.healthcheck
 
+import java.util.Collections
+
 import com.timgroup.eventstore.api.Clock
 import com.timgroup.tucker.info.Health.State.{healthy, ill}
-import com.timgroup.tucker.info.Status.{OK, WARNING, CRITICAL}
+import com.timgroup.tucker.info.Status.{CRITICAL, OK, WARNING}
 import com.timgroup.tucker.info.Report
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone.UTC
 import org.mockito.Mockito.{mock, when}
-import org.scalatest.{OneInstancePerTest, FunSpec, MustMatchers}
+import org.scalatest.{FunSpec, MustMatchers, OneInstancePerTest}
 
 class EventSubscriptionStatusTest extends FunSpec with MustMatchers with OneInstancePerTest {
   val timestamp = new DateTime(2014, 2, 1, 0, 0, 0, UTC)
@@ -15,7 +17,7 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers with OneInst
   val clock = mock(classOf[Clock])
   when(clock.now()).thenReturn(timestamp)
   val status = new EventSubscriptionStatus("", clock, 123)
-  val adapter = new SubscriptionListenerAdapter(0, status)
+  val adapter = new SubscriptionListenerAdapter(0, Collections.singletonList(status))
 
   it("reports ill whilst initial replay is in progress") {
     status.get() must be(ill)
