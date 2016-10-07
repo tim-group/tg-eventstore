@@ -1,9 +1,11 @@
 package com.timgroup.eventsubscription;
 
+import com.timgroup.eventstore.api.Position;
+
 public interface ChaserListener {
     void transientFailure(Exception e);
 
-    void chaserReceived(long version);
+    void chaserReceived(Position position);
 
-    void chaserUpToDate(long version);
+    void chaserUpToDate(Position position);
 }

@@ -30,7 +30,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(anEvent(), anEvent(), anEvent()))
 
-    setup = new EventSubscription("test", store, deserializer, List(eventProcessing), clock, 1024, 1L, 0L, 320, Nil)
+    setup = new EventSubscription("test", store, deserializer, List(eventProcessing), clock, 1024, 1L, LegacyPositionAdapter(0L), 320, Nil)
     setup.start()
     val component = setup.statusComponents.find(_.getId == "event-subscription-status-test").get
 
@@ -62,7 +62,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     eventStore.save(List(anEvent()))
 
-    setup = new EventSubscription("test", eventStore, deserializer, Nil, clock, 1024, 1L, 0L, 320, Nil)
+    setup = new EventSubscription("test", eventStore, deserializer, Nil, clock, 1024, 1L, LegacyPositionAdapter(0L), 320, Nil)
     setup.start()
 
     eventually { setup.health.get() must be(healthy) }
@@ -84,7 +84,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(anEvent()))
 
-    setup = new EventSubscription("test", store, deserializer, List(failingHandler), SystemClock, 1024, 1L, 0L, 320, Nil)
+    setup = new EventSubscription("test", store, deserializer, List(failingHandler), SystemClock, 1024, 1L, LegacyPositionAdapter(0L), 320, Nil)
     setup.start()
 
     val component = setup.statusComponents.find(_.getId == "event-subscription-status-test").get
@@ -107,7 +107,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(evt1, evt2))
 
-    setup = new EventSubscription("test", store, deserializer, List(failingHandler), SystemClock, 1024, 5L, 0L, 320, Nil)
+    setup = new EventSubscription("test", store, deserializer, List(failingHandler), SystemClock, 1024, 5L, LegacyPositionAdapter(0L), 320, Nil)
     setup.start()
 
     val component = setup.statusComponents.find(_.getId == "event-subscription-status-test").get
@@ -146,7 +146,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
       }
     }
 
-    setup = new EventSubscription("test", store, failingDeserializer, List(handler), SystemClock, 1024, 5L, 0L, 320, Nil)
+    setup = new EventSubscription("test", store, failingDeserializer, List(handler), SystemClock, 1024, 5L, LegacyPositionAdapter(0L), 320, Nil)
     setup.start()
 
     Thread.sleep(50)
@@ -165,7 +165,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     store.save(List(event1, event2))
 
     val eventHandler = mock(classOf[EventHandler[Event]])
-    setup = new EventSubscription("test", store, deserializer, List(eventHandler), SystemClock, 1024, 1L, 0L, 320, Nil)
+    setup = new EventSubscription("test", store, deserializer, List(eventHandler), SystemClock, 1024, 1L, LegacyPositionAdapter(0L), 320, Nil)
     setup.start()
 
     eventually {
@@ -179,7 +179,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
   it("starts up healthy when there are no events") {
     val store = new InMemoryEventStore()
 
-    setup = new EventSubscription("test", store, deserializer, List(), SystemClock, 1024, 1L, 0L, 320, Nil)
+    setup = new EventSubscription("test", store, deserializer, List(), SystemClock, 1024, 1L, LegacyPositionAdapter(0L), 320, Nil)
     setup.start()
 
     eventually {
@@ -192,7 +192,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(anEvent(), anEvent(), anEvent()))
 
-    setup = new EventSubscription("test", store, deserializer, List(), SystemClock, 1024, 1L, 3L, 320, Nil)
+    setup = new EventSubscription("test", store, deserializer, List(), SystemClock, 1024, 1L, LegacyPositionAdapter(3L), 320, Nil)
     setup.start()
 
     eventually {

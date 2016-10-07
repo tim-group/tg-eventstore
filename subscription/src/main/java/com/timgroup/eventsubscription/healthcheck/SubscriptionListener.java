@@ -1,11 +1,13 @@
 package com.timgroup.eventsubscription.healthcheck;
 
-import java.util.OptionalLong;
+import com.timgroup.eventstore.api.Position;
+
+import java.util.Optional;
 
 public interface SubscriptionListener {
-    void caughtUpAt(long version);
+    void caughtUpAt(Position position);
 
-    void staleAtVersion(OptionalLong version);
+    void staleAtVersion(Optional<Position> position);
 
-    void terminated(long version, Exception e);
+    void terminated(Position position, Exception e);
 }

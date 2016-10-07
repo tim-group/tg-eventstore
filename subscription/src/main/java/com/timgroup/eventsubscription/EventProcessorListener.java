@@ -1,11 +1,13 @@
 package com.timgroup.eventsubscription;
 
+import com.timgroup.eventstore.api.Position;
+
 public interface EventProcessorListener {
-    void eventProcessingFailed(long version, Exception e);
+    void eventProcessingFailed(Position position, Exception e);
 
-    void eventProcessed(long version);
+    void eventProcessed(Position position);
 
-    void eventDeserializationFailed(long version, Exception e);
+    void eventDeserializationFailed(Position position, Exception e);
 
-    void eventDeserialized(long version);
+    void eventDeserialized(Position position);
 }

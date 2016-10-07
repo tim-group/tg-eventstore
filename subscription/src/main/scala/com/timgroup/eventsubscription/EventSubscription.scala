@@ -6,7 +6,7 @@ import java.util.function.Consumer
 
 import com.lmax.disruptor.dsl.{Disruptor, ProducerType}
 import com.lmax.disruptor.{BlockingWaitStrategy, EventFactory, EventTranslator, WorkHandler}
-import com.timgroup.eventstore.api.{Clock, EventInStream, EventStore, SystemClock}
+import com.timgroup.eventstore.api._
 import com.timgroup.eventsubscription.healthcheck.{ChaserHealth, EventSubscriptionStatus, SubscriptionListener, SubscriptionListenerAdapter}
 import com.timgroup.tucker.info.{Component, Health}
 
@@ -19,7 +19,7 @@ class EventSubscription[T](
             clock: Clock = SystemClock,
             bufferSize: java.lang.Integer,
             runFrequency: java.lang.Long,
-            fromVersion: java.lang.Long,
+            startingPosition: Position,
             maxInitialReplayDuration: java.lang.Integer,
             listeners: java.util.List[SubscriptionListener]) {
 
@@ -28,7 +28,7 @@ class EventSubscription[T](
 
   import scala.collection.JavaConversions._
   private val subListeners: java.util.List[SubscriptionListener] = subscriptionStatus.asInstanceOf[SubscriptionListener] +: listeners
-  private val processorListener = new SubscriptionListenerAdapter(fromVersion, subListeners)
+  private val processorListener = new SubscriptionListenerAdapter(startingPosition, subListeners)
   private val chaserListener = new BroadcastingChaserListener(chaserHealth, processorListener)
 
   val statusComponents: List[Component] = List(subscriptionStatus, chaserHealth)
@@ -62,10 +62,10 @@ class EventSubscription[T](
     override def onEvent(eventContainer: EventContainer[T]): Unit = {
       try {
         eventContainer.deserializedEvent = deserializer.deserialize(eventContainer.event)
-        processorListener.eventDeserialized(eventContainer.event.version)
+        processorListener.eventDeserialized(eventContainer.event.position)
       } catch {
         case e: Exception => {
-          processorListener.eventDeserializationFailed(eventContainer.event.version, e)
+          processorListener.eventDeserializationFailed(eventContainer.event.position, e)
           throw e
         }
       }
@@ -76,9 +76,9 @@ class EventSubscription[T](
     override def onEvent(eventContainer: EventContainer[T], sequence: Long, endOfBatch: Boolean): Unit = {
       try {
         eventHandler.apply(eventContainer.event, eventContainer.deserializedEvent, endOfBatch)
-        processorListener.eventProcessed(eventContainer.event.version)
+        processorListener.eventProcessed(eventContainer.event.position)
       } catch {
-        case e: Exception => processorListener.eventProcessingFailed(eventContainer.event.version, e); throw e
+        case e: Exception => processorListener.eventProcessingFailed(eventContainer.event.position, e); throw e
       }
     }
 
@@ -87,7 +87,7 @@ class EventSubscription[T](
   disruptor.handleEventsWithWorkerPool(deserializeWorker, deserializeWorker).then(invokeEventHandlers)
 
   def start() {
-    val chaser = new EventStoreChaser(eventstore, fromVersion, new Consumer[EventInStream] {
+    val chaser = new EventStoreChaser(eventstore, startingPosition, new Consumer[EventInStream] {
       override def accept(evt: EventInStream): Unit = disruptor.publishEvent(new SetEventInStream(evt))
     }, chaserListener)
 

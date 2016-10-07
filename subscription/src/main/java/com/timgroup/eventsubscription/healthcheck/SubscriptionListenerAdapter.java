@@ -1,21 +1,21 @@
 package com.timgroup.eventsubscription.healthcheck;
 
+import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventsubscription.ChaserListener;
 import com.timgroup.eventsubscription.EventProcessorListener;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalLong;
 
 public class SubscriptionListenerAdapter implements ChaserListener, EventProcessorListener {
-    private final long fromVersion;
+    private final Position startingPosition;
     private final List<SubscriptionListener> listeners;
 
-    private volatile Optional<Long> latestFetchedVersion = Optional.empty();
-    private volatile Optional<Long> latestProcessedVersion = Optional.empty();
+    private volatile Optional<Position> latestFetchedPosition = Optional.empty();
+    private volatile Optional<Position> latestProcessedPosition = Optional.empty();
 
-    public SubscriptionListenerAdapter(long fromVersion, List<SubscriptionListener> listeners) {
-        this.fromVersion = fromVersion;
+    public SubscriptionListenerAdapter(Position startingPosition, List<SubscriptionListener> listeners) {
+        this.startingPosition = startingPosition;
         this.listeners = listeners;
     }
 
@@ -23,58 +23,56 @@ public class SubscriptionListenerAdapter implements ChaserListener, EventProcess
     public void transientFailure(Exception e) { }
 
     @Override
-    public void chaserReceived(long version) {
-        latestFetchedVersion = Optional.empty();
+    public void chaserReceived(Position position) {
+        latestFetchedPosition = Optional.empty();
         checkStaleness();
     }
 
     @Override
-    public void chaserUpToDate(long version) {
-        latestFetchedVersion = Optional.of(version);
+    public void chaserUpToDate(Position position) {
+        latestFetchedPosition = Optional.of(position);
         checkStaleness();
     }
 
     @Override
-    public void eventProcessingFailed(long version, Exception e) {
+    public void eventProcessingFailed(Position position, Exception e) {
         for (SubscriptionListener listener : listeners) {
-            listener.terminated(version, e);
+            listener.terminated(position, e);
         }
     }
 
     @Override
-    public void eventProcessed(long version) {
-        latestProcessedVersion = Optional.of(version);
+    public void eventProcessed(Position position) {
+        latestProcessedPosition = Optional.of(position);
         checkStaleness();
     }
 
     @Override
-    public void eventDeserializationFailed(long version, Exception e) {
+    public void eventDeserializationFailed(Position position, Exception e) {
         for (SubscriptionListener listener : listeners) {
-            listener.terminated(version, e);
+            listener.terminated(position, e);
         }
     }
 
     @Override
-    public void eventDeserialized(long version) { }
+    public void eventDeserialized(Position position) { }
 
     private void checkStaleness() {
-        if (latestFetchedVersion.isPresent() && latestFetchedVersion.equals(latestProcessedVersion)) {
+        if (latestFetchedPosition.isPresent() && latestFetchedPosition.equals(latestProcessedPosition)) {
             for (SubscriptionListener listener : listeners) {
-                listener.caughtUpAt(latestFetchedVersion.get());
+                listener.caughtUpAt(latestFetchedPosition.get());
             }
-        } else if (latestFetchedVersion.isPresent() && !latestProcessedVersion.isPresent() && latestFetchedVersion.get() == fromVersion) {
+        } else if (latestFetchedPosition.isPresent() && !latestProcessedPosition.isPresent() && latestFetchedPosition.get().equals(startingPosition)) {
             for (SubscriptionListener listener : listeners) {
-                listener.caughtUpAt(fromVersion);
+                listener.caughtUpAt(startingPosition);
             }
-        } else if (latestProcessedVersion.isPresent()) {
-            OptionalLong value = latestProcessedVersion.isPresent() ? OptionalLong.of(latestProcessedVersion.get()) : OptionalLong.empty();
-
+        } else if (latestProcessedPosition.isPresent()) {
             for (SubscriptionListener listener : listeners) {
-                listener.staleAtVersion(value);
+                listener.staleAtVersion(latestProcessedPosition);
             }
         } else {
             for (SubscriptionListener listener : listeners) {
-                listener.staleAtVersion(OptionalLong.empty());
+                listener.staleAtVersion(Optional.empty());
             }
         }
     }

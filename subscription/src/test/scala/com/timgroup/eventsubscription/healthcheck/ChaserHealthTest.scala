@@ -1,6 +1,6 @@
 package com.timgroup.eventsubscription.healthcheck
 
-import com.timgroup.eventstore.api.Clock
+import com.timgroup.eventstore.api.{Clock, LegacyPositionAdapter, Position}
 import com.timgroup.tucker.info.Status.{CRITICAL, OK, WARNING}
 import org.joda.time.DateTime
 import org.mockito.Mockito.{mock, when}
@@ -13,7 +13,7 @@ class ChaserHealthTest extends FunSpec with MustMatchers {
     val health = new ChaserHealth("", clock)
 
     when(clock.now()).thenReturn(now)
-    health.chaserUpToDate(134)
+    health.chaserUpToDate(LegacyPositionAdapter(134))
 
     when(clock.now()).thenReturn(now.plusSeconds(4))
 
@@ -27,7 +27,7 @@ class ChaserHealthTest extends FunSpec with MustMatchers {
     val health = new ChaserHealth("", clock)
 
     when(clock.now()).thenReturn(now)
-    health.chaserUpToDate(1)
+    health.chaserUpToDate(LegacyPositionAdapter(1))
 
     when(clock.now()).thenReturn(now.plusSeconds(6))
 
@@ -40,7 +40,7 @@ class ChaserHealthTest extends FunSpec with MustMatchers {
     val health = new ChaserHealth("", clock)
 
     when(clock.now()).thenReturn(now)
-    health.chaserUpToDate(1)
+    health.chaserUpToDate(LegacyPositionAdapter(1))
 
     when(clock.now()).thenReturn(now.plusSeconds(31))
 
@@ -53,7 +53,7 @@ class ChaserHealthTest extends FunSpec with MustMatchers {
     val health = new ChaserHealth("", clock)
 
     when(clock.now()).thenReturn(now)
-    health.chaserReceived(1)
+    health.chaserReceived(LegacyPositionAdapter(1))
 
     when(clock.now()).thenReturn(now.plusSeconds(31))
 

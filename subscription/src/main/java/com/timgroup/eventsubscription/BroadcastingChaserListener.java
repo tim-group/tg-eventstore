@@ -1,5 +1,7 @@
 package com.timgroup.eventsubscription;
 
+import com.timgroup.eventstore.api.Position;
+
 public class BroadcastingChaserListener implements ChaserListener {
     private final ChaserListener[] listeners;
 
@@ -15,16 +17,16 @@ public class BroadcastingChaserListener implements ChaserListener {
     }
 
     @Override
-    public void chaserReceived(long version) {
+    public void chaserReceived(Position position) {
         for (ChaserListener listener : listeners) {
-            listener.chaserReceived(version);
+            listener.chaserReceived(position);
         }
     }
 
     @Override
-    public void chaserUpToDate(long version) {
+    public void chaserUpToDate(Position position) {
         for (ChaserListener listener : listeners) {
-            listener.chaserUpToDate(version);
+            listener.chaserUpToDate(position);
         }
     }
 }

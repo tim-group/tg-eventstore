@@ -2,6 +2,8 @@ package com.timgroup.eventsubscription;
 
 import com.timgroup.eventstore.api.EventInStream;
 import com.timgroup.eventstore.api.EventStore;
+import com.timgroup.eventstore.api.LegacyPositionAdapter;
+import com.timgroup.eventstore.api.Position;
 
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -11,32 +13,32 @@ public class EventStoreChaser implements Runnable {
     private final Consumer<EventInStream> eventHandler;
     private final ChaserListener listener;
 
-    private long lastVersion;
+    private Position lastPosition;
 
     public EventStoreChaser(
             EventStore eventStore,
-            long fromVersion,
+            Position startingPosition,
             Consumer<EventInStream> eventHandler,
             ChaserListener listener) {
         this.eventStore = eventStore;
         this.eventHandler = eventHandler;
         this.listener = listener;
 
-        this.lastVersion = fromVersion;
+        this.lastPosition = startingPosition;
     }
 
     @Override
     public void run() {
         try {
-            try (Stream<EventInStream> stream = eventStore.streamingFromAll(lastVersion)) {
+            try (Stream<EventInStream> stream = eventStore.streamingFromAll(((LegacyPositionAdapter) lastPosition).version())) {
                 stream.forEach(nextEvent -> {
-                    listener.chaserReceived(nextEvent.version());
-                    lastVersion = nextEvent.version();
+                    listener.chaserReceived(nextEvent.position());
+                    lastPosition = nextEvent.position();
                     eventHandler.accept(nextEvent);
                 });
             }
 
-            listener.chaserUpToDate(lastVersion);
+            listener.chaserUpToDate(lastPosition);
         } catch (Exception e) {
             listener.transientFailure(e);
         }

@@ -30,4 +30,10 @@ object EventData {
 
 case class EventInStream(effectiveTimestamp: DateTime,
                          eventData: EventData,
-                         version: Long)
+                         version: Long) {
+  val position = LegacyPositionAdapter(version)
+}
+
+case class LegacyPositionAdapter(version: Long) extends Position {
+  override def toString: String = version.toString
+}
