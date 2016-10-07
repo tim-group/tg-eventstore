@@ -1,15 +1,8 @@
 package com.timgroup.eventsubscription.healthcheck
 
-import com.timgroup.eventsubscription.{EventProcessorListener, ChaserListener}
+import java.util.OptionalLong
 
-
-trait SubscriptionListener {
-  def caughtUpAt(version: Long): Unit
-
-  def staleAtVersion(version: Option[Long]): Unit
-
-  def terminated(version: Long, e: Exception): Unit
-}
+import com.timgroup.eventsubscription.{ChaserListener, EventProcessorListener}
 
 class SubscriptionListenerAdapter(fromVersion: Long, listeners: SubscriptionListener*) extends ChaserListener with EventProcessorListener {
   @volatile private var latestFetchedVersion: Option[Long] = None
@@ -46,8 +39,8 @@ class SubscriptionListenerAdapter(fromVersion: Long, listeners: SubscriptionList
     (latestFetchedVersion, latestProcessedVersion) match {
       case (Some(fetchedVersion), Some(processedVersion)) if processedVersion >= fetchedVersion => listeners.foreach(_.caughtUpAt(processedVersion))
       case (Some(`fromVersion`), None) => listeners.foreach(_.caughtUpAt(fromVersion))
-      case (_, Some(processedVersion)) => listeners.foreach(_.staleAtVersion(Some(processedVersion)))
-      case _ => listeners.foreach(_.staleAtVersion(None))
+      case (_, Some(processedVersion)) => listeners.foreach(_.staleAtVersion(OptionalLong.of(processedVersion)))
+      case _ => listeners.foreach(_.staleAtVersion(OptionalLong.empty()))
     }
   }
 }

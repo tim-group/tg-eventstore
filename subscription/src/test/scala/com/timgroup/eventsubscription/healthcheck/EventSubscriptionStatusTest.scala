@@ -14,7 +14,7 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers with OneInst
 
   val clock = mock(classOf[Clock])
   when(clock.now()).thenReturn(timestamp)
-  val status = new EventSubscriptionStatus("", clock, maxInitialReplayDuration = 123)
+  val status = new EventSubscriptionStatus("", clock, 123)
   val adapter = new SubscriptionListenerAdapter(0, status)
 
   it("reports ill whilst initial replay is in progress") {
