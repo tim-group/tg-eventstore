@@ -7,7 +7,7 @@ trait EventStore {
 
   def fromAll(version: Long = 0): EventStream
 
-  def fromAll(version: Long, eventHandler: EventInStream => Unit): Unit
+  def streamingFromAll(version: Long = 0): java.util.stream.Stream[EventInStream]
 }
 
 trait EventStream extends Iterator[EventInStream]

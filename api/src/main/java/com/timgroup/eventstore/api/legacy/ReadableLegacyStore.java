@@ -35,15 +35,18 @@ public final class ReadableLegacyStore implements EventStore {
     }
 
     @Override
-    public long fromAll$default$1() {
+    public long streamingFromAll$default$1() {
         return 0;
     }
 
     @Override
-    public void fromAll(long version, Function1<EventInStream, BoxedUnit> eventHandler) {
-        try (Stream<ResolvedEvent> stream = eventReader.readAllForwards(toPosition.apply(version))) {
-            stream.map(this::toEventInStream).forEachOrdered(eventHandler::apply);
-        }
+    public Stream<EventInStream> streamingFromAll(long version) {
+        return eventReader.readAllForwards(toPosition.apply(version)).map(this::toEventInStream);
+    }
+
+    @Override
+    public long fromAll$default$1() {
+        return 0;
     }
 
     @Override

@@ -1,5 +1,7 @@
 package com.timgroup.eventstore.stitching
 
+import java.util.stream.Stream
+
 import com.timgroup.eventstore.api.{EventData, EventInStream, EventStore, EventStream}
 
 class BackfillStitchingEventStore(backfill: EventStore, live: EventStore, liveCuttoffVersion: Long) extends EventStore {
@@ -16,10 +18,11 @@ class BackfillStitchingEventStore(backfill: EventStore, live: EventStore, liveCu
     }
   }
 
-  override def fromAll(version: Long, eventHandler: (EventInStream) => Unit): Unit = {
+  override def streamingFromAll(version: Long): Stream[EventInStream] = {
     if (version <= liveCuttoffVersion) {
-      backfill.fromAll(version, eventHandler)
+      java.util.stream.Stream.concat(backfill.streamingFromAll(version), live.streamingFromAll(liveCuttoffVersion.max(version)))
+    } else {
+      live.streamingFromAll(liveCuttoffVersion.max(version))
     }
-    live.fromAll(liveCuttoffVersion.max(version), eventHandler)
   }
 }

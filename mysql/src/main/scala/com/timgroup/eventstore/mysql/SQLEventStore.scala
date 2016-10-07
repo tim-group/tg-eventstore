@@ -1,9 +1,14 @@
 package com.timgroup.eventstore.mysql
 
-import java.sql.{Connection, ResultSet}
+import java.sql.{Connection, ResultSet, Statement}
+import java.util.Spliterator
+import java.util.function.Consumer
+import java.util.stream.{Stream, StreamSupport}
 
 import com.timgroup.eventstore.api._
 import org.joda.time.{DateTime, DateTimeZone}
+
+import scala.util.control.Exception.allCatch
 
 trait ConnectionProvider {
   def getConnection(): Connection
@@ -77,25 +82,54 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
     }
   }
 
-  override def fromAll(version: Long, eventHandler: EventInStream => Unit): Unit = {
-    import ResourceManagement.withResource
 
-    withResource(connectionProvider.getConnection()) { connection =>
+  override def streamingFromAll(version: Long): Stream[EventInStream] = {
+    val connection = connectionProvider.getConnection()
+    var statement: Statement = null
+    var resultSet: ResultSet = null
+
+    val closeConnection = new Runnable {
+      override def run(): Unit = {
+        try {
+          allCatch { resultSet.close() }
+          allCatch { statement.close() }
+          allCatch { connection.close() }
+        }
+      }
+    }
+
+    try {
       connection.setAutoCommit(false)
-      withResource(connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) { statement =>
-        statement.setFetchSize(Integer.MIN_VALUE)
-        withResource(statement.executeQuery("select effective_timestamp, eventType, body, version from  %s where version > %s".format(tableName, version))) { results =>
-          while (results.next()) {
-            val nextEvent = EventInStream(
-              new DateTime(results.getTimestamp("effective_timestamp"), DateTimeZone.UTC),
-              EventData(
-                results.getString("eventType"),
-                results.getBytes("body")),
-              results.getLong("version")
-            )
-            eventHandler(nextEvent)
+      statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
+      resultSet = statement.executeQuery("select effective_timestamp, eventType, body, version from  %s where version > %s".format(tableName, version))
+
+      return StreamSupport.stream(new Spliterator[EventInStream] {
+        override def estimateSize(): Long = Long.MaxValue
+
+        override def tryAdvance(action: Consumer[_ >: EventInStream]): Boolean = {
+          if (resultSet.next()) {
+            action.accept(EventInStream(
+                            new DateTime(resultSet.getTimestamp("effective_timestamp"), DateTimeZone.UTC),
+                            EventData(
+                              resultSet.getString("eventType"),
+                              resultSet.getBytes("body")),
+                              resultSet.getLong("version")
+                          ))
+            true
+          } else {
+            closeConnection.run()
+            false
           }
         }
+
+        override def trySplit(): Spliterator[EventInStream] = null
+
+        override def characteristics(): Int = Spliterator.ORDERED
+      }, false).onClose(closeConnection);
+    } catch {
+      case e: Exception => {
+        closeConnection.run()
+        throw e
       }
     }
   }

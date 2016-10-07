@@ -1,6 +1,8 @@
 package com.timgroup.eventstore.stitching
 
-import com.timgroup.eventstore.api.{Clock, EventStore, EventData, EventStoreTest}
+import java.util.function.Consumer
+
+import com.timgroup.eventstore.api._
 import com.timgroup.eventstore.memory.InMemoryEventStore
 import org.joda.time.DateTime
 import org.scalatest.{BeforeAndAfterEach, FunSpec, MustMatchers}
@@ -26,7 +28,9 @@ class BackfillStitchingEventStoreTest extends FunSpec with MustMatchers with Eve
     ))
 
     var events = Vector[EventData]()
-    eventStore.fromAll(0, evt => events = events :+ evt.eventData)
+    eventStore.streamingFromAll(0).forEach(new Consumer[EventInStream] {
+      override def accept(evt: EventInStream): Unit = events = events :+ evt.eventData
+    })
 
     events must be(List(
       event("B1"),
@@ -53,7 +57,9 @@ class BackfillStitchingEventStoreTest extends FunSpec with MustMatchers with Eve
     ))
 
     var events = Vector[EventData]()
-    eventStore.fromAll(5, evt => events = events :+ evt.eventData)
+    eventStore.streamingFromAll(5).forEach(new Consumer[EventInStream] {
+      override def accept(evt: EventInStream): Unit = events = events :+ evt.eventData
+    })
 
     events must be(List(
       event("L2")

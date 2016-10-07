@@ -1,6 +1,7 @@
 package com.timgroup.eventsubscription
 
 import java.util.concurrent.Semaphore
+import java.util.stream.Stream
 
 import com.timgroup.eventstore.api._
 import com.timgroup.eventstore.memory.InMemoryEventStore
@@ -8,7 +9,7 @@ import com.timgroup.tucker.info.Health.State.{healthy, ill}
 import com.timgroup.tucker.info.Report
 import com.timgroup.tucker.info.Status.{CRITICAL, OK, WARNING}
 import org.joda.time.DateTimeZone.UTC
-import org.joda.time.{DateTimeZone, DateTime}
+import org.joda.time.{DateTime, DateTimeZone}
 import org.mockito.Matchers
 import org.mockito.Mockito._
 import org.scalatest.concurrent.Eventually.eventually
@@ -206,11 +207,11 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     override def fromAll(version: Long): EventStream = underlying.fromAll(version)
 
-    override def fromAll(version: Long, eventHandler: (EventInStream) => Unit): Unit = {
+    override def streamingFromAll(version: Long): Stream[EventInStream] = {
       if (hanging) {
         Thread.sleep(10000)
       }
-      underlying.fromAll(version, eventHandler)
+      underlying.streamingFromAll(version)
     }
   }
 

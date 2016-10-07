@@ -27,7 +27,7 @@ public class ReadableLegacyStoreTest {
     public void passes_all_events_to_event_handler() throws Exception {
         List<String> received = new ArrayList<>();
         new ReadableLegacyStore(events("red", "orange", "yellow"), TestEventReader::toPosition, TestEventReader::toVersion)
-                .fromAll(0, eventHandler(e -> received.add(e.version() + ":" + new String(e.eventData().body().data(), UTF_8))));
+                .streamingFromAll(0).forEach(e -> received.add(e.version() + ":" + new String(e.eventData().body().data(), UTF_8)));
         assertEquals(Arrays.asList("1:red", "2:orange", "3:yellow"), received);
     }
 
@@ -35,7 +35,7 @@ public class ReadableLegacyStoreTest {
     public void passes_tail_events_to_event_handler() throws Exception {
         List<String> received = new ArrayList<>();
         new ReadableLegacyStore(events("red", "orange", "yellow"), TestEventReader::toPosition, TestEventReader::toVersion)
-                .fromAll(1, eventHandler(e -> received.add(e.version() + ":" + new String(e.eventData().body().data(), UTF_8))));
+                .streamingFromAll(1).forEach(e -> received.add(e.version() + ":" + new String(e.eventData().body().data(), UTF_8)));
         assertEquals(Arrays.asList("2:orange", "3:yellow"), received);
     }
 
@@ -43,7 +43,7 @@ public class ReadableLegacyStoreTest {
     public void provides_all_events_as_event_stream() throws Exception {
         List<String> received = new ArrayList<>();
         new ReadableLegacyStore(events("red", "orange", "yellow"), TestEventReader::toPosition, TestEventReader::toVersion)
-                .fromAll(0).foreach(eventHandler(e -> received.add(e.version() + ":" + new String(e.eventData().body().data(), UTF_8))));
+                .streamingFromAll(0).forEach(e -> received.add(e.version() + ":" + new String(e.eventData().body().data(), UTF_8)));
         assertEquals(Arrays.asList("1:red", "2:orange", "3:yellow"), received);
     }
 
@@ -51,18 +51,8 @@ public class ReadableLegacyStoreTest {
     public void provides_tail_events_as_event_stream() throws Exception {
         List<String> received = new ArrayList<>();
         new ReadableLegacyStore(events("red", "orange", "yellow"), TestEventReader::toPosition, TestEventReader::toVersion)
-                .fromAll(1).foreach(eventHandler(e -> received.add(e.version() + ":" + new String(e.eventData().body().data(), UTF_8))));
+                .streamingFromAll(1).forEach(e -> received.add(e.version() + ":" + new String(e.eventData().body().data(), UTF_8)));
         assertEquals(Arrays.asList("2:orange", "3:yellow"), received);
-    }
-
-    private static Function1<EventInStream, BoxedUnit> eventHandler(Consumer<EventInStream> consumer) {
-        return new AbstractFunction1<EventInStream, BoxedUnit>() {
-            @Override
-            public BoxedUnit apply(EventInStream v1) {
-                consumer.accept(v1);
-                return BoxedUnit.UNIT;
-            }
-        };
     }
 
     private static EventReader events(String... contents) {

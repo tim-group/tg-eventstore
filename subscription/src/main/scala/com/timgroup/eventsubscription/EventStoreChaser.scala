@@ -1,5 +1,8 @@
 package com.timgroup.eventsubscription
 
+import java.util.function.Consumer
+import java.util.stream.Stream
+
 import com.timgroup.eventstore.api.{EventInStream, EventStore}
 
 trait ChaserListener {
@@ -26,11 +29,20 @@ class EventStoreChaser(eventStore: EventStore,
 
   override def run(): Unit = {
     try {
-      eventStore.fromAll(lastVersion, nextEvent => {
-        listener.chaserReceived(nextEvent.version)
-        lastVersion = nextEvent.version
-        eventHandler(nextEvent)
-      })
+      val stream: Stream[EventInStream] = eventStore.streamingFromAll(lastVersion)
+
+      try {
+        stream.forEach(new Consumer[EventInStream] {
+          override def accept(nextEvent: EventInStream): Unit = {
+            listener.chaserReceived(nextEvent.version)
+            lastVersion = nextEvent.version
+            eventHandler(nextEvent)
+          }
+        })
+      } finally {
+        stream.close()
+      }
+
       listener.chaserUpToDate(lastVersion)
     } catch {
       case e: Exception => {

@@ -1,5 +1,7 @@
 package com.timgroup.eventstore.memory
 
+import java.util.stream.Stream
+
 import com.timgroup.eventstore.api._
 
 class InMemoryEventStore(now: Clock = SystemClock) extends EventStore {
@@ -37,9 +39,8 @@ class InMemoryEventStore(now: Clock = SystemClock) extends EventStore {
     }
   }
 
-
-  override def fromAll(version: Long, eventHandler: (EventInStream) => Unit): Unit = {
-    fromAll(version).foreach(eventHandler)
+  override def streamingFromAll(version: Long): Stream[EventInStream] = {
+    scala.collection.JavaConversions.seqAsJavaList(fromAll(version).toList).stream()
   }
 
   def clear(): Unit = {
