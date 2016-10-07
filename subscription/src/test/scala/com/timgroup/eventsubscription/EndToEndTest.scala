@@ -14,6 +14,7 @@ import org.mockito.Matchers
 import org.mockito.Mockito._
 import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.{BeforeAndAfterEach, FunSpec, MustMatchers}
+import scala.collection.JavaConversions._
 
 import scala.util.Random
 
@@ -29,7 +30,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(anEvent(), anEvent(), anEvent()))
 
-    setup = new EventSubscription("test", store, deserializer, List(eventProcessing), runFrequency = 1, clock = clock)
+    setup = new EventSubscription("test", store, deserializer, List(eventProcessing), clock, 1024, 1L, 0L, 320, Nil)
     setup.start()
     val component = setup.statusComponents.find(_.getId == "event-subscription-status-test").get
 
@@ -61,7 +62,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     eventStore.save(List(anEvent()))
 
-    setup = new EventSubscription("test", eventStore, deserializer, Nil, clock)
+    setup = new EventSubscription("test", eventStore, deserializer, Nil, clock, 1024, 1L, 0L, 320, Nil)
     setup.start()
 
     eventually { setup.health.get() must be(healthy) }
@@ -83,7 +84,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(anEvent()))
 
-    setup = new EventSubscription("test", store, deserializer, List(failingHandler))
+    setup = new EventSubscription("test", store, deserializer, List(failingHandler), SystemClock, 1024, 1L, 0L, 320, Nil)
     setup.start()
 
     val component = setup.statusComponents.find(_.getId == "event-subscription-status-test").get
@@ -106,7 +107,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(evt1, evt2))
 
-    setup = new EventSubscription("test", store, deserializer, List(failingHandler), runFrequency = 5)
+    setup = new EventSubscription("test", store, deserializer, List(failingHandler), SystemClock, 1024, 5L, 0L, 320, Nil)
     setup.start()
 
     val component = setup.statusComponents.find(_.getId == "event-subscription-status-test").get
@@ -135,15 +136,17 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(evt1, evt2, evt3))
 
-    val failingDeserializer: (EventInStream) => DeserializedVersionOf = evt => {
-      if (evt.version == 1) {
-        throw new scala.RuntimeException("Failed to deserialize event 1")
-      } else {
-        deserializer(evt)
+    val failingDeserializer = new Deserializer[Event] {
+      override def deserialize(evt: EventInStream): Event = {
+        if (evt.version == 1) {
+          throw new scala.RuntimeException("Failed to deserialize event 1")
+        } else {
+          deserializer.deserialize(evt)
+        }
       }
     }
 
-    setup = new EventSubscription("test", store, failingDeserializer, List(handler), runFrequency = 5)
+    setup = new EventSubscription("test", store, failingDeserializer, List(handler), SystemClock, 1024, 5L, 0L, 320, Nil)
     setup.start()
 
     Thread.sleep(50)
@@ -162,7 +165,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     store.save(List(event1, event2))
 
     val eventHandler = mock(classOf[EventHandler[Event]])
-    setup = new EventSubscription("test", store, deserializer, List(eventHandler), runFrequency = 1)
+    setup = new EventSubscription("test", store, deserializer, List(eventHandler), SystemClock, 1024, 1L, 0L, 320, Nil)
     setup.start()
 
     eventually {
@@ -176,7 +179,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
   it("starts up healthy when there are no events") {
     val store = new InMemoryEventStore()
 
-    setup = new EventSubscription("test", store, deserializer, List(), runFrequency = 1, fromVersion = 0)
+    setup = new EventSubscription("test", store, deserializer, List(), SystemClock, 1024, 1L, 0L, 320, Nil)
     setup.start()
 
     eventually {
@@ -189,7 +192,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(anEvent(), anEvent(), anEvent()))
 
-    setup = new EventSubscription("test", store, deserializer, List(), runFrequency = 1, fromVersion = 3)
+    setup = new EventSubscription("test", store, deserializer, List(), SystemClock, 1024, 1L, 3L, 320, Nil)
     setup.start()
 
     eventually {
@@ -219,7 +222,9 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     setup.stop()
   }
 
-  def deserializer(evt: EventInStream) = DeserializedVersionOf(evt)
+  val deserializer = new Deserializer[Event] {
+    override def deserialize(event: EventInStream): Event = DeserializedVersionOf(event)
+  }
 
   def anEvent() = EventData("A", Body(Random.alphanumeric.take(10).mkString.getBytes("utf-8")))
 }

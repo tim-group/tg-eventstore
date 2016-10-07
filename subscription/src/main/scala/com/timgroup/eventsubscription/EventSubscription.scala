@@ -15,14 +15,14 @@ import scala.collection.JavaConversions._
 class EventSubscription[T](
             name: String,
             eventstore: EventStore,
-            deserializer: EventInStream => T,
-            handlers: List[EventHandler[T]],
+            deserializer: Deserializer[T],
+            handlers: java.util.List[EventHandler[T]],
             clock: Clock = SystemClock,
-            bufferSize: Int = 1024,
-            runFrequency: Long = 1000,
-            fromVersion: Long = 0,
-            maxInitialReplayDuration: Int = 240,
-            listeners: List[SubscriptionListener] = List.empty) {
+            bufferSize: java.lang.Integer,
+            runFrequency: java.lang.Long,
+            fromVersion: java.lang.Long,
+            maxInitialReplayDuration: java.lang.Integer,
+            listeners: java.util.List[SubscriptionListener]) {
 
   private val chaserHealth = new ChaserHealth(name, clock)
   private val subscriptionStatus = new EventSubscriptionStatus(name, clock, maxInitialReplayDuration)
@@ -31,48 +31,6 @@ class EventSubscription[T](
 
   val statusComponents: List[Component] = List(subscriptionStatus, chaserHealth)
   val health: Health = subscriptionStatus
-
-  def this(name: String,
-           eventstore: EventStore,
-           deserializer: Deserializer[T],
-           handlers: java.lang.Iterable[EventHandler[T]],
-           clock: Clock,
-           bufferSize: java.lang.Integer,
-           runFrequency: java.lang.Long,
-           fromVersion: java.lang.Long,
-           maxInitialReplayDuration: java.lang.Integer) {
-    this(name,
-         eventstore,
-         deserializer.deserialize _,
-         handlers.toList,
-         clock,
-         bufferSize,
-         runFrequency,
-         fromVersion,
-         maxInitialReplayDuration)
-  }
-
-  def this(name: String,
-           eventstore: EventStore,
-           deserializer: Deserializer[T],
-           handlers: java.lang.Iterable[EventHandler[T]],
-           listeners: java.lang.Iterable[SubscriptionListener],
-           clock: Clock,
-           bufferSize: java.lang.Integer,
-           runFrequency: java.lang.Long,
-           fromVersion: java.lang.Long,
-           maxInitialReplayDuration: java.lang.Integer) {
-    this(name,
-      eventstore,
-      deserializer.deserialize _,
-      handlers.toList,
-      clock,
-      bufferSize,
-      runFrequency,
-      fromVersion,
-      maxInitialReplayDuration,
-      listeners.toList)
-  }
 
   private val executor = Executors.newScheduledThreadPool(1, new ThreadFactory {
     private val count = new AtomicInteger()
@@ -84,7 +42,7 @@ class EventSubscription[T](
     }
   })
 
-  private val eventHandler = new BroadcastingEventHandler[T](handlers)
+  private val eventHandler = new BroadcastingEventHandler[T](handlers.toList)
 
   private val eventHandlerExecutor = Executors.newCachedThreadPool(new ThreadFactory {
     private val count = new AtomicInteger()
@@ -101,7 +59,7 @@ class EventSubscription[T](
   private val deserializeWorker = new WorkHandler[EventContainer[T]] {
     override def onEvent(eventContainer: EventContainer[T]): Unit = {
       try {
-        eventContainer.deserializedEvent = deserializer(eventContainer.event)
+        eventContainer.deserializedEvent = deserializer.deserialize(eventContainer.event)
         processorListener.eventDeserialized(eventContainer.event.version)
       } catch {
         case e: Exception => {
