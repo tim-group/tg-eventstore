@@ -10,9 +10,6 @@ import com.timgroup.eventstore.api.{Clock, EventInStream, EventStore, SystemCloc
 import com.timgroup.eventsubscription.healthcheck.{ChaserHealth, EventSubscriptionStatus, SubscriptionListener, SubscriptionListenerAdapter}
 import com.timgroup.tucker.info.{Component, Health}
 
-import scala.collection.JavaConversions._
-import scala.collection.mutable
-
 
 class EventSubscription[T](
             name: String,
