@@ -5,14 +5,6 @@ import java.util.stream.Stream
 
 import com.timgroup.eventstore.api.{EventInStream, EventStore}
 
-trait ChaserListener {
-  def transientFailure(e: Exception): Unit
-
-  def chaserReceived(version: Long): Unit
-
-  def chaserUpToDate(version: Long): Unit
-}
-
 class BroadcastingChaserListener(listeners: ChaserListener*) extends ChaserListener {
   override def transientFailure(e: Exception): Unit = listeners.foreach(_.transientFailure(e))
 

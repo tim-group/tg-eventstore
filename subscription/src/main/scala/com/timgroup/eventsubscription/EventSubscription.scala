@@ -42,7 +42,7 @@ class EventSubscription[T](
     }
   })
 
-  private val eventHandler = new BroadcastingEventHandler[T](handlers.toList)
+  private val eventHandler = new BroadcastingEventHandler[T](handlers)
 
   private val eventHandlerExecutor = Executors.newCachedThreadPool(new ThreadFactory {
     private val count = new AtomicInteger()
