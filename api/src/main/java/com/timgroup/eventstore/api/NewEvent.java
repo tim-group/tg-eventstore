@@ -2,7 +2,7 @@ package com.timgroup.eventstore.api;
 
 import java.util.Arrays;
 
-public class NewEvent {
+public final class NewEvent {
     private final String type;
     private final byte[] data;
     private final byte[] metadata;

@@ -3,7 +3,7 @@ package com.timgroup.eventstore.api;
 import java.time.Instant;
 import java.util.Arrays;
 
-public class EventRecord {
+public final class EventRecord {
     private final Instant timestamp;
     private final StreamId streamId;
     private final int eventNumber;

@@ -1,6 +1,6 @@
 package com.timgroup.eventstore.api;
 
-public class StreamId {
+public final class StreamId {
     private final String category;
     private final String id;
 

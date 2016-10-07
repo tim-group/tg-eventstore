@@ -1,6 +1,6 @@
 package com.timgroup.eventstore.api;
 
-public class ResolvedEvent {
+public final class ResolvedEvent {
     private final Position position;
     private final EventRecord eventRecord;
 
