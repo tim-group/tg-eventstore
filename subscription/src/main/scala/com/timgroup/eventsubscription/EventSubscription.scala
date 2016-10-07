@@ -56,35 +56,13 @@ class EventSubscription[T](
     }
   })
 
-  private val disruptor = new Disruptor[EventContainer[T]](new EventContainerFactory[T], bufferSize, eventHandlerExecutor, ProducerType.SINGLE, new BlockingWaitStrategy())
+  private val disruptor = new Disruptor[EventContainer[T]](new EventContainer.Factory[T](), bufferSize, eventHandlerExecutor, ProducerType.SINGLE, new BlockingWaitStrategy())
 
-  private val deserializeWorker = new WorkHandler[EventContainer[T]] {
-    override def onEvent(eventContainer: EventContainer[T]): Unit = {
-      try {
-        eventContainer.deserializedEvent = deserializer.deserialize(eventContainer.event)
-        processorListener.eventDeserialized(eventContainer.event.position)
-      } catch {
-        case e: Exception => {
-          processorListener.eventDeserializationFailed(eventContainer.event.position, e)
-          throw e
-        }
-      }
-    }
-  }
-
-  private val invokeEventHandlers = new com.lmax.disruptor.EventHandler[EventContainer[T]] {
-    override def onEvent(eventContainer: EventContainer[T], sequence: Long, endOfBatch: Boolean): Unit = {
-      try {
-        eventHandler.apply(eventContainer.event, eventContainer.deserializedEvent, endOfBatch)
-        processorListener.eventProcessed(eventContainer.event.position)
-      } catch {
-        case e: Exception => processorListener.eventProcessingFailed(eventContainer.event.position, e); throw e
-      }
-    }
-
-  }
-
-  disruptor.handleEventsWithWorkerPool(deserializeWorker, deserializeWorker).then(invokeEventHandlers)
+  disruptor
+    .handleEventsWithWorkerPool(
+      new DisruptorDeserializationAdapter[T](deserializer, processorListener),
+      new DisruptorDeserializationAdapter[T](deserializer, processorListener))
+    .then(new DisruptorEventHandlerAdapter(eventHandler, processorListener))
 
   def start() {
     val chaser = new EventStoreChaser(eventstore, startingPosition, new Consumer[EventInStream] {
@@ -103,12 +81,6 @@ class EventSubscription[T](
     eventHandlerExecutor.shutdown()
     eventHandlerExecutor.awaitTermination(1, TimeUnit.SECONDS)
   }
-}
-
-class EventContainer[T](var event: EventInStream, var deserializedEvent: T)
-
-class EventContainerFactory[T] extends EventFactory[EventContainer[T]] {
-  override def newInstance(): EventContainer[T] = new EventContainer(null, null.asInstanceOf[T])
 }
 
 class SetEventInStream[T](evt: EventInStream) extends EventTranslator[EventContainer[T]] {
