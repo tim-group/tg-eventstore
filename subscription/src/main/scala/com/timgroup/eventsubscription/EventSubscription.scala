@@ -2,6 +2,7 @@ package com.timgroup.eventsubscription
 
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{Executors, ThreadFactory, TimeUnit}
+import java.util.function.Consumer
 
 import com.lmax.disruptor.dsl.{Disruptor, ProducerType}
 import com.lmax.disruptor.{BlockingWaitStrategy, EventFactory, EventTranslator, WorkHandler}
@@ -85,7 +86,9 @@ class EventSubscription[T](
   disruptor.handleEventsWithWorkerPool(deserializeWorker, deserializeWorker).then(invokeEventHandlers)
 
   def start() {
-    val chaser = new EventStoreChaser(eventstore, fromVersion, evt => disruptor.publishEvent(new SetEventInStream(evt)), chaserListener)
+    val chaser = new EventStoreChaser(eventstore, fromVersion, new Consumer[EventInStream] {
+      override def accept(evt: EventInStream): Unit = disruptor.publishEvent(new SetEventInStream(evt))
+    }, chaserListener)
 
     disruptor.start()
 
