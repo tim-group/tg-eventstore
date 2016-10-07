@@ -45,25 +45,26 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
 
     @Override
     public void write(StreamId streamId, Collection<NewEvent> events) {
-        write(streamId, events, currentVersionOf(streamId).get());
+        write(streamId, events, currentVersionOf(streamId));
     }
 
-    private AtomicLong currentVersionOf(StreamId streamId) {
-        return new AtomicLong(readStreamForwards(streamId, EmptyStreamEventNumber).reduce((a, b) -> b)
+    private long currentVersionOf(StreamId streamId) {
+        return readStreamForwards(streamId, EmptyStreamEventNumber).reduce((a, b) -> b)
                 .map(ResolvedEvent::eventRecord)
                 .map(EventRecord::eventNumber)
-                .orElse(-1L));
+                .orElse(-1L);
     }
 
     @Override
     public void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
-        AtomicLong eventNumber = currentVersionOf(streamId);
+        long currentVersion = currentVersionOf(streamId);
 
-        if (eventNumber.get() != expectedVersion) {
+        if (currentVersion != expectedVersion) {
             throw new WrongExpectedVersion();
         }
 
         AtomicLong globalPosition = new AtomicLong(this.events.size());
+        AtomicLong eventNumber = new AtomicLong(currentVersion);
 
         events.stream().map(newEvent -> new ResolvedEvent(new InMemoryEventStorePosition(globalPosition.incrementAndGet()), EventRecord.eventRecord(
                 clock.instant(),
