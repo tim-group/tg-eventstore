@@ -9,12 +9,12 @@ import static java.util.Objects.requireNonNull;
 public final class EventRecord {
     private final Instant timestamp;
     private final StreamId streamId;
-    private final int eventNumber;
+    private final long eventNumber;
     private final String eventType;
     private final byte[] data;
     private final byte[] metadata;
 
-    private EventRecord(Instant timestamp, StreamId streamId, int eventNumber, String eventType, byte[] data, byte[] metadata) {
+    private EventRecord(Instant timestamp, StreamId streamId, long eventNumber, String eventType, byte[] data, byte[] metadata) {
             this.timestamp = requireNonNull(timestamp);
             this.streamId = requireNonNull(streamId);
             this.eventNumber = requireNonNull(eventNumber);
@@ -23,7 +23,7 @@ public final class EventRecord {
             this.metadata = requireNonNull(metadata);
     }
 
-    public static EventRecord eventRecord(Instant timestamp, StreamId streamId, int eventNumber, String eventType, byte[] data, byte[] metadata) {
+    public static EventRecord eventRecord(Instant timestamp, StreamId streamId, long eventNumber, String eventType, byte[] data, byte[] metadata) {
         return new EventRecord(timestamp, streamId, eventNumber, eventType, data, metadata);
     }
 
@@ -66,7 +66,7 @@ public final class EventRecord {
                 '}';
     }
 
-    public int eventNumber() {
+    public long eventNumber() {
         return eventNumber;
     }
 

@@ -5,5 +5,5 @@ import java.util.Collection;
 public interface EventStreamWriter {
     void write(StreamId streamId, Collection<NewEvent> events);
 
-    void write(StreamId streamId, Collection<NewEvent> events, int expectedVersion);
+    void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion);
 }
