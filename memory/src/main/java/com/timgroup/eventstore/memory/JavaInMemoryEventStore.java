@@ -49,10 +49,10 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     }
 
     private long currentVersionOf(StreamId streamId) {
-        return readStreamForwards(streamId, EmptyStreamEventNumber).reduce((a, b) -> b)
-                .map(ResolvedEvent::eventRecord)
-                .map(EventRecord::eventNumber)
-                .orElse(-1L);
+        return readStreamForwards(streamId, EmptyStreamEventNumber)
+                .mapToLong(r -> r.eventRecord().eventNumber())
+                .max()
+                .orElse(EmptyStreamEventNumber);
     }
 
     @Override
