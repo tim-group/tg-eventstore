@@ -58,7 +58,7 @@ public final class EventRecord {
     public String toString() {
         return "EventRecord{" +
                 "timestamp=" + timestamp +
-                ", streamId='" + streamId + '\'' +
+                ", streamId=" + streamId +
                 ", eventNumber=" + eventNumber +
                 ", eventType='" + eventType + '\'' +
                 ", data=" + Arrays.toString(data) +
