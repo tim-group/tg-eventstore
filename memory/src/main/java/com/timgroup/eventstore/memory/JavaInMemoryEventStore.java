@@ -1,15 +1,7 @@
 package com.timgroup.eventstore.memory;
 
-import com.timgroup.eventstore.api.EventCategoryReader;
-import com.timgroup.eventstore.api.EventReader;
-import com.timgroup.eventstore.api.EventRecord;
-import com.timgroup.eventstore.api.EventStreamReader;
-import com.timgroup.eventstore.api.EventStreamWriter;
-import com.timgroup.eventstore.api.NewEvent;
-import com.timgroup.eventstore.api.Position;
-import com.timgroup.eventstore.api.ResolvedEvent;
-import com.timgroup.eventstore.api.StreamId;
-import com.timgroup.eventstore.api.WrongExpectedVersion;
+import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.legacy.ReadableLegacyStore;
 
 import java.time.Clock;
 import java.util.ArrayList;
@@ -46,6 +38,10 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     @Override
     public void write(StreamId streamId, Collection<NewEvent> events) {
         write(streamId, events, currentVersionOf(streamId));
+    }
+
+    public EventStore toLegacy() {
+        return new ReadableLegacyStore(this, InMemoryEventStorePosition::new, p -> ((InMemoryEventStorePosition) p).eventNumber);
     }
 
     private long currentVersionOf(StreamId streamId) {
