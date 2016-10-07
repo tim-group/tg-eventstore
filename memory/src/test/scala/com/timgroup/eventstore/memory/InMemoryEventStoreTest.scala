@@ -1,21 +1,29 @@
 package com.timgroup.eventstore.memory
 
-import com.timgroup.eventstore.api.{Clock, EventStoreTest}
+import java.time.{Clock, Instant, ZoneOffset}
+
+import com.timgroup.eventstore.api.{EventStoreTest, Clock => LegacyClock}
 import org.joda.time.DateTime
-import org.scalatest.{BeforeAndAfterEach, FunSpec, MustMatchers}
+import org.scalatest.{FunSpec, MustMatchers, OneInstancePerTest}
 
-class InMemoryEventStoreTest extends FunSpec with EventStoreTest with MustMatchers with BeforeAndAfterEach {
-  val inMemoryEventStore = new InMemoryEventStore(
-    now = new Clock {
-      override def now(): DateTime = effectiveTimestamp
-    }
-  )
+class InMemoryEventStoreTest extends FunSpec with EventStoreTest with MustMatchers with OneInstancePerTest {
+  describe("traditional") {
+    val traditionalInMemoryEventStore = new InMemoryEventStore(
+      now = new LegacyClock {
+        override def now(): DateTime = effectiveTimestamp
+      }
+    )
 
-  override protected def afterEach(): Unit = {
-    inMemoryEventStore.clear()
+    it should behave like anEventStore(traditionalInMemoryEventStore)
+
+    it should behave like optimisticConcurrencyControl(traditionalInMemoryEventStore)
   }
 
-  it should behave like anEventStore(inMemoryEventStore)
+  describe("wrapper around new") {
+    val newInMemoryEventStore = new JavaInMemoryEventStore(Clock.fixed(Instant.ofEpochMilli(effectiveTimestamp.getMillis), ZoneOffset.UTC)).toLegacy
 
-  it should behave like optimisticConcurrencyControl(inMemoryEventStore)
+    it should behave like anEventStore(newInMemoryEventStore)
+
+    it should behave like optimisticConcurrencyControl(newInMemoryEventStore)
+  }
 }

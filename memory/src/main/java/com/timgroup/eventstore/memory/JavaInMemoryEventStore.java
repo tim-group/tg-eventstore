@@ -1,6 +1,7 @@
 package com.timgroup.eventstore.memory;
 
 import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.legacy.LegacyStore;
 import com.timgroup.eventstore.api.legacy.ReadableLegacyStore;
 
 import java.time.Clock;
@@ -41,7 +42,7 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     }
 
     public EventStore toLegacy() {
-        return new ReadableLegacyStore(this, InMemoryEventStorePosition::new, p -> ((InMemoryEventStorePosition) p).eventNumber);
+        return new LegacyStore(this, this, StreamId.streamId("all", "all"), InMemoryEventStorePosition::new, p -> ((InMemoryEventStorePosition) p).eventNumber);
     }
 
     private long currentVersionOf(StreamId streamId) {
@@ -56,7 +57,7 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
         long currentVersion = currentVersionOf(streamId);
 
         if (currentVersion != expectedVersion) {
-            throw new WrongExpectedVersion();
+            throw new WrongExpectedVersion(currentVersion, expectedVersion);
         }
 
         AtomicLong globalPosition = new AtomicLong(this.events.size());

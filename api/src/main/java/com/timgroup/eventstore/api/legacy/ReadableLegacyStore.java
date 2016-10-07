@@ -13,12 +13,8 @@ import com.timgroup.eventstore.api.EventStreamJavaAdapter;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import org.joda.time.DateTimeZone;
-import scala.Function1;
-import scala.Option;
-import scala.collection.Seq;
-import scala.runtime.BoxedUnit;
 
-public final class ReadableLegacyStore implements EventStore {
+public class ReadableLegacyStore implements EventStore {
     private final EventReader eventReader;
     private final LongFunction<Position> toPosition;
     private final ToLongFunction<Position> toVersion;
@@ -50,12 +46,12 @@ public final class ReadableLegacyStore implements EventStore {
     }
 
     @Override
-    public void save(Seq<EventData> newEvents, Option<Object> expectedVersion) {
+    public void save(scala.collection.Seq<EventData> newEvents, scala.Option<Object> expectedVersion) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Option<Object> save$default$2() {
+    public scala.Option<Object> save$default$2() {
         throw new UnsupportedOperationException();
     }
 
