@@ -22,8 +22,15 @@ val compatibleScalaTestDependency = libraryDependencies ++= Seq(
   "org.scala-lang.modules" %% "scala-xml" % "1.0.2" % "test"
 )
 
+val JUnit = Seq(
+  "junit" % "junit" % "4.12" % "test",
+  "org.hamcrest" % "hamcrest-core" % "1.3" % "test",
+  "org.hamcrest" % "hamcrest-library" % "1.3" % "test"
+)
+
 val eventstore_api = Project(id = "eventstore-api", base = file("api"))
   .settings(libraryDependencies ++= joda)
+  .settings(libraryDependencies ++= JUnit)
   .settings(compatibleScalaTestDependency)
   .settings(overridePublishSettings)
 
