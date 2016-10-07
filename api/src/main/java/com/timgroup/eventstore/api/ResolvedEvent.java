@@ -1,12 +1,14 @@
 package com.timgroup.eventstore.api;
 
+import static java.util.Objects.requireNonNull;
+
 public final class ResolvedEvent {
     private final Position position;
     private final EventRecord eventRecord;
 
     public ResolvedEvent(Position position, EventRecord eventRecord) {
-        this.position = position;
-        this.eventRecord = eventRecord;
+        this.position = requireNonNull(position);
+        this.eventRecord = requireNonNull(eventRecord);
     }
 
     @Override

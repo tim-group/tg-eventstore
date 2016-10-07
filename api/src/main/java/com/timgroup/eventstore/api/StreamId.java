@@ -1,12 +1,14 @@
 package com.timgroup.eventstore.api;
 
+import static java.util.Objects.requireNonNull;
+
 public final class StreamId {
     private final String category;
     private final String id;
 
     private StreamId(String category, String id) {
-        this.category = category;
-        this.id = id;
+        this.category = requireNonNull(category);
+        this.id = requireNonNull(id);
     }
 
     public static StreamId streamId(String category, String id) {

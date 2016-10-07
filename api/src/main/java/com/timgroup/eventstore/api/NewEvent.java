@@ -2,15 +2,17 @@ package com.timgroup.eventstore.api;
 
 import java.util.Arrays;
 
+import static java.util.Objects.requireNonNull;
+
 public final class NewEvent {
     private final String type;
     private final byte[] data;
     private final byte[] metadata;
 
     private NewEvent(String type, byte[] data, byte[] metadata) {
-        this.type = type;
-        this.data = data;
-        this.metadata = metadata;
+        this.type = requireNonNull(type);
+        this.data = requireNonNull(data);
+        this.metadata = requireNonNull(metadata);
     }
 
     public static NewEvent newEvent(String type, byte[] data, byte[] metadata) {

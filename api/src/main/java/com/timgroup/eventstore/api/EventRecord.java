@@ -2,6 +2,9 @@ package com.timgroup.eventstore.api;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 public final class EventRecord {
     private final Instant timestamp;
@@ -12,12 +15,12 @@ public final class EventRecord {
     private final byte[] metadata;
 
     private EventRecord(Instant timestamp, StreamId streamId, int eventNumber, String eventType, byte[] data, byte[] metadata) {
-            this.timestamp = timestamp;
-            this.streamId = streamId;
-            this.eventNumber = eventNumber;
-            this.eventType = eventType;
-            this.data = data;
-            this.metadata = metadata;
+            this.timestamp = requireNonNull(timestamp);
+            this.streamId = requireNonNull(streamId);
+            this.eventNumber = requireNonNull(eventNumber);
+            this.eventType = requireNonNull(eventType);
+            this.data = requireNonNull(data);
+            this.metadata = requireNonNull(metadata);
     }
 
     public static EventRecord eventRecord(Instant timestamp, StreamId streamId, int eventNumber, String eventType, byte[] data, byte[] metadata) {
