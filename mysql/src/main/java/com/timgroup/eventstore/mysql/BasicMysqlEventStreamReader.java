@@ -1,6 +1,5 @@
 package com.timgroup.eventstore.mysql;
 
-import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
@@ -36,7 +35,7 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
         return stream(spliterator, false).onClose(spliterator::close);
     }
 
-    private static class BasicMysqlEventStorePosition implements Position {
+    private static final class BasicMysqlEventStorePosition implements Position {
         private final long value;
 
         private BasicMysqlEventStorePosition(long value) {
