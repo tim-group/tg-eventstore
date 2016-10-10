@@ -59,7 +59,7 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
     }
 
     @Override
-    public State get() {
+    public Health.State get() {
         return initialReplayDuration.isPresent() ? State.healthy : State.ill;
     }
 
