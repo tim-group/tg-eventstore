@@ -24,6 +24,7 @@ val compatibleScalaTestDependency = libraryDependencies ++= Seq(
 
 val JUnit = Seq(
   "junit" % "junit" % "4.12" % "test",
+  "com.novocode" % "junit-interface" % "0.10-M1" % "test",
   "org.hamcrest" % "hamcrest-core" % "1.3" % "test",
   "org.hamcrest" % "hamcrest-library" % "1.3" % "test"
 )
