@@ -1,35 +1,35 @@
 package com.timgroup.eventsubscription.healthcheck;
 
-import com.timgroup.eventstore.api.Clock;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Health;
 import com.timgroup.tucker.info.Report;
 import com.timgroup.tucker.info.Status;
-import org.joda.time.DateTime;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 
 import static com.timgroup.tucker.info.Status.CRITICAL;
 import static com.timgroup.tucker.info.Status.OK;
 import static com.timgroup.tucker.info.Status.WARNING;
-import static org.joda.time.Seconds.secondsBetween;
 
 public class EventSubscriptionStatus extends Component implements Health, SubscriptionListener {
     private final Clock clock;
     private final int maxInitialReplayDuration;
 
-    private volatile DateTime startTime;
-    private volatile Optional<Integer> initialReplayDuration = Optional.empty();
+    private volatile Instant startTime;
+    private volatile Optional<Long> initialReplayDuration = Optional.empty();
     private volatile Optional<Position> currentPosition = Optional.empty();
     private volatile Optional<Report> terminatedReport = Optional.empty();
-    private volatile Optional<DateTime> staleSince = Optional.empty();
+    private volatile Optional<Instant> staleSince = Optional.empty();
 
     public EventSubscriptionStatus(String name, Clock clock, int maxInitialReplayDuration) {
         super("event-subscription-status-" + name, "Event subscription status (" + name + ")");
         this.clock = clock;
         this.maxInitialReplayDuration = maxInitialReplayDuration;
-        this.startTime = clock.now();
+        this.startTime = clock.instant();
     }
 
     @Override
@@ -39,7 +39,7 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
         }
 
         if (staleSince.isPresent()) {
-            long staleSeconds = secondsBetween(staleSince.get(), clock.now()).getSeconds();
+            long staleSeconds = Duration.between(staleSince.get(), clock.instant()).getSeconds();
             Status status = initialReplayDuration.map(s -> {
                 if (staleSeconds > 30) { return CRITICAL; } else { return WARNING; }
             }).orElse(staleSeconds > maxInitialReplayDuration ? CRITICAL : OK);
@@ -66,7 +66,7 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
     @Override
     public void caughtUpAt(Position position) {
         if (!initialReplayDuration.isPresent()) {
-            initialReplayDuration = Optional.of(secondsBetween(startTime, clock.now()).getSeconds());
+            initialReplayDuration = Optional.of(Duration.between(startTime, clock.instant()).getSeconds());
         }
 
         staleSince = Optional.empty();
@@ -77,7 +77,7 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
     @Override
     public void staleAtVersion(Optional<Position> position) {
         if (!staleSince.isPresent()) {
-            staleSince = Optional.of(clock.now());
+            staleSince = Optional.of(clock.instant());
         }
         currentPosition = position;
     }
@@ -88,7 +88,7 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
     }
 
     public void reset() {
-        startTime = clock.now();
+        startTime = clock.instant();
         staleSince = Optional.empty();
         currentPosition = Optional.empty();
         initialReplayDuration = Optional.empty();

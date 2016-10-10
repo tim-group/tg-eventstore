@@ -1,14 +1,14 @@
 package com.timgroup.eventsubscription.healthcheck;
 
-import com.timgroup.eventstore.api.Clock;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventsubscription.ChaserListener;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Report;
-import org.joda.time.DateTime;
-import org.joda.time.Seconds;
 import org.slf4j.LoggerFactory;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 
 import static com.timgroup.tucker.info.Status.CRITICAL;
@@ -18,7 +18,7 @@ import static java.lang.String.format;
 
 public class ChaserHealth extends Component implements ChaserListener {
     private final Clock clock;
-    private volatile Optional<DateTime> lastPollTimestamp = Optional.empty();
+    private volatile Optional<Instant> lastPollTimestamp = Optional.empty();
     private volatile Position currentPosition = null;
 
     public ChaserHealth(String name, Clock clock) {
@@ -29,8 +29,8 @@ public class ChaserHealth extends Component implements ChaserListener {
     @Override
     public Report getReport() {
         if (lastPollTimestamp.isPresent()) {
-            DateTime timestamp = lastPollTimestamp.get();
-            int seconds = Seconds.secondsBetween(timestamp, clock.now()).getSeconds();
+            Instant timestamp = lastPollTimestamp.get();
+            long seconds = Duration.between(timestamp, clock.instant()).getSeconds();
             if (seconds > 30) {
                 return new Report(CRITICAL, format("potentially stale. Last up-to-date at at %s. (%s seconds ago).", timestamp, seconds));
             } else if (seconds > 5) {
@@ -57,6 +57,6 @@ public class ChaserHealth extends Component implements ChaserListener {
     @Override
     public void chaserUpToDate(Position position) {
         currentPosition = position;
-        lastPollTimestamp = Optional.of(clock.now());
+        lastPollTimestamp = Optional.of(clock.instant());
     }
 }

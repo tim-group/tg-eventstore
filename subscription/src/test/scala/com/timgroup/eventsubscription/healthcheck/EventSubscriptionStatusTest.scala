@@ -1,21 +1,20 @@
 package com.timgroup.eventsubscription.healthcheck
 
+import java.time.{Clock, Instant}
 import java.util.Collections
 
-import com.timgroup.eventstore.api.{Clock, LegacyPositionAdapter}
+import com.timgroup.eventstore.api.LegacyPositionAdapter
 import com.timgroup.tucker.info.Health.State.{healthy, ill}
-import com.timgroup.tucker.info.Status.{CRITICAL, OK, WARNING}
 import com.timgroup.tucker.info.Report
-import org.joda.time.DateTime
-import org.joda.time.DateTimeZone.UTC
+import com.timgroup.tucker.info.Status.{CRITICAL, OK, WARNING}
 import org.mockito.Mockito.{mock, when}
 import org.scalatest.{FunSpec, MustMatchers, OneInstancePerTest}
 
 class EventSubscriptionStatusTest extends FunSpec with MustMatchers with OneInstancePerTest {
-  val timestamp = new DateTime(2014, 2, 1, 0, 0, 0, UTC)
+  val timestamp = Instant.parse("2016-02-01T00:00:00.000Z")
 
   val clock = mock(classOf[Clock])
-  when(clock.now()).thenReturn(timestamp)
+  when(clock.instant()).thenReturn(timestamp)
   val status = new EventSubscriptionStatus("", clock, 123)
   val adapter = new SubscriptionListenerAdapter(LegacyPositionAdapter(0), Collections.singletonList(status))
 
@@ -33,7 +32,7 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers with OneInst
     status.get() must be(ill)
     status.getReport() must be(new Report(OK, "Stale, catching up. No events processed yet. (Stale for 0s)"))
 
-    when(clock.now()).thenReturn(timestamp.plusSeconds(100))
+    when(clock.instant()).thenReturn(timestamp.plusSeconds(100))
     adapter.eventProcessed(LegacyPositionAdapter(1))
     adapter.eventProcessed(LegacyPositionAdapter(2))
     adapter.eventProcessed(LegacyPositionAdapter(3))
@@ -48,7 +47,7 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers with OneInst
     adapter.chaserReceived(LegacyPositionAdapter(3))
     adapter.chaserUpToDate(LegacyPositionAdapter(3))
 
-    when(clock.now()).thenReturn(timestamp.plusSeconds(124))
+    when(clock.instant()).thenReturn(timestamp.plusSeconds(124))
     adapter.eventProcessed(LegacyPositionAdapter(1))
     adapter.eventProcessed(LegacyPositionAdapter(2))
     adapter.eventProcessed(LegacyPositionAdapter(3))
@@ -61,7 +60,7 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers with OneInst
     adapter.chaserUpToDate(LegacyPositionAdapter(5))
     adapter.eventProcessed(LegacyPositionAdapter(5))
     adapter.chaserReceived(LegacyPositionAdapter(6))
-    when(clock.now()).thenReturn(timestamp.plusSeconds(7))
+    when(clock.instant()).thenReturn(timestamp.plusSeconds(7))
 
     status.getReport() must be(new Report(WARNING, "Stale, catching up. Currently at version 5. (Stale for 7s)"))
   }
@@ -71,7 +70,7 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers with OneInst
     adapter.eventProcessed(LegacyPositionAdapter(5))
     adapter.chaserReceived(LegacyPositionAdapter(6))
 
-    when(clock.now()).thenReturn(timestamp.plusSeconds(31))
+    when(clock.instant()).thenReturn(timestamp.plusSeconds(31))
     status.getReport() must be(new Report(CRITICAL, "Stale, catching up. Currently at version 5. (Stale for 31s)"))
   }
 
@@ -79,7 +78,7 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers with OneInst
     adapter.chaserReceived(LegacyPositionAdapter(1))
     adapter.eventProcessed(LegacyPositionAdapter(1))
 
-    when(clock.now()).thenReturn(timestamp.plusSeconds(123))
+    when(clock.instant()).thenReturn(timestamp.plusSeconds(123))
     status.getReport() must be(new Report(OK, "Stale, catching up. Currently at version 1. (Stale for 123s)"))
   }
 
@@ -87,7 +86,7 @@ class EventSubscriptionStatusTest extends FunSpec with MustMatchers with OneInst
     adapter.chaserReceived(LegacyPositionAdapter(1))
     adapter.eventProcessed(LegacyPositionAdapter(1))
 
-    when(clock.now()).thenReturn(timestamp.plusSeconds(124))
+    when(clock.instant()).thenReturn(timestamp.plusSeconds(124))
     status.getReport() must be(new Report(CRITICAL, "Stale, catching up. Currently at version 1. (Stale for 124s)"))
   }
 

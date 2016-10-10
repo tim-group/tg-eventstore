@@ -1,6 +1,5 @@
 package com.timgroup.eventsubscription;
 
-import com.timgroup.eventstore.api.EventInStream;
 import com.timgroup.eventstore.api.Position;
 import org.joda.time.DateTime;
 

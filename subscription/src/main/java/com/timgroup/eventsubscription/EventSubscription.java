@@ -2,7 +2,6 @@ package com.timgroup.eventsubscription;
 
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.dsl.Disruptor;
-import com.timgroup.eventstore.api.Clock;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventsubscription.healthcheck.ChaserHealth;
@@ -12,6 +11,7 @@ import com.timgroup.eventsubscription.healthcheck.SubscriptionListenerAdapter;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Health;
 
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
