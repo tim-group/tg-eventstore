@@ -1,7 +1,7 @@
 package com.timgroup.eventsubscription;
 
-import com.timgroup.eventstore.api.EventInStream;
+import com.timgroup.eventstore.api.EventRecord;
 
 public interface Deserializer<T> {
-    T deserialize(EventInStream event);
+    T deserialize(EventRecord event);
 }

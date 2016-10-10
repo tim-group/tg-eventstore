@@ -13,7 +13,7 @@ import com.timgroup.tucker.info.{Component, Health}
 
 class EventSubscription[T](
             name: String,
-            eventstore: EventStore,
+            eventstore: EventReader,
             deserializer: Deserializer[T],
             handlers: java.util.List[EventHandler[T]],
             clock: Clock = SystemClock,
@@ -65,8 +65,8 @@ class EventSubscription[T](
     .then(new DisruptorEventHandlerAdapter(eventHandler, processorListener))
 
   def start() {
-    val chaser = new EventStoreChaser(eventstore, startingPosition, new Consumer[EventInStream] {
-      override def accept(evt: EventInStream): Unit = disruptor.publishEvent(new SetEventInStream(evt))
+    val chaser = new EventStoreChaser(eventstore, startingPosition, new Consumer[ResolvedEvent] {
+      override def accept(evt: ResolvedEvent): Unit = disruptor.publishEvent(new SetEventInStream(evt))
     }, chaserListener)
 
     disruptor.start()
@@ -83,6 +83,6 @@ class EventSubscription[T](
   }
 }
 
-class SetEventInStream[T](evt: EventInStream) extends EventTranslator[EventContainer[T]] {
+class SetEventInStream[T](evt: ResolvedEvent) extends EventTranslator[EventContainer[T]] {
   override def translateTo(eventContainer: EventContainer[T], sequence: Long): Unit = eventContainer.event = evt
 }

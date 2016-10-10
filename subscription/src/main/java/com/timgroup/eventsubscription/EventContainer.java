@@ -1,10 +1,10 @@
 package com.timgroup.eventsubscription;
 
 import com.lmax.disruptor.EventFactory;
-import com.timgroup.eventstore.api.EventInStream;
+import com.timgroup.eventstore.api.ResolvedEvent;
 
 public class EventContainer<T> {
-    EventInStream event = null;
+    ResolvedEvent event = null;
     T deserializedEvent = null;
 
     public static class Factory<T> implements EventFactory<EventContainer<T>> {

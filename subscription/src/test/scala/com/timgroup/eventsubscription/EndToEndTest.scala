@@ -1,21 +1,23 @@
 package com.timgroup.eventsubscription
 
+import java.time.Instant
 import java.util.concurrent.Semaphore
 import java.util.stream.Stream
 
+import com.timgroup.eventstore.api.EventRecord.eventRecord
 import com.timgroup.eventstore.api._
 import com.timgroup.eventstore.memory.InMemoryEventStore
 import com.timgroup.tucker.info.Health.State.{healthy, ill}
 import com.timgroup.tucker.info.Report
 import com.timgroup.tucker.info.Status.{CRITICAL, OK, WARNING}
+import org.joda.time.DateTime
 import org.joda.time.DateTimeZone.UTC
-import org.joda.time.{DateTime, DateTimeZone}
 import org.mockito.Matchers
 import org.mockito.Mockito._
 import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.{BeforeAndAfterEach, FunSpec, MustMatchers}
-import scala.collection.JavaConversions._
 
+import scala.collection.JavaConversions._
 import scala.util.Random
 
 class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
@@ -30,7 +32,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(anEvent(), anEvent(), anEvent()))
 
-    setup = new EventSubscription("test", store, deserializer, List(eventProcessing), clock, 1024, 1L, LegacyPositionAdapter(0L), 320, Nil)
+    setup = new EventSubscription("test", new LegacyEventStoreEventReaderAdapter(store), deserializer, List(eventProcessing), clock, 1024, 1L, LegacyPositionAdapter(0L), 320, Nil)
     setup.start()
     val component = setup.statusComponents.find(_.getId == "event-subscription-status-test").get
 
@@ -62,7 +64,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     eventStore.save(List(anEvent()))
 
-    setup = new EventSubscription("test", eventStore, deserializer, Nil, clock, 1024, 1L, LegacyPositionAdapter(0L), 320, Nil)
+    setup = new EventSubscription("test", new LegacyEventStoreEventReaderAdapter(eventStore), deserializer, Nil, clock, 1024, 1L, LegacyPositionAdapter(0L), 320, Nil)
     setup.start()
 
     eventually { setup.health.get() must be(healthy) }
@@ -84,7 +86,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(anEvent()))
 
-    setup = new EventSubscription("test", store, deserializer, List(failingHandler), SystemClock, 1024, 1L, LegacyPositionAdapter(0L), 320, Nil)
+    setup = new EventSubscription("test", new LegacyEventStoreEventReaderAdapter(store), deserializer, List(failingHandler), SystemClock, 1024, 1L, LegacyPositionAdapter(0L), 320, Nil)
     setup.start()
 
     val component = setup.statusComponents.find(_.getId == "event-subscription-status-test").get
@@ -106,12 +108,12 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     doThrow(new RuntimeException("failure")).when(failingHandler)
       .apply(Matchers.eq(LegacyPositionAdapter(1)),
              Matchers.eq(timestamp),
-             Matchers.eq(DeserializedVersionOf(EventInStream(timestamp, evt1, 1))),
+             Matchers.eq(DeserializedVersionOf(eventRecord(Instant.ofEpochMilli(timestamp.getMillis), StreamId.streamId("all", "all"), 1, evt1.eventType, evt1.body.data, new Array(0)))),
              Matchers.anyBoolean())
 
     store.save(List(evt1, evt2))
 
-    setup = new EventSubscription("test", store, deserializer, List(failingHandler), SystemClock, 1024, 5L, LegacyPositionAdapter(0L), 320, Nil)
+    setup = new EventSubscription("test", new LegacyEventStoreEventReaderAdapter(store), deserializer, List(failingHandler), SystemClock, 1024, 5L, LegacyPositionAdapter(0L), 320, Nil)
     setup.start()
 
     val component = setup.statusComponents.find(_.getId == "event-subscription-status-test").get
@@ -121,7 +123,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     verify(failingHandler).apply(
       Matchers.eq(LegacyPositionAdapter(1)),
       Matchers.eq(timestamp),
-      Matchers.eq(DeserializedVersionOf(EventInStream(timestamp, evt1, 1))),
+      Matchers.eq(DeserializedVersionOf(eventRecord(Instant.ofEpochMilli(timestamp.getMillis), StreamId.streamId("all", "all"), 1, evt1.eventType, evt1.body.data, new Array(0)))),
       Matchers.anyBoolean())
     verifyNoMoreInteractions(failingHandler)
     component.getReport.getValue.asInstanceOf[String] must include("Event subscription terminated. Failed to process version 1: failure")
@@ -145,8 +147,8 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     store.save(List(evt1, evt2, evt3))
 
     val failingDeserializer = new Deserializer[Event] {
-      override def deserialize(evt: EventInStream): Event = {
-        if (evt.version == 1) {
+      override def deserialize(evt: EventRecord): Event = {
+        if (evt.eventNumber() == 1) {
           throw new scala.RuntimeException("Failed to deserialize event 1")
         } else {
           deserializer.deserialize(evt)
@@ -154,7 +156,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
       }
     }
 
-    setup = new EventSubscription("test", store, failingDeserializer, List(handler), SystemClock, 1024, 5L, LegacyPositionAdapter(0L), 320, Nil)
+    setup = new EventSubscription("test", new LegacyEventStoreEventReaderAdapter(store), failingDeserializer, List(handler), SystemClock, 1024, 5L, LegacyPositionAdapter(0L), 320, Nil)
     setup.start()
 
     Thread.sleep(50)
@@ -173,7 +175,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     store.save(List(event1, event2))
 
     val eventHandler = mock(classOf[EventHandler[Event]])
-    setup = new EventSubscription("test", store, deserializer, List(eventHandler), SystemClock, 1024, 1L, LegacyPositionAdapter(0L), 320, Nil)
+    setup = new EventSubscription("test", new LegacyEventStoreEventReaderAdapter(store), deserializer, List(eventHandler), SystemClock, 1024, 1L, LegacyPositionAdapter(0L), 320, Nil)
     setup.start()
 
     eventually {
@@ -183,20 +185,20 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
     verify(eventHandler).apply(
       Matchers.eq(LegacyPositionAdapter(1)),
       Matchers.eq(timestamp),
-      Matchers.eq(DeserializedVersionOf(EventInStream(timestamp, event1, 1))),
+      Matchers.eq(DeserializedVersionOf(eventRecord(Instant.ofEpochMilli(timestamp.getMillis), StreamId.streamId("all", "all"), 1, event1.eventType, event1.body.data, new Array(0)))),
       Matchers.anyBoolean())
 
     verify(eventHandler).apply(
       Matchers.eq(LegacyPositionAdapter(2)),
       Matchers.eq(timestamp),
-      Matchers.eq(DeserializedVersionOf(EventInStream(timestamp, event2, 2))),
+      Matchers.eq(DeserializedVersionOf(eventRecord(Instant.ofEpochMilli(timestamp.getMillis), StreamId.streamId("all", "all"), 2, event2.eventType, event2.body.data, new Array(0)))),
       Matchers.eq(true))
   }
 
   it("starts up healthy when there are no events") {
     val store = new InMemoryEventStore()
 
-    setup = new EventSubscription("test", store, deserializer, List(), SystemClock, 1024, 1L, LegacyPositionAdapter(0L), 320, Nil)
+    setup = new EventSubscription("test", new LegacyEventStoreEventReaderAdapter(store), deserializer, List(), SystemClock, 1024, 1L, LegacyPositionAdapter(0L), 320, Nil)
     setup.start()
 
     eventually {
@@ -209,7 +211,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
     store.save(List(anEvent(), anEvent(), anEvent()))
 
-    setup = new EventSubscription("test", store, deserializer, List(), SystemClock, 1024, 1L, LegacyPositionAdapter(3L), 320, Nil)
+    setup = new EventSubscription("test", new LegacyEventStoreEventReaderAdapter(store), deserializer, List(), SystemClock, 1024, 1L, LegacyPositionAdapter(3L), 320, Nil)
     setup.start()
 
     eventually {
@@ -240,7 +242,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
   }
 
   val deserializer = new Deserializer[Event] {
-    override def deserialize(event: EventInStream): Event = DeserializedVersionOf(event)
+    override def deserialize(event: EventRecord): Event = DeserializedVersionOf(event)
   }
 
   def anEvent() = EventData("A", Body(Random.alphanumeric.take(10).mkString.getBytes("utf-8")))
@@ -248,7 +250,7 @@ class EndToEndTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
 
 trait Event
 
-case class DeserializedVersionOf(evt: EventInStream) extends Event
+case class DeserializedVersionOf(evt: EventRecord) extends Event
 
 class BlockingEventHandler extends EventHandler[Event] {
   val lock = new Semaphore(0)
