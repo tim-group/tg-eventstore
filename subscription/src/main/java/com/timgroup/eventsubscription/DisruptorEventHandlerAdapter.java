@@ -12,7 +12,7 @@ public class DisruptorEventHandlerAdapter<T> implements com.lmax.disruptor.Event
     @Override
     public void onEvent(EventContainer<T> eventContainer, long sequence, boolean endOfBatch) throws Exception {
         try {
-            eventHandler.apply(eventContainer.event, eventContainer.deserializedEvent, endOfBatch);
+            eventHandler.apply(eventContainer.event.position(), eventContainer.event.effectiveTimestamp(), eventContainer.deserializedEvent, endOfBatch);
             processorListener.eventProcessed(eventContainer.event.position());
         } catch (Exception e) {
             processorListener.eventProcessingFailed(eventContainer.event.position(), e);
