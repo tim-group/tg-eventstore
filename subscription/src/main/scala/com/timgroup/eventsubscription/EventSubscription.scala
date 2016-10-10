@@ -7,6 +7,7 @@ import java.util.function.Consumer
 import com.lmax.disruptor.dsl.{Disruptor, ProducerType}
 import com.lmax.disruptor.{BlockingWaitStrategy, EventFactory, EventTranslator, WorkHandler}
 import com.timgroup.eventstore.api._
+import com.timgroup.eventsubscription.EventContainer.Translator
 import com.timgroup.eventsubscription.healthcheck.{ChaserHealth, EventSubscriptionStatus, SubscriptionListener, SubscriptionListenerAdapter}
 import com.timgroup.tucker.info.{Component, Health}
 
@@ -66,7 +67,9 @@ class EventSubscription[T](
 
   def start() {
     val chaser = new EventStoreChaser(eventstore, startingPosition, new Consumer[ResolvedEvent] {
-      override def accept(evt: ResolvedEvent): Unit = disruptor.publishEvent(new SetEventInStream(evt))
+      private val translator: Translator[T] = new Translator[T]
+
+      override def accept(evt: ResolvedEvent): Unit = disruptor.publishEvent(translator.setting(evt))
     }, chaserListener)
 
     disruptor.start()
@@ -81,8 +84,4 @@ class EventSubscription[T](
     eventHandlerExecutor.shutdown()
     eventHandlerExecutor.awaitTermination(1, TimeUnit.SECONDS)
   }
-}
-
-class SetEventInStream[T](evt: ResolvedEvent) extends EventTranslator[EventContainer[T]] {
-  override def translateTo(eventContainer: EventContainer[T], sequence: Long): Unit = eventContainer.event = evt
 }
