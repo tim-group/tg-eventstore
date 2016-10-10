@@ -1,6 +1,5 @@
-package com.timgroup.eventstore;
+package com.timgroup.eventstore.healthcheck;
 
-import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventsubscription.healthcheck.ChaserHealth;
 import org.junit.Test;
 
@@ -61,32 +60,4 @@ public class ChaserHealthTest {
         assertThat(chaserHealth.getReport().getStatus(), is(WARNING));
     }
 
-    private static class TestPosition implements Position {
-        private final long value;
-
-        private TestPosition(long value) {
-            this.value = value;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof TestPosition)) return false;
-
-            TestPosition that = (TestPosition) o;
-
-            return value == that.value;
-
-        }
-
-        @Override
-        public int hashCode() {
-            return (int) (value ^ (value >>> 32));
-        }
-
-        @Override
-        public String toString() {
-            return Long.toString(value);
-        }
-    }
 }
