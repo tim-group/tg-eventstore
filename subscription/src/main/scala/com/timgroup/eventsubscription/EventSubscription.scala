@@ -1,11 +1,10 @@
 package com.timgroup.eventsubscription
 
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.{Executors, ThreadFactory, TimeUnit}
+import java.util.concurrent.{Executors, TimeUnit}
 import java.util.function.Consumer
 
+import com.lmax.disruptor.BlockingWaitStrategy
 import com.lmax.disruptor.dsl.{Disruptor, ProducerType}
-import com.lmax.disruptor.{BlockingWaitStrategy, EventFactory, EventTranslator, WorkHandler}
 import com.timgroup.eventstore.api._
 import com.timgroup.eventsubscription.EventContainer.Translator
 import com.timgroup.eventsubscription.healthcheck.{ChaserHealth, EventSubscriptionStatus, SubscriptionListener, SubscriptionListenerAdapter}
@@ -35,27 +34,11 @@ class EventSubscription[T](
   val statusComponents: List[Component] = List(subscriptionStatus, chaserHealth)
   val health: Health = subscriptionStatus
 
-  private val executor = Executors.newScheduledThreadPool(1, new ThreadFactory {
-    private val count = new AtomicInteger()
-
-    override def newThread(r: Runnable) = {
-      val thread = new Thread(r, "EventChaser-" + name + "-" + count.getAndIncrement)
-      thread.setDaemon(true)
-      thread
-    }
-  })
+  private val executor = Executors.newScheduledThreadPool(1, new NamedThreadFactory("EventChaser-" + name))
 
   private val eventHandler = new BroadcastingEventHandler[T](handlers)
 
-  private val eventHandlerExecutor = Executors.newCachedThreadPool(new ThreadFactory {
-    private val count = new AtomicInteger()
-
-    override def newThread(r: Runnable) = {
-      val thread = new Thread(r, "EventSubscription-" + name + "-" + count.getAndIncrement)
-      thread.setDaemon(true)
-      thread
-    }
-  })
+  private val eventHandlerExecutor = Executors.newCachedThreadPool(new NamedThreadFactory("EventSubscription-" + name))
 
   private val disruptor = new Disruptor[EventContainer[T]](new EventContainer.Factory[T](), bufferSize, eventHandlerExecutor, ProducerType.SINGLE, new BlockingWaitStrategy())
 
