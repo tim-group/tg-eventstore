@@ -10,10 +10,6 @@ import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.util.control.Exception.allCatch
 
-trait ConnectionProvider {
-  def getConnection(): Connection
-}
-
 trait EventPersister {
   def saveEventsToDB(connection: Connection, newEvents: Seq[EventAtATime], expectedVersion: Option[Long] = None): Unit
 }
