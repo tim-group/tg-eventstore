@@ -21,16 +21,19 @@ import static java.util.stream.StreamSupport.stream;
 
 public class BasicMysqlEventStreamReader implements EventStreamReader {
     private final ConnectionProvider connectionProvider;
+    private final String tableName;
 
-    public BasicMysqlEventStreamReader(ConnectionProvider connectionProvider) {
+    public BasicMysqlEventStreamReader(ConnectionProvider connectionProvider, String tableName) {
         this.connectionProvider = connectionProvider;
+        this.tableName = tableName;
     }
 
     @Override
     public Stream<ResolvedEvent> readStreamForwards(StreamId streamId, long eventNumber) {
         //todo: handling of transactions
 
-        EventSpliterator spliterator = new EventSpliterator(connectionProvider, format("select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata from event where stream_category = '%s' and stream_id = '%s'", streamId.category(), streamId.id()));
+        EventSpliterator spliterator = new EventSpliterator(connectionProvider,
+                format("select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata from %s where stream_category = '%s' and stream_id = '%s'", tableName, streamId.category(), streamId.id()));
 
         return stream(spliterator, false).onClose(spliterator::close);
     }

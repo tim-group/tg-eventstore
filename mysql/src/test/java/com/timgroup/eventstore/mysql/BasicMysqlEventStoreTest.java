@@ -23,12 +23,14 @@ public class BasicMysqlEventStoreTest extends JavaEventStoreTest {
 
     private final ConnectionProvider connectionProvider = () -> DriverManager.getConnection("jdbc:mysql://localhost:3306/sql_eventstore?useGmtMillisForDatetimes=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&useTimezone=true&serverTimezone=UTC");
 
+    private final String tableName = "basic_eventstore";
+
     @Before
     public void createTables() throws SQLException {
         try (Connection connection = connectionProvider.getConnection();
              Statement statement = connection.createStatement()) {
-            statement.executeUpdate("drop table if exists Event");
-            statement.execute("create table event(" +
+            statement.executeUpdate("drop table if exists " + tableName);
+            statement.execute("create table " + tableName + "(" +
                     "position bigint primary key auto_increment, " +
                     "timestamp datetime not null, " +
                     "stream_category varchar(255) not null, " +
@@ -43,21 +45,21 @@ public class BasicMysqlEventStoreTest extends JavaEventStoreTest {
 
     @Override
     public EventStreamWriter writer() {
-        return new BasicMysqlEventStreamWriter(connectionProvider);
+        return new BasicMysqlEventStreamWriter(connectionProvider, tableName);
     }
 
     @Override
     public EventStreamReader streamEventReader() {
-        return new BasicMysqlEventStreamReader(connectionProvider);
+        return new BasicMysqlEventStreamReader(connectionProvider, tableName);
     }
 
     @Override
     public EventReader allEventReader() {
-        return new BasicMysqlEventReader(connectionProvider);
+        return new BasicMysqlEventReader(connectionProvider, tableName);
     }
 
     @Override
     public EventCategoryReader eventByCategoryReader() {
-        return new BasicMysqlEventCategoryReader(connectionProvider);
+        return new BasicMysqlEventCategoryReader(connectionProvider, tableName);
     }
 }

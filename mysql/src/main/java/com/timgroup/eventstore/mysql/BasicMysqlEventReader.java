@@ -7,7 +7,7 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import java.util.stream.Stream;
 
 public class BasicMysqlEventReader implements EventReader {
-    public BasicMysqlEventReader(ConnectionProvider connectionProvider) {
+    public BasicMysqlEventReader(ConnectionProvider connectionProvider, String tableName) {
 
     }
 

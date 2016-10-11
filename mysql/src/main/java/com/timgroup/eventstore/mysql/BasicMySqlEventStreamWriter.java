@@ -11,15 +11,17 @@ import java.util.Collection;
 
 public class BasicMysqlEventStreamWriter implements EventStreamWriter {
     private final ConnectionProvider connectionProvider;
+    private final String tableName;
 
-    public BasicMysqlEventStreamWriter(ConnectionProvider connectionProvider) {
+    public BasicMysqlEventStreamWriter(ConnectionProvider connectionProvider, String tableName) {
         this.connectionProvider = connectionProvider;
+        this.tableName = tableName;
     }
 
     @Override
     public void write(StreamId streamId, Collection<NewEvent> events) {
         try (Connection connection = connectionProvider.getConnection();
-             PreparedStatement statement = connection.prepareStatement("insert into event(timestamp, stream_category, stream_id, event_number, event_type, data, metadata) values(UTC_TIMESTAMP(), ?, ?, ?, ?, ?, ?)")
+             PreparedStatement statement = connection.prepareStatement("insert into " + tableName + "(timestamp, stream_category, stream_id, event_number, event_type, data, metadata) values(UTC_TIMESTAMP(), ?, ?, ?, ?, ?, ?)")
         ) {
 
             //todo: deal with transactions
