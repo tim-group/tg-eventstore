@@ -1,7 +1,6 @@
 package com.timgroup.eventstore.mysql;
 
 import com.timgroup.eventstore.api.EventStreamReader;
-import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 
