@@ -33,7 +33,8 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
         //todo: handling of transactions
 
         EventSpliterator spliterator = new EventSpliterator(connectionProvider,
-                format("select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata from %s where stream_category = '%s' and stream_id = '%s'", tableName, streamId.category(), streamId.id()));
+                format("select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata " +
+                        "from %s where stream_category = '%s' and stream_id = '%s' and event_number > %s", tableName, streamId.category(), streamId.id(), eventNumber));
 
         return stream(spliterator, false).onClose(spliterator::close);
     }
