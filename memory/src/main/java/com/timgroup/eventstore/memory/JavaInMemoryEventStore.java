@@ -41,6 +41,10 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
         write(streamId, events, currentVersionOf(streamId));
     }
 
+    public static Position emptyStorePosition() {
+        return new InMemoryEventStorePosition(0);
+    }
+
     public EventStore toLegacy() {
         return new LegacyStore(this, this, StreamId.streamId("all", "all"), InMemoryEventStorePosition::new, p -> ((InMemoryEventStorePosition) p).eventNumber);
     }
@@ -83,7 +87,7 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
         return readAllForwards(position).filter(evt -> evt.eventRecord().streamId().category().equals(category));
     }
 
-    private static class InMemoryEventStorePosition implements Position {
+    private static final class InMemoryEventStorePosition implements Position {
         private final long eventNumber;
 
         private InMemoryEventStorePosition(long eventNumber) {
@@ -108,9 +112,7 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
 
         @Override
         public String toString() {
-            return "InMemoryEventStorePosition{" +
-                    "eventNumber=" + eventNumber +
-                    '}';
+            return Long.toString(eventNumber);
         }
     }
 }

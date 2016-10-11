@@ -12,14 +12,20 @@ import com.timgroup.eventstore.api.EventData;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.LegacyPositionAdapter;
 import com.timgroup.eventstore.api.NewEvent;
+import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.InMemoryEventStore;
+import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Report;
 import junit.framework.AssertionFailedError;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
+import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
@@ -42,6 +48,7 @@ import static scala.collection.JavaConversions.asScalaBuffer;
 public class EndToEndTest {
     private final ManualClock clock = ManualClock.createDefault();
     private final StreamId stream = streamId("any", "any");
+    private final JavaInMemoryEventStore store = new JavaInMemoryEventStore(clock);
 
     private EventSubscription<DeserialisedEvent> subscription;
 
@@ -53,10 +60,9 @@ public class EndToEndTest {
 
     @Test
     public void reports_ill_during_initial_replay() throws Exception {
-        InMemoryEventStore store = new InMemoryEventStore(() -> new DateTime(clock.millis(), UTC));
         BlockingEventHandler eventProcessing = new BlockingEventHandler();
-        store.save(asScalaBuffer(Arrays.asList(anEvent(), anEvent(), anEvent())), scala.Option.empty());
-        subscription = new EventSubscription<>("test", new LegacyEventStoreEventReaderAdapter(store), EndToEndTest::deserialize, singletonList(eventProcessing), clock, 1024, 1L, new LegacyPositionAdapter(0L), 320, emptyList());
+        store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
+        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(eventProcessing), clock, 1024, 1L, JavaInMemoryEventStore.emptyStorePosition(), 320, emptyList());
         subscription.start();
 
         eventually(() -> {
@@ -80,9 +86,8 @@ public class EndToEndTest {
 
     @Test
     public void reports_warning_if_event_store_was_not_polled_recently() throws Exception {
-        InMemoryEventStore store = new InMemoryEventStore(() -> new DateTime(clock.millis(), UTC));
-        store.save(asScalaBuffer(Arrays.asList(anEvent(), anEvent(), anEvent())), scala.Option.empty());
-        subscription = new EventSubscription<>("test", new LegacyEventStoreEventReaderAdapter(store), EndToEndTest::deserialize, singletonList(failingHandler(() -> new RuntimeException("failure"))), clock, 1024, 1L, new LegacyPositionAdapter(0L), 320, emptyList());
+        store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
+        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(failingHandler(() -> new RuntimeException("failure"))), clock, 1024, 1L, JavaInMemoryEventStore.emptyStorePosition(), 320, emptyList());
         subscription.start();
 
         eventually(() -> {
@@ -93,15 +98,14 @@ public class EndToEndTest {
 
     @Test
     public void does_not_continue_processing_events_if_event_processing_failed_on_a_previous_event() throws Exception {
-        InMemoryEventStore store = new InMemoryEventStore(() -> new DateTime(clock.millis(), UTC));
-        store.save(asScalaBuffer(Arrays.asList(anEvent(), anEvent())), scala.Option.empty());
+        store.write(stream, Arrays.asList(newEvent(), newEvent()));
         AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = new EventSubscription<>("test", new LegacyEventStoreEventReaderAdapter(store), EndToEndTest::deserialize, singletonList(handler(e -> {
+        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(handler(e -> {
             eventsProcessed.incrementAndGet();
-            if (e.event.eventNumber() == 1) {
+            if (e.event.eventNumber() == 0) {
                 throw new RuntimeException("failure");
             }
-        })), clock, 1024, 1L, new LegacyPositionAdapter(0L), 320, emptyList());
+        })), clock, 1024, 1L, JavaInMemoryEventStore.emptyStorePosition(), 320, emptyList());
         subscription.start();
 
         Thread.sleep(50L);
@@ -115,12 +119,11 @@ public class EndToEndTest {
 
     @Test
     public void does_not_continue_processing_events_if_deserialisation_failed_on_a_previous_event() throws Exception {
-        InMemoryEventStore store = new InMemoryEventStore(() -> new DateTime(clock.millis(), UTC));
-        store.save(asScalaBuffer(Arrays.asList(anEvent(), anEvent(), anEvent())), scala.Option.empty());
+        store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
         AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = new EventSubscription<>("test", new LegacyEventStoreEventReaderAdapter(store), e -> {
-            if (e.eventNumber() == 1) {
-                throw new RuntimeException("Failed to deserialize event 1");
+        subscription = new EventSubscription<>("test", store, e -> {
+            if (e.eventNumber() == 0) {
+                throw new RuntimeException("Failed to deserialize first event");
             }
             else {
                 return deserialize(e);
@@ -128,7 +131,7 @@ public class EndToEndTest {
         }, singletonList(handler(e -> {
             eventsProcessed.incrementAndGet();
             throw new UnsupportedOperationException();
-        })), clock, 1024, 1L, new LegacyPositionAdapter(0L), 320, emptyList());
+        })), clock, 1024, 1L, JavaInMemoryEventStore.emptyStorePosition(), 320, emptyList());
         subscription.start();
 
         Thread.sleep(50L);
@@ -140,13 +143,12 @@ public class EndToEndTest {
 
     @Test
     public void invokes_event_handlers_with_both_event_record_and_deserialised_event() throws Exception {
-        InMemoryEventStore store = new InMemoryEventStore(() -> new DateTime(clock.millis(), UTC));
-        EventData event1 = anEvent();
-        EventData event2 = anEvent();
-        store.save(asScalaBuffer(Arrays.asList(event1, event2)), scala.Option.empty());
+        NewEvent event1 = newEvent();
+        NewEvent event2 = newEvent();
+        store.write(stream, Arrays.asList(event1, event2));
         @SuppressWarnings("unchecked")
         EventHandler<DeserialisedEvent> eventHandler = Mockito.mock(EventHandler.class);
-        subscription = new EventSubscription<>("test", new LegacyEventStoreEventReaderAdapter(store), EndToEndTest::deserialize, singletonList(eventHandler), clock, 1024, 1L, new LegacyPositionAdapter(0L), 320, emptyList());
+        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(eventHandler), clock, 1024, 1L, JavaInMemoryEventStore.emptyStorePosition(), 320, emptyList());
         subscription.start();
 
         eventually(() -> {
@@ -154,25 +156,24 @@ public class EndToEndTest {
         });
 
         verify(eventHandler).apply(
-                Matchers.eq(new LegacyPositionAdapter(1)),
+                Matchers.argThat(inMemoryPosition(1)),
                 Matchers.eq(new DateTime(clock.millis(), DateTimeZone.getDefault())),
-                Matchers.eq(new DeserialisedEvent(eventRecord(clock.instant(), StreamId.streamId("all", "all"), 1, event1.eventType(), event1.body().data(), new byte[0]))),
+                Matchers.eq(new DeserialisedEvent(eventRecord(clock.instant(), stream, 0, event1.type(), event1.data(), event1.metadata()))),
                 Matchers.anyBoolean());
 
         verify(eventHandler).apply(
-                Matchers.eq(new LegacyPositionAdapter(2)),
+                Matchers.argThat(inMemoryPosition(2)),
                 Matchers.eq(new DateTime(clock.millis(), DateTimeZone.getDefault())),
-                Matchers.eq(new DeserialisedEvent(eventRecord(clock.instant(), StreamId.streamId("all", "all"), 2, event2.eventType(), event2.body().data(), new byte[0]))),
+                Matchers.eq(new DeserialisedEvent(eventRecord(clock.instant(), stream, 1, event2.type(), event2.data(), event2.metadata()))),
                 Matchers.eq(true));
     }
 
     @Test
     public void starts_up_healthy_when_there_are_no_events() throws Exception {
-        InMemoryEventStore store = new InMemoryEventStore(() -> new DateTime(clock.millis(), UTC));
         AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = new EventSubscription<>("test", new LegacyEventStoreEventReaderAdapter(store), EndToEndTest::deserialize, singletonList(handler(e -> {
+        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(handler(e -> {
             eventsProcessed.incrementAndGet();
-        })), clock, 1024, 1L, new LegacyPositionAdapter(0L), 320, emptyList());
+        })), clock, 1024, 1L, JavaInMemoryEventStore.emptyStorePosition(), 320, emptyList());
         subscription.start();
 
         eventually(() -> {
@@ -181,12 +182,11 @@ public class EndToEndTest {
         });
     }
 
-    @Test
+    @Test @Ignore("converting checkpoint to position not specified yet")
     public void starts_up_healthy_when_there_are_no_events_after_fromversion() throws Exception {
-        InMemoryEventStore store = new InMemoryEventStore(() -> new DateTime(clock.millis(), UTC));
-        store.save(asScalaBuffer(Arrays.asList(anEvent(), anEvent(), anEvent())), scala.Option.empty());
+        store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
         AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = new EventSubscription<>("test", new LegacyEventStoreEventReaderAdapter(store), EndToEndTest::deserialize, singletonList(handler(e -> {
+        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(handler(e -> {
             eventsProcessed.incrementAndGet();
         })), clock, 1024, 1L, new LegacyPositionAdapter(3L), 320, emptyList());
         subscription.start();
@@ -197,6 +197,20 @@ public class EndToEndTest {
         });
     }
 
+    private static Matcher<Position> inMemoryPosition(long n) {
+        return new TypeSafeDiagnosingMatcher<Position>() {
+            @Override
+            protected boolean matchesSafely(Position item, Description mismatchDescription) {
+                mismatchDescription.appendText("position was ").appendValue(item);
+                return Long.parseLong(item.toString()) == n;
+            }
+
+            @Override
+            public void describeTo(Description description) {
+                description.appendText("version ").appendValue(n);
+            }
+        };
+    }
     private Component statusComponent() {
         return subscription.statusComponents().stream().filter(c -> c.getId().equals("event-subscription-status-test")).findFirst().orElseThrow(() -> new AssertionFailedError("No event-subscription-status-test component"));
     }
