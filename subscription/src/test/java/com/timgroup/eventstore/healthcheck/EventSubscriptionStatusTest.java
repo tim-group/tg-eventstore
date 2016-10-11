@@ -1,12 +1,12 @@
 package com.timgroup.eventstore.healthcheck;
 
+import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventsubscription.healthcheck.EventSubscriptionStatus;
 import com.timgroup.eventsubscription.healthcheck.SubscriptionListenerAdapter;
 import com.timgroup.tucker.info.Report;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.time.Clock;
 import java.time.Instant;
 
 import static com.timgroup.tucker.info.Health.State.healthy;
@@ -14,22 +14,19 @@ import static com.timgroup.tucker.info.Health.State.ill;
 import static com.timgroup.tucker.info.Status.CRITICAL;
 import static com.timgroup.tucker.info.Status.OK;
 import static com.timgroup.tucker.info.Status.WARNING;
+import static java.time.ZoneOffset.UTC;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class EventSubscriptionStatusTest {
-    private final Instant now = Instant.now();
-    private final Clock clock = mock(Clock.class);
+    private final ManualClock clock = new ManualClock(Instant.now(), UTC);
     private EventSubscriptionStatus status;
     private SubscriptionListenerAdapter adapter;
 
     @Before
     public void setup() {
-        when(clock.instant()).thenReturn(now);
         status = new EventSubscriptionStatus("", clock, 123);
         adapter = new SubscriptionListenerAdapter(new TestPosition(0), singletonList(status));
     }
@@ -50,7 +47,7 @@ public class EventSubscriptionStatusTest {
         assertThat(status.get(), is (ill));
         assertThat(status.getReport(), is(new Report(OK, "Stale, catching up. No events processed yet. (Stale for 0s)")));
 
-        when(clock.instant()).thenReturn(now.plusSeconds(100));
+        clock.bumpSeconds(100);
         adapter.eventProcessed(new TestPosition(1));
         adapter.eventProcessed(new TestPosition(2));
         adapter.eventProcessed(new TestPosition(3));
@@ -66,7 +63,7 @@ public class EventSubscriptionStatusTest {
         adapter.chaserReceived(new TestPosition(3));
         adapter.chaserUpToDate(new TestPosition(3));
 
-        when(clock.instant()).thenReturn(now.plusSeconds(124));
+        clock.bumpSeconds(124);
         adapter.eventProcessed(new TestPosition(1));
         adapter.eventProcessed(new TestPosition(2));
         adapter.eventProcessed(new TestPosition(3));
@@ -81,7 +78,7 @@ public class EventSubscriptionStatusTest {
         adapter.chaserUpToDate(new TestPosition(5));
         adapter.eventProcessed(new TestPosition(5));
         adapter.chaserReceived(new TestPosition(6));
-        when(clock.instant()).thenReturn(now.plusSeconds(7));
+        clock.bumpSeconds(7);
 
         assertThat(status.getReport(), is(new Report(WARNING, "Stale, catching up. Currently at version 5. (Stale for 7s)")));
     }
@@ -92,7 +89,7 @@ public class EventSubscriptionStatusTest {
         adapter.eventProcessed(new TestPosition(5));
         adapter.chaserReceived(new TestPosition(6));
 
-        when(clock.instant()).thenReturn(now.plusSeconds(31));
+        clock.bumpSeconds(31);
         assertThat(status.getReport(), is(new Report(CRITICAL, "Stale, catching up. Currently at version 5. (Stale for 31s)")));
     }
 
@@ -101,7 +98,7 @@ public class EventSubscriptionStatusTest {
         adapter.chaserReceived(new TestPosition(1));
         adapter.eventProcessed(new TestPosition(1));
 
-        when(clock.instant()).thenReturn(now.plusSeconds(123));
+        clock.bumpSeconds(123);
         assertThat(status.getReport(), is(new Report(OK, "Stale, catching up. Currently at version 1. (Stale for 123s)")));
     }
 
@@ -110,7 +107,7 @@ public class EventSubscriptionStatusTest {
         adapter.chaserReceived(new TestPosition(1));
         adapter.eventProcessed(new TestPosition(1));
 
-        when(clock.instant()).thenReturn(now.plusSeconds(124));
+        clock.bumpSeconds(124);
         assertThat(status.getReport(), is(new Report(CRITICAL, "Stale, catching up. Currently at version 1. (Stale for 124s)")));
     }
 
