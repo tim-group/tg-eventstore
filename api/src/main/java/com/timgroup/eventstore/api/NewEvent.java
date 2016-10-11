@@ -5,6 +5,7 @@ import java.util.Arrays;
 import static java.util.Objects.requireNonNull;
 
 public final class NewEvent {
+    private static final byte[] EMPTY = new byte[0];
     private final String type;
     private final byte[] data;
     private final byte[] metadata;
@@ -17,6 +18,10 @@ public final class NewEvent {
 
     public static NewEvent newEvent(String type, byte[] data, byte[] metadata) {
         return new NewEvent(type, data, metadata);
+    }
+
+    public static NewEvent newEvent(String type, byte[] data) {
+        return new NewEvent(type, data, EMPTY);
     }
 
     @Override
