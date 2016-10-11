@@ -31,14 +31,15 @@ public class BasicMysqlEventStoreTest extends JavaEventStoreTest {
              Statement statement = connection.createStatement()) {
                 statement.executeUpdate("drop table if exists " + tableName);
                 statement.execute("create table " + tableName + "(" +
-                        "position bigint primary key auto_increment, " +
+                        "position bigint primary key, " +
                         "timestamp datetime not null, " +
                         "stream_category varchar(255) not null, " +
                         "stream_id varchar(255) not null, " +
                         "event_number bigint not null, " +
                         "event_type varchar(255) not null," +
                         "data blob not null, " +
-                        "metadata blob not null" +
+                        "metadata blob not null," +
+                        "unique(stream_category, stream_id, event_number)" +
                         ")");
         }
     }

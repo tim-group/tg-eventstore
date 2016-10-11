@@ -25,7 +25,12 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
     @Override
     public void write(StreamId streamId, Collection<NewEvent> events) {
         try (Connection connection = connectionProvider.getConnection()) {
-            write(streamId, events, currentEventNumber(streamId, connection), connection);
+            connection.setAutoCommit(false);
+            long currentEventNumber = currentEventNumber(streamId, connection);
+
+            write(streamId, events, currentEventNumber, connection);
+
+            connection.commit();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -34,6 +39,8 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
     @Override
     public void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
         try (Connection connection = connectionProvider.getConnection()) {
+            connection.setAutoCommit(false);
+
             long currentEventNumber = currentEventNumber(streamId, connection);
 
             if (currentEventNumber != expectedVersion) {
@@ -41,25 +48,27 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
             }
 
             write(streamId, events, currentEventNumber, connection);
+            connection.commit();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
     private void write(StreamId streamId, Collection<NewEvent> events, long currentEventNumber, Connection connection) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("insert into " + tableName + "(timestamp, stream_category, stream_id, event_number, event_type, data, metadata) values(UTC_TIMESTAMP(), ?, ?, ?, ?, ?, ?)")) {
-            //todo: deal with transactions
-            //todo: deal with locking tables
+        try (PreparedStatement statement = connection.prepareStatement("insert into " + tableName + "(position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata) values(?, UTC_TIMESTAMP(), ?, ?, ?, ?, ?, ?)")) {
+
+            long currentPosition = currentPosition(connection);
 
             long eventNumber = currentEventNumber;
 
             for (NewEvent event : events) {
-                statement.setString(1, streamId.category());
-                statement.setString(2, streamId.id());
-                statement.setLong(3, ++eventNumber);
-                statement.setString(4, event.type());
-                statement.setBytes(5, event.data());
-                statement.setBytes(6, event.metadata());
+                statement.setLong(1, ++currentPosition);
+                statement.setString(2, streamId.category());
+                statement.setString(3, streamId.id());
+                statement.setLong(4, ++eventNumber);
+                statement.setString(5, event.type());
+                statement.setBytes(6, event.data());
+                statement.setBytes(7, event.metadata());
                 statement.addBatch();
             }
 
@@ -67,6 +76,15 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
 
             if (affectedRows.length != events.size()) {
                 throw new RuntimeException("Expected to write " + events.size() + " events but wrote " + affectedRows.length);
+            }
+        }
+    }
+
+    private long currentPosition(Connection connection) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(format("select max(position) as current_position from %s", tableName))) {
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                return resultSet.getLong("current_position");
             }
         }
     }
