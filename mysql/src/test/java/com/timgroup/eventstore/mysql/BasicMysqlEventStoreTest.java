@@ -7,10 +7,8 @@ import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.JavaEventStoreTest;
 import org.junit.Before;
 
-import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 public class BasicMysqlEventStoreTest extends JavaEventStoreTest {
     static {
@@ -27,21 +25,9 @@ public class BasicMysqlEventStoreTest extends JavaEventStoreTest {
 
     @Before
     public void createTables() throws SQLException {
-        try (Connection connection = connectionProvider.getConnection();
-             Statement statement = connection.createStatement()) {
-                statement.executeUpdate("drop table if exists " + tableName);
-                statement.execute("create table " + tableName + "(" +
-                        "position bigint primary key, " +
-                        "timestamp datetime not null, " +
-                        "stream_category varchar(255) not null, " +
-                        "stream_id varchar(255) not null, " +
-                        "event_number bigint not null, " +
-                        "event_type varchar(255) not null," +
-                        "data blob not null, " +
-                        "metadata blob not null," +
-                        "unique(stream_category, stream_id, event_number)" +
-                        ")");
-        }
+        BasicMysqlEventStoreSetup setup = new BasicMysqlEventStoreSetup(connectionProvider, tableName);
+        setup.drop();
+        setup.create();
     }
 
     @Override
