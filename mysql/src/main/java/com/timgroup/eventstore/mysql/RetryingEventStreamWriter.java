@@ -3,6 +3,7 @@ package com.timgroup.eventstore.mysql;
 import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.StreamId;
+import com.timgroup.eventstore.api.WrongExpectedVersion;
 
 import java.time.Duration;
 import java.util.Collection;
@@ -23,29 +24,23 @@ public class RetryingEventStreamWriter implements EventStreamWriter {
 
     @Override
     public synchronized void write(StreamId streamId, Collection<NewEvent> events) {
-        int retriesRemaining = count;
-        while (true) {
-            try {
-                underlying.write(streamId, events);
-                return;
-            } catch (RuntimeException e) {
-                if (retriesRemaining-- == 0) {
-                    throw e;
-                }
-                try {
-                    sleep(interval.toMillis());
-                } catch (InterruptedException e1) { }
-            }
-        }
+        retry(() -> underlying.write(streamId, events));
+
     }
 
     @Override
     public synchronized void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
+        retry(() -> underlying.write(streamId, events, expectedVersion));
+    }
+
+    private void retry(Runnable work) {
         int retriesRemaining = count;
         while (true) {
             try {
-                underlying.write(streamId, events, expectedVersion);
+                work.run();
                 return;
+            } catch (WrongExpectedVersion e) {
+                throw e;
             } catch (RuntimeException e) {
                 if (retriesRemaining-- == 0) {
                     throw e;

@@ -3,12 +3,14 @@ package com.timgroup.eventstore.mysql;
 import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.StreamId;
+import com.timgroup.eventstore.api.WrongExpectedVersion;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.time.Clock;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.eventstore.api.StreamId.streamId;
@@ -17,6 +19,7 @@ import static java.time.Duration.ofMillis;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.fail;
 
 public class RetryingEventStreamWriterTest {
     public final ExpectedException thrown = ExpectedException.none();
@@ -49,6 +52,28 @@ public class RetryingEventStreamWriterTest {
     when_underlying_keeps_failing_it_propagates_failure_with_expected_version() {
         thrown.expect(RuntimeException.class);
         retrying(failing(5, underlying), 5, ofMillis(1)).write(stream, singletonList(newEvent("type", "data".getBytes(), "metadata".getBytes())), -1);
+    }
+
+    @Test public void
+    when_wrong_expected_version_does_not_retry() {
+        AtomicInteger writeCount = new AtomicInteger();
+
+        try {
+            retrying(new EventStreamWriter() {
+                @Override
+                public void write(StreamId streamId, Collection<NewEvent> events) {
+                }
+
+                @Override
+                public void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
+                    writeCount.incrementAndGet();
+                    underlying.write(streamId, events, expectedVersion);
+                }
+            }).write(stream, singletonList(newEvent("type", "data".getBytes(), "metadata".getBytes())), 5);
+            fail();
+        } catch (WrongExpectedVersion e) {}
+
+        assertThat(writeCount.get(), is(1));
     }
 
     private EventStreamWriter failing(int count, EventStreamWriter writer) {

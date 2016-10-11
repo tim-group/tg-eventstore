@@ -12,7 +12,6 @@ import com.timgroup.tucker.info.Health.State.{healthy, ill}
 import com.timgroup.tucker.info.Report
 import com.timgroup.tucker.info.Status.{CRITICAL, OK, WARNING}
 import org.joda.time.DateTime
-import org.joda.time.DateTimeZone.UTC
 import org.mockito.Matchers
 import org.mockito.Mockito._
 import org.scalatest.concurrent.Eventually.eventually
