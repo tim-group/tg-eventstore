@@ -6,18 +6,31 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 
 import java.util.stream.Stream;
 
-public class BasicMysqlEventReader implements EventReader {
-    public BasicMysqlEventReader(ConnectionProvider connectionProvider, String tableName) {
+import static java.lang.String.format;
+import static java.util.stream.StreamSupport.stream;
 
+public class BasicMysqlEventReader implements EventReader {
+    private final ConnectionProvider connectionProvider;
+    private final String tableName;
+
+    public BasicMysqlEventReader(ConnectionProvider connectionProvider, String tableName) {
+        this.connectionProvider = connectionProvider;
+        this.tableName = tableName;
     }
 
     @Override
     public Stream<ResolvedEvent> readAllForwards() {
-        return null;
+        return readAllForwards(new BasicMysqlEventStorePosition(-1));
     }
 
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-        return null;
+        BasicMysqlEventStorePosition basicMysqlEventStorePosition = (BasicMysqlEventStorePosition) positionExclusive;
+
+        EventSpliterator spliterator = new EventSpliterator(connectionProvider,
+                format("select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata " +
+                        "from %s where position > %s order by position asc", tableName, basicMysqlEventStorePosition.value));
+
+        return stream(spliterator, false).onClose(spliterator::close);
     }
 }
