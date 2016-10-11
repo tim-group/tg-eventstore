@@ -29,17 +29,17 @@ public class BasicMysqlEventStoreTest extends JavaEventStoreTest {
     public void createTables() throws SQLException {
         try (Connection connection = connectionProvider.getConnection();
              Statement statement = connection.createStatement()) {
-            statement.executeUpdate("drop table if exists " + tableName);
-            statement.execute("create table " + tableName + "(" +
-                    "position bigint primary key auto_increment, " +
-                    "timestamp datetime not null, " +
-                    "stream_category varchar(255) not null, " +
-                    "stream_id varchar(255) not null, " +
-                    "event_number bigint not null, " +
-                    "event_type varchar(255) not null," +
-                    "data blob not null, " +
-                    "metadata blob not null" +
-                    ")");
+                statement.executeUpdate("drop table if exists " + tableName);
+                statement.execute("create table " + tableName + "(" +
+                        "position bigint primary key auto_increment, " +
+                        "timestamp datetime not null, " +
+                        "stream_category varchar(255) not null, " +
+                        "stream_id varchar(255) not null, " +
+                        "event_number bigint not null, " +
+                        "event_type varchar(255) not null," +
+                        "data blob not null, " +
+                        "metadata blob not null" +
+                        ")");
         }
     }
 

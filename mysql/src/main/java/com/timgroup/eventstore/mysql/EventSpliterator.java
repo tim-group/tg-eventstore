@@ -2,6 +2,7 @@ package com.timgroup.eventstore.mysql;
 
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
+import org.slf4j.Logger;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -13,17 +14,19 @@ import java.util.function.Consumer;
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static java.lang.Integer.MIN_VALUE;
 import static java.lang.Long.MAX_VALUE;
+import static org.slf4j.LoggerFactory.getLogger;
 
 class EventSpliterator implements Spliterator<ResolvedEvent>, AutoCloseable {
+    private static final Logger LOG = getLogger(EventSpliterator.class);
+
     private Connection connection = null;
     private Statement statement = null;
     private ResultSet resultSet = null;
 
     EventSpliterator(ConnectionProvider connectionProvider, String query) {
-        //todo: handling of transactions
-
         try {
             connection = connectionProvider.getConnection();
+            connection.setAutoCommit(false);
             statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
             statement.setFetchSize(MIN_VALUE);
             resultSet = statement.executeQuery(query);
@@ -79,7 +82,7 @@ class EventSpliterator implements Spliterator<ResolvedEvent>, AutoCloseable {
             try {
                 resultSet.close();
             } catch (SQLException e) {
-                //TODO: log this?
+                LOG.warn("Failure closing ResultSet. Ignoring.", e);
             }
             resultSet = null;
         }
@@ -87,7 +90,7 @@ class EventSpliterator implements Spliterator<ResolvedEvent>, AutoCloseable {
             try {
                 statement.close();
             } catch (SQLException e) {
-                //TODO: log this?
+                LOG.warn("Failure closing Statement. Ignoring.", e);
             }
             statement = null;
         }
@@ -95,7 +98,7 @@ class EventSpliterator implements Spliterator<ResolvedEvent>, AutoCloseable {
             try {
                 connection.close();
             } catch (SQLException e) {
-                //TODO: log this?
+                LOG.warn("Failure closing Connection. Ignoring.", e);
             }
             connection = null;
         }

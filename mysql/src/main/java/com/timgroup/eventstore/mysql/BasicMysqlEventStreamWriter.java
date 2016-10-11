@@ -63,9 +63,11 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
                 statement.addBatch();
             }
 
-            int[] ints = statement.executeBatch();
+            int[] affectedRows = statement.executeBatch();
 
-            //todo: deal with affected rows
+            if (affectedRows.length != events.size()) {
+                throw new RuntimeException("Expected to write " + events.size() + " events but wrote " + affectedRows.length);
+            }
         }
     }
 
