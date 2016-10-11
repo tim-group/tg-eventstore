@@ -35,8 +35,13 @@ val eventstore_api = Project(id = "eventstore-api", base = file("api"))
   .settings(compatibleScalaTestDependency)
   .settings(overridePublishSettings)
 
+val eventstore_memory = Project(id = "eventstore-memory", base = file("memory"))
+  .dependsOn(eventstore_api % "compile->compile; test->test")
+  .settings(overridePublishSettings)
+
 val eventstore_mysql = Project(id = "eventstore-mysql", base = file("mysql"))
   .dependsOn(eventstore_api % "compile->compile; test->test")
+  .dependsOn(eventstore_api, eventstore_memory % "compile->test")
   .settings(
     parallelExecution in Test := false,
     compatibleScalaTestDependency,
@@ -44,10 +49,6 @@ val eventstore_mysql = Project(id = "eventstore-mysql", base = file("mysql"))
     libraryDependencies += "com.timgroup" %% "tim-slogger" % autobump
   )
   .settings(CreateDatabase.settings :_*)
-  .settings(overridePublishSettings)
-
-val eventstore_memory = Project(id = "eventstore-memory", base = file("memory"))
-  .dependsOn(eventstore_api % "compile->compile; test->test")
   .settings(overridePublishSettings)
 
 val eventstore_stitching = Project(id = "eventstore-stitching", base = file("stitching"))
