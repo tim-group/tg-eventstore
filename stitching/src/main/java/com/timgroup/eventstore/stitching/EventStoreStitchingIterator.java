@@ -10,7 +10,6 @@ import java.time.Instant;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.function.Consumer;
 
 import static java.util.stream.Collectors.toList;
 
@@ -20,6 +19,7 @@ public final class EventStoreStitchingIterator implements Iterator<EventInIdenti
     private final List<PeekingIterator<EventInIdentifiedStream>> underlying;
 
     private Long cutOffTime;
+    private PeekingIterator<EventInIdentifiedStream> iteratorWhoseHeadIsNext;
 
     public EventStoreStitchingIterator(Clock clock, Duration delay, List<Iterator<EventInIdentifiedStream>> iterators) {
         this.clock = clock;
@@ -34,26 +34,18 @@ public final class EventStoreStitchingIterator implements Iterator<EventInIdenti
 
     @Override
     public EventInIdentifiedStream next() {
-        PeekingIterator<EventInIdentifiedStream> candidate = getIteratorWhoseHeadIsNext();
+        Iterator<EventInIdentifiedStream> candidate = getIteratorWhoseHeadIsNext();
         if (candidate == null) {
             throw new NoSuchElementException();
         }
+        iteratorWhoseHeadIsNext = null;
         return candidate.next();
     }
 
-    @Override
-    public void forEachRemaining(Consumer<? super EventInIdentifiedStream> action) {
-        do {
-            PeekingIterator<EventInIdentifiedStream> candidate = getIteratorWhoseHeadIsNext();
-            if (candidate == null) {
-                return;
-            }
-            action.accept(candidate.next());
-        } while (true);
-    }
-
-    private PeekingIterator<EventInIdentifiedStream> getIteratorWhoseHeadIsNext() {
-        PeekingIterator<EventInIdentifiedStream> iteratorWhoseHeadIsNext = null;
+    private Iterator<EventInIdentifiedStream> getIteratorWhoseHeadIsNext() {
+        if (iteratorWhoseHeadIsNext != null) {
+            return iteratorWhoseHeadIsNext;
+        }
         Iterator<PeekingIterator<EventInIdentifiedStream>> streams = underlying.iterator();
         while (streams.hasNext()) {
             PeekingIterator<EventInIdentifiedStream> eventStream = streams.next();
