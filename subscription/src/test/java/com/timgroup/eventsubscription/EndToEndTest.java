@@ -62,7 +62,7 @@ public class EndToEndTest {
     public void reports_ill_during_initial_replay() throws Exception {
         BlockingEventHandler eventProcessing = new BlockingEventHandler();
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
-        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(eventProcessing), clock, 1024, 1L, JavaInMemoryEventStore.emptyStorePosition(), 320, emptyList());
+        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(eventProcessing), clock, 1024, 1L, store.emptyStorePosition(), 320, emptyList());
         subscription.start();
 
         eventually(() -> {
@@ -87,7 +87,7 @@ public class EndToEndTest {
     @Test
     public void reports_warning_if_event_store_was_not_polled_recently() throws Exception {
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
-        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(failingHandler(() -> new RuntimeException("failure"))), clock, 1024, 1L, JavaInMemoryEventStore.emptyStorePosition(), 320, emptyList());
+        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(failingHandler(() -> new RuntimeException("failure"))), clock, 1024, 1L, store.emptyStorePosition(), 320, emptyList());
         subscription.start();
 
         eventually(() -> {
@@ -105,7 +105,7 @@ public class EndToEndTest {
             if (e.event.eventNumber() == 0) {
                 throw new RuntimeException("failure");
             }
-        })), clock, 1024, 1L, JavaInMemoryEventStore.emptyStorePosition(), 320, emptyList());
+        })), clock, 1024, 1L, store.emptyStorePosition(), 320, emptyList());
         subscription.start();
 
         Thread.sleep(50L);
@@ -131,7 +131,7 @@ public class EndToEndTest {
         }, singletonList(handler(e -> {
             eventsProcessed.incrementAndGet();
             throw new UnsupportedOperationException();
-        })), clock, 1024, 1L, JavaInMemoryEventStore.emptyStorePosition(), 320, emptyList());
+        })), clock, 1024, 1L, store.emptyStorePosition(), 320, emptyList());
         subscription.start();
 
         Thread.sleep(50L);
@@ -148,7 +148,7 @@ public class EndToEndTest {
         store.write(stream, Arrays.asList(event1, event2));
         @SuppressWarnings("unchecked")
         EventHandler<DeserialisedEvent> eventHandler = Mockito.mock(EventHandler.class);
-        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(eventHandler), clock, 1024, 1L, JavaInMemoryEventStore.emptyStorePosition(), 320, emptyList());
+        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(eventHandler), clock, 1024, 1L, store.emptyStorePosition(), 320, emptyList());
         subscription.start();
 
         eventually(() -> {
@@ -173,7 +173,7 @@ public class EndToEndTest {
         AtomicInteger eventsProcessed = new AtomicInteger();
         subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(handler(e -> {
             eventsProcessed.incrementAndGet();
-        })), clock, 1024, 1L, JavaInMemoryEventStore.emptyStorePosition(), 320, emptyList());
+        })), clock, 1024, 1L, store.emptyStorePosition(), 320, emptyList());
         subscription.start();
 
         eventually(() -> {

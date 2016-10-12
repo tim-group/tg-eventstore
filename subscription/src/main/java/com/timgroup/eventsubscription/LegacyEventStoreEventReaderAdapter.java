@@ -30,6 +30,11 @@ public class LegacyEventStoreEventReaderAdapter implements EventReader {
         return eventStore.streamingFromAll(((LegacyPositionAdapter) positionExclusive).version()).map(this::toResolvedEvent);
     }
 
+    @Override
+    public Position emptyStorePosition() {
+        return new LegacyPositionAdapter(0);
+    }
+
     private ResolvedEvent toResolvedEvent(EventInStream eventInStream) {
         return new ResolvedEvent(
                 new LegacyPositionAdapter(eventInStream.version()),

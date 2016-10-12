@@ -95,6 +95,11 @@ public class ReadableLegacyStoreTest {
             return events.subList(((Pos) positionExclusive).index + 1, events.size()).stream();
         }
 
+        @Override
+        public Position emptyStorePosition() {
+            return toPosition(-1L);
+        }
+
         private static final class Pos implements Position {
             private final int index;
 

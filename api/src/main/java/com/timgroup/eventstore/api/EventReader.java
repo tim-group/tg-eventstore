@@ -3,7 +3,11 @@ package com.timgroup.eventstore.api;
 import java.util.stream.Stream;
 
 public interface EventReader {
-    Stream<ResolvedEvent> readAllForwards();
+    default Stream<ResolvedEvent> readAllForwards() {
+        return readAllForwards(emptyStorePosition());
+    }
 
     Stream<ResolvedEvent> readAllForwards(Position positionExclusive);
+
+    Position emptyStorePosition();
 }

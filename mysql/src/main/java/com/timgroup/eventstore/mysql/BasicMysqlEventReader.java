@@ -21,11 +21,6 @@ public class BasicMysqlEventReader implements EventReader {
     }
 
     @Override
-    public Stream<ResolvedEvent> readAllForwards() {
-        return readAllForwards(EMPTY_STORE_POSITION);
-    }
-
-    @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
         BasicMysqlEventStorePosition basicMysqlEventStorePosition = (BasicMysqlEventStorePosition) positionExclusive;
 
@@ -36,7 +31,8 @@ public class BasicMysqlEventReader implements EventReader {
         return stream(spliterator, false).onClose(spliterator::close);
     }
 
-    public static Position emptyStorePosition() {
+    @Override
+    public Position emptyStorePosition() {
         return EMPTY_STORE_POSITION;
     }
 }

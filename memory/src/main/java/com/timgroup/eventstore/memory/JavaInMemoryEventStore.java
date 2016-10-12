@@ -41,7 +41,8 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
         write(streamId, events, currentVersionOf(streamId));
     }
 
-    public static Position emptyStorePosition() {
+    @Override
+    public Position emptyStorePosition() {
         return new InMemoryEventStorePosition(0);
     }
 
