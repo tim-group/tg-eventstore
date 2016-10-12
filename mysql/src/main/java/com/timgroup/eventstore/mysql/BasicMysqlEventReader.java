@@ -3,6 +3,7 @@ package com.timgroup.eventstore.mysql;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 
 import java.util.stream.Stream;
 
@@ -10,6 +11,7 @@ import static java.lang.String.format;
 import static java.util.stream.StreamSupport.stream;
 
 public class BasicMysqlEventReader implements EventReader {
+    private static final BasicMysqlEventStorePosition EMPTY_STORE_POSITION = new BasicMysqlEventStorePosition(-1);
     private final ConnectionProvider connectionProvider;
     private final String tableName;
 
@@ -20,7 +22,7 @@ public class BasicMysqlEventReader implements EventReader {
 
     @Override
     public Stream<ResolvedEvent> readAllForwards() {
-        return readAllForwards(new BasicMysqlEventStorePosition(-1));
+        return readAllForwards(EMPTY_STORE_POSITION);
     }
 
     @Override
@@ -32,5 +34,9 @@ public class BasicMysqlEventReader implements EventReader {
                         "from %s where position > %s order by position asc", tableName, basicMysqlEventStorePosition.value));
 
         return stream(spliterator, false).onClose(spliterator::close);
+    }
+
+    public static Position emptyStorePosition() {
+        return EMPTY_STORE_POSITION;
     }
 }
