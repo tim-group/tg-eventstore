@@ -56,6 +56,10 @@ val eventstore_stitching = Project(id = "eventstore-stitching", base = file("sti
   .dependsOn(eventstore_api % "compile->compile; test->test", eventstore_memory % "test")
   .settings(compatibleScalaTestDependency)
   .settings(overridePublishSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+  "com.google.guava" % "guava" % "19.0"
+))
 
 val eventstore_subscription = Project(id = "eventstore-subscription", base = file("subscription"))
   .dependsOn(eventstore_api, eventstore_memory % "compile->test")
