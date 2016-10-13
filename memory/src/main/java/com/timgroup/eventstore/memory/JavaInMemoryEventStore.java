@@ -2,7 +2,6 @@ package com.timgroup.eventstore.memory;
 
 import com.timgroup.eventstore.api.*;
 import com.timgroup.eventstore.api.legacy.LegacyStore;
-import com.timgroup.eventstore.api.legacy.ReadableLegacyStore;
 
 import java.time.Clock;
 import java.util.ArrayList;
@@ -20,9 +19,10 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
 
     @Override
     public Stream<ResolvedEvent> readStreamForwards(StreamId streamId, long eventNumberExclusive) {
-        return events.stream()
-                .filter(event -> event.eventRecord().streamId().equals(streamId))
-                .filter(event -> event.eventRecord().eventNumber() > eventNumberExclusive);
+        internalReadStream(streamId, Long.MIN_VALUE)
+                .findAny()
+                .orElseThrow(() -> new NoSuchStreamException(streamId));
+        return internalReadStream(streamId, eventNumberExclusive);
     }
 
     @Override
@@ -51,7 +51,7 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     }
 
     private long currentVersionOf(StreamId streamId) {
-        return readStreamForwards(streamId, EmptyStreamEventNumber)
+        return internalReadStream(streamId, EmptyStreamEventNumber)
                 .mapToLong(r -> r.eventRecord().eventNumber())
                 .max()
                 .orElse(EmptyStreamEventNumber);
@@ -62,7 +62,7 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
         long currentVersion = currentVersionOf(streamId);
 
         if (currentVersion != expectedVersion) {
-            throw new WrongExpectedVersion(currentVersion, expectedVersion);
+            throw new WrongExpectedVersionException(currentVersion, expectedVersion);
         }
 
         AtomicLong globalPosition = new AtomicLong(this.events.size());
@@ -86,6 +86,12 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     @Override
     public Stream<ResolvedEvent> readCategoryForwards(String category, Position position) {
         return readAllForwards(position).filter(evt -> evt.eventRecord().streamId().category().equals(category));
+    }
+
+    private Stream<ResolvedEvent> internalReadStream(StreamId streamId, long eventNumberExclusive) {
+        return events.stream()
+                .filter(event -> event.eventRecord().streamId().equals(streamId))
+                .filter(event -> event.eventRecord().eventNumber() > eventNumberExclusive);
     }
 
     private static final class InMemoryEventStorePosition implements Position {

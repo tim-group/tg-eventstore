@@ -27,7 +27,8 @@ public class BasicMysqlEventStoreTest extends JavaEventStoreTest {
     public void createTables() throws SQLException {
         BasicMysqlEventStoreSetup setup = new BasicMysqlEventStoreSetup(connectionProvider, tableName);
         setup.drop();
-        setup.create();
+        setup.lazyCreate();
+        setup.lazyCreate();
     }
 
     @Override

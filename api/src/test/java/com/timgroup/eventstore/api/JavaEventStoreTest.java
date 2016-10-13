@@ -96,6 +96,13 @@ public abstract class JavaEventStoreTest {
 
     @Test
     public void
+    throws_exception_when_stream_does_not_exist() {
+        thrown.expect(NoSuchStreamException.class);
+        streamEventReader().readStreamForwards(stream_1, 0).collect(toList());
+    }
+
+    @Test
+    public void
     can_read_all_events() {
         writer().write(stream_1, asList(NewEvent.newEvent("type-A", "data-A".getBytes(), "metadata-A".getBytes())));
         writer().write(stream_2, asList(NewEvent.newEvent("type-B", "data-B".getBytes(), "metadata-B".getBytes())));
@@ -128,7 +135,7 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     fails_if_expected_version_has_not_been_reached() {
-        thrown.expect(WrongExpectedVersion.class);
+        thrown.expect(WrongExpectedVersionException.class);
         writer().write(stream_1, asList(NewEvent.newEvent("type-B", "data-B".getBytes(), "metadata-B".getBytes())), 0);
     }
 
@@ -138,7 +145,7 @@ public abstract class JavaEventStoreTest {
         writer().write(stream_1, asList(NewEvent.newEvent("type-A", "data-A".getBytes(), "metadata-A".getBytes())));
         writer().write(stream_1, asList(NewEvent.newEvent("type-B", "data-A".getBytes(), "metadata-A".getBytes())));
 
-        thrown.expect(WrongExpectedVersion.class);
+        thrown.expect(WrongExpectedVersionException.class);
         writer().write(stream_1, asList(NewEvent.newEvent("type-B", "data-B".getBytes(), "metadata-B".getBytes())), 0);
     }
 

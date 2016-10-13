@@ -11,7 +11,7 @@ import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.OptimisticConcurrencyFailure;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.StreamId;
-import com.timgroup.eventstore.api.WrongExpectedVersion;
+import com.timgroup.eventstore.api.WrongExpectedVersionException;
 import scala.Option;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -33,7 +33,7 @@ public class LegacyStore extends ReadableLegacyStore {
         if (expectedVersion.isDefined()) {
             try {
                 writer.write(streamId, newEvents(newEvents), ((Long) expectedVersion.get()) - 1);
-            } catch (WrongExpectedVersion e) {
+            } catch (WrongExpectedVersionException e) {
                 throw new OptimisticConcurrencyFailure(Option.apply(e));
             }
         }

@@ -3,7 +3,7 @@ package com.timgroup.eventstore.mysql;
 import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.StreamId;
-import com.timgroup.eventstore.api.WrongExpectedVersion;
+import com.timgroup.eventstore.api.WrongExpectedVersionException;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -71,7 +71,7 @@ public class RetryingEventStreamWriterTest {
                 }
             }).write(stream, singletonList(newEvent("type", "data".getBytes(), "metadata".getBytes())), 5);
             fail();
-        } catch (WrongExpectedVersion e) {}
+        } catch (WrongExpectedVersionException e) {}
 
         assertThat(writeCount.get(), is(1));
     }

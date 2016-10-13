@@ -1,8 +1,8 @@
 package com.timgroup.eventstore.api;
 
-public class WrongExpectedVersion extends RuntimeException {
+public class WrongExpectedVersionException extends RuntimeException {
     private static final long serialVersionUID = 1L;
-    public WrongExpectedVersion(long currentVersion, long expectedVersion) {
+    public WrongExpectedVersionException(long currentVersion, long expectedVersion) {
         super("current version: " + currentVersion + ", expected version: " + expectedVersion);
     }
 }

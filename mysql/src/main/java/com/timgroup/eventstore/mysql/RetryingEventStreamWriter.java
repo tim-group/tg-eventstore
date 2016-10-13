@@ -3,7 +3,7 @@ package com.timgroup.eventstore.mysql;
 import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.StreamId;
-import com.timgroup.eventstore.api.WrongExpectedVersion;
+import com.timgroup.eventstore.api.WrongExpectedVersionException;
 
 import java.time.Duration;
 import java.util.Collection;
@@ -39,7 +39,7 @@ public class RetryingEventStreamWriter implements EventStreamWriter {
             try {
                 work.run();
                 return;
-            } catch (WrongExpectedVersion e) {
+            } catch (WrongExpectedVersionException e) {
                 throw e;
             } catch (RuntimeException e) {
                 if (retriesRemaining-- == 0) {

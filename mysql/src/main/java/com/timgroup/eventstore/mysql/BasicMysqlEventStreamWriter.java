@@ -3,7 +3,7 @@ package com.timgroup.eventstore.mysql;
 import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.StreamId;
-import com.timgroup.eventstore.api.WrongExpectedVersion;
+import com.timgroup.eventstore.api.WrongExpectedVersionException;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -44,7 +44,7 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
             long currentEventNumber = currentEventNumber(streamId, connection);
 
             if (currentEventNumber != expectedVersion) {
-                throw new WrongExpectedVersion(currentEventNumber, expectedVersion);
+                throw new WrongExpectedVersionException(currentEventNumber, expectedVersion);
             }
 
             write(streamId, events, currentEventNumber, connection);
