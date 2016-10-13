@@ -1,7 +1,9 @@
 package com.timgroup.eventstore.api;
 
+import java.time.Instant;
 import java.util.Arrays;
 
+import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static java.util.Objects.requireNonNull;
 
 public final class NewEvent {
@@ -22,6 +24,10 @@ public final class NewEvent {
 
     public static NewEvent newEvent(String type, byte[] data) {
         return new NewEvent(type, data, EMPTY);
+    }
+
+    public EventRecord toEventRecord(Instant timestamp, StreamId streamId, long eventNumber) {
+        return eventRecord(timestamp, streamId, eventNumber, type, data, metadata);
     }
 
     @Override

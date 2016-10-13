@@ -27,6 +27,10 @@ public final class EventRecord {
         return new EventRecord(timestamp, streamId, eventNumber, eventType, data, metadata);
     }
 
+    public ResolvedEvent toResolvedEvent(Position position) {
+        return new ResolvedEvent(position, this);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
