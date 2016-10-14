@@ -69,7 +69,7 @@ val eventstore_subscription = Project(id = "eventstore-subscription", base = fil
   .settings(
     publishArtifact in (Compile, packageDoc) := false,
     libraryDependencies ++= Seq(
-  "com.timgroup" % "Tucker" % "autobump",
+  "com.timgroup" % "Tucker" % autobump,
   "com.lmax" % "disruptor" % "3.3.2",
   "org.mockito" % "mockito-core" % "1.9.5" % "test"
 ))
