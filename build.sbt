@@ -8,6 +8,9 @@ scalaVersion in ThisBuild := "2.11.8"
 
 javaVersion in ThisBuild := "1.8"
 
+javacOptions += "-g"
+javacOptions += "-parameters"
+
 publishTo in ThisBuild := Some("publish-repo" at "http://repo.youdevise.com:8081/nexus/content/repositories/yd-release-candidates")
 
 credentials in ThisBuild += Credentials(new File("/etc/sbt/credentials"))
