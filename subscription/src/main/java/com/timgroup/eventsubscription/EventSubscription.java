@@ -1,6 +1,7 @@
 package com.timgroup.eventsubscription;
 
 import com.lmax.disruptor.BlockingWaitStrategy;
+import com.lmax.disruptor.ExceptionHandler;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
@@ -10,6 +11,8 @@ import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
 import com.timgroup.eventsubscription.healthcheck.SubscriptionListenerAdapter;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Health;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
 import java.util.ArrayList;
@@ -25,6 +28,7 @@ import static java.util.Collections.unmodifiableCollection;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class EventSubscription<T> {
+    private static final Logger LOG = LoggerFactory.getLogger(EventSubscription.class);
     private final EventSubscriptionStatus subscriptionStatus;
     private final List<Component> statusComponents;
     private final ScheduledExecutorService chaserExecutor;
@@ -59,6 +63,30 @@ public class EventSubscription<T> {
         chaserExecutor = Executors.newScheduledThreadPool(1, new NamedThreadFactory("EventChaser-" + name));
         eventHandlerExecutor = Executors.newCachedThreadPool(new NamedThreadFactory("EventSubscription-" + name));
         disruptor = new Disruptor<>(new EventContainer.Factory<>(), bufferSize, eventHandlerExecutor, SINGLE, new BlockingWaitStrategy());
+
+        disruptor.handleExceptionsWith(new ExceptionHandler<EventContainer<T>>() {
+            @Override
+            public void handleEventException(Throwable ex, long sequence, EventContainer<T> event) {
+                LOG.error(String.format("Exception processing %d: %s", sequence, event), ex);
+                if (ex instanceof RuntimeException) {
+                    throw (RuntimeException) ex;
+                } else if (ex instanceof Error) {
+                    throw (Error) ex;
+                } else {
+                    throw new RuntimeException(String.format("Exception processing %d: %s", sequence, event), ex);
+                }
+            }
+
+            @Override
+            public void handleOnStartException(Throwable ex) {
+                LOG.error("Error starting up disruptor", ex);
+            }
+
+            @Override
+            public void handleOnShutdownException(Throwable ex) {
+                LOG.error("Error shutting down disruptor", ex);
+            }
+        });
 
         disruptor.handleEventsWithWorkerPool(
                 new DisruptorDeserializationAdapter<>(deserializer, processorListener),
