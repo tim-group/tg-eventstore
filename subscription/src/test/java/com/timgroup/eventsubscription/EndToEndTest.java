@@ -14,7 +14,6 @@ import com.timgroup.eventstore.api.LegacyPositionAdapter;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.StreamId;
-import com.timgroup.eventstore.memory.InMemoryEventStore;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Report;
@@ -41,9 +40,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.core.StringContains.containsString;
-import static org.joda.time.DateTimeZone.UTC;
 import static org.mockito.Mockito.verify;
-import static scala.collection.JavaConversions.asScalaBuffer;
 
 public class EndToEndTest {
     private final ManualClock clock = ManualClock.createDefault();
@@ -62,17 +59,17 @@ public class EndToEndTest {
     public void reports_ill_during_initial_replay() throws Exception {
         BlockingEventHandler eventProcessing = new BlockingEventHandler();
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
-        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(eventProcessing), clock, 1024, 1L, store.emptyStorePosition(), 320, emptyList());
+        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(eventProcessing), clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), emptyList());
         subscription.start();
 
         eventually(() -> {
             assertThat(subscription.health().get(), is(ill));
-            assertThat(statusComponent().getReport(), is(new Report(OK, "Stale, catching up. No events processed yet. (Stale for 0s)")));
+            assertThat(statusComponent().getReport(), is(new Report(OK, "Stale, catching up. No events processed yet. (Stale for PT0S)")));
         });
 
         eventProcessing.allowProcessing(1);
         eventually(() -> {
-            assertThat(statusComponent().getReport(), is(new Report(OK, "Stale, catching up. Currently at version 1. (Stale for 0s)")));
+            assertThat(statusComponent().getReport(), is(new Report(OK, "Stale, catching up. Currently at version 1. (Stale for PT0S)")));
         });
 
         clock.bumpSeconds(123);
@@ -80,14 +77,14 @@ public class EndToEndTest {
 
         eventually(() -> {
             assertThat(subscription.health().get(), is(healthy));
-            assertThat(statusComponent().getReport(), is(new Report(OK, "Caught up at version 3. Initial replay took 123s.")));
+            assertThat(statusComponent().getReport(), is(new Report(OK, "Caught up at version 3. Initial replay took PT2M3S")));
         });
     }
 
     @Test
     public void reports_warning_if_event_store_was_not_polled_recently() throws Exception {
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
-        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(failingHandler(() -> new RuntimeException("failure"))), clock, 1024, 1L, store.emptyStorePosition(), 320, emptyList());
+        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(failingHandler(() -> new RuntimeException("failure"))), clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), emptyList());
         subscription.start();
 
         eventually(() -> {
@@ -105,7 +102,7 @@ public class EndToEndTest {
             if (e.event.eventNumber() == 0) {
                 throw new RuntimeException("failure");
             }
-        })), clock, 1024, 1L, store.emptyStorePosition(), 320, emptyList());
+        })), clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), emptyList());
         subscription.start();
 
         Thread.sleep(50L);
@@ -131,7 +128,7 @@ public class EndToEndTest {
         }, singletonList(handler(e -> {
             eventsProcessed.incrementAndGet();
             throw new UnsupportedOperationException();
-        })), clock, 1024, 1L, store.emptyStorePosition(), 320, emptyList());
+        })), clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), emptyList());
         subscription.start();
 
         Thread.sleep(50L);
@@ -148,7 +145,7 @@ public class EndToEndTest {
         store.write(stream, Arrays.asList(event1, event2));
         @SuppressWarnings("unchecked")
         EventHandler<DeserialisedEvent> eventHandler = Mockito.mock(EventHandler.class);
-        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(eventHandler), clock, 1024, 1L, store.emptyStorePosition(), 320, emptyList());
+        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(eventHandler), clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), emptyList());
         subscription.start();
 
         eventually(() -> {
@@ -173,7 +170,7 @@ public class EndToEndTest {
         AtomicInteger eventsProcessed = new AtomicInteger();
         subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(handler(e -> {
             eventsProcessed.incrementAndGet();
-        })), clock, 1024, 1L, store.emptyStorePosition(), 320, emptyList());
+        })), clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), emptyList());
         subscription.start();
 
         eventually(() -> {
@@ -188,7 +185,7 @@ public class EndToEndTest {
         AtomicInteger eventsProcessed = new AtomicInteger();
         subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(handler(e -> {
             eventsProcessed.incrementAndGet();
-        })), clock, 1024, 1L, new LegacyPositionAdapter(3L), 320, emptyList());
+        })), clock, 1024, Duration.ofMillis(1L), new LegacyPositionAdapter(3L), Duration.ofSeconds(320), emptyList());
         subscription.start();
 
         eventually(() -> {

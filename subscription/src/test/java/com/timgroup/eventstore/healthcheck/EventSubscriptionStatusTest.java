@@ -1,13 +1,14 @@
 package com.timgroup.eventstore.healthcheck;
 
+import java.time.Duration;
+import java.time.Instant;
+
 import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventsubscription.healthcheck.EventSubscriptionStatus;
 import com.timgroup.eventsubscription.healthcheck.SubscriptionListenerAdapter;
 import com.timgroup.tucker.info.Report;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.time.Instant;
 
 import static com.timgroup.tucker.info.Health.State.healthy;
 import static com.timgroup.tucker.info.Health.State.ill;
@@ -27,7 +28,7 @@ public class EventSubscriptionStatusTest {
 
     @Before
     public void setup() {
-        status = new EventSubscriptionStatus("", clock, 123);
+        status = new EventSubscriptionStatus("", clock, Duration.ofSeconds(123));
         adapter = new SubscriptionListenerAdapter(new TestPosition(0), singletonList(status));
     }
 
@@ -45,7 +46,7 @@ public class EventSubscriptionStatusTest {
         adapter.chaserUpToDate(new TestPosition(3));
 
         assertThat(status.get(), is (ill));
-        assertThat(status.getReport(), is(new Report(OK, "Stale, catching up. No events processed yet. (Stale for 0s)")));
+        assertThat(status.getReport(), is(new Report(OK, "Stale, catching up. No events processed yet. (Stale for PT0S)")));
 
         clock.bumpSeconds(100);
         adapter.eventProcessed(new TestPosition(1));
@@ -53,7 +54,7 @@ public class EventSubscriptionStatusTest {
         adapter.eventProcessed(new TestPosition(3));
 
         assertThat(status.get(), is (healthy));
-        assertThat(status.getReport(), is(new Report(OK, "Caught up at version 3. Initial replay took 100s.")));
+        assertThat(status.getReport(), is(new Report(OK, "Caught up at version 3. Initial replay took PT1M40S")));
     }
 
     @Test public void
@@ -70,7 +71,7 @@ public class EventSubscriptionStatusTest {
 
 
         assertThat(status.get(), is (healthy));
-        assertThat(status.getReport(), is(new Report(WARNING, "Caught up at version 3. Initial replay took 124s. This is longer than expected limit of 123s.")));
+        assertThat(status.getReport(), is(new Report(WARNING, "Caught up at version 3. Initial replay took PT2M4S; this is longer than expected limit of PT2M3S.")));
     }
 
     @Test public void
@@ -80,7 +81,7 @@ public class EventSubscriptionStatusTest {
         adapter.chaserReceived(new TestPosition(6));
         clock.bumpSeconds(7);
 
-        assertThat(status.getReport(), is(new Report(WARNING, "Stale, catching up. Currently at version 5. (Stale for 7s)")));
+        assertThat(status.getReport(), is(new Report(WARNING, "Stale, catching up. Currently at version 5. (Stale for PT7S)")));
     }
 
     @Test public void
@@ -90,7 +91,7 @@ public class EventSubscriptionStatusTest {
         adapter.chaserReceived(new TestPosition(6));
 
         clock.bumpSeconds(31);
-        assertThat(status.getReport(), is(new Report(CRITICAL, "Stale, catching up. Currently at version 5. (Stale for 31s)")));
+        assertThat(status.getReport(), is(new Report(CRITICAL, "Stale, catching up. Currently at version 5. (Stale for PT31S)")));
     }
 
     @Test public void
@@ -99,7 +100,7 @@ public class EventSubscriptionStatusTest {
         adapter.eventProcessed(new TestPosition(1));
 
         clock.bumpSeconds(123);
-        assertThat(status.getReport(), is(new Report(OK, "Stale, catching up. Currently at version 1. (Stale for 123s)")));
+        assertThat(status.getReport(), is(new Report(OK, "Stale, catching up. Currently at version 1. (Stale for PT2M3S)")));
     }
 
     @Test public void
@@ -108,7 +109,7 @@ public class EventSubscriptionStatusTest {
         adapter.eventProcessed(new TestPosition(1));
 
         clock.bumpSeconds(124);
-        assertThat(status.getReport(), is(new Report(CRITICAL, "Stale, catching up. Currently at version 1. (Stale for 124s)")));
+        assertThat(status.getReport(), is(new Report(CRITICAL, "Stale, catching up. Currently at version 1. (Stale for PT2M4S)")));
     }
 
     @Test public void

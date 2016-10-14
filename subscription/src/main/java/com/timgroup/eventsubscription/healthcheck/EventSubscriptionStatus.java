@@ -1,15 +1,15 @@
 package com.timgroup.eventsubscription.healthcheck;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Optional;
+
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Health;
 import com.timgroup.tucker.info.Report;
 import com.timgroup.tucker.info.Status;
-
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Optional;
 
 import static com.timgroup.tucker.info.Status.CRITICAL;
 import static com.timgroup.tucker.info.Status.OK;
@@ -17,15 +17,15 @@ import static com.timgroup.tucker.info.Status.WARNING;
 
 public class EventSubscriptionStatus extends Component implements Health, SubscriptionListener {
     private final Clock clock;
-    private final int maxInitialReplayDuration;
+    private final Duration maxInitialReplayDuration;
 
     private volatile Instant startTime;
-    private volatile Optional<Long> initialReplayDuration = Optional.empty();
+    private volatile Optional<Duration> initialReplayDuration = Optional.empty();
     private volatile Optional<Position> currentPosition = Optional.empty();
     private volatile Optional<Report> terminatedReport = Optional.empty();
     private volatile Optional<Instant> staleSince = Optional.empty();
 
-    public EventSubscriptionStatus(String name, Clock clock, int maxInitialReplayDuration) {
+    public EventSubscriptionStatus(String name, Clock clock, Duration maxInitialReplayDuration) {
         super("event-subscription-status-" + name, "Event subscription status (" + name + ")");
         this.clock = clock;
         this.maxInitialReplayDuration = maxInitialReplayDuration;
@@ -39,19 +39,19 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
         }
 
         if (staleSince.isPresent()) {
-            long staleSeconds = Duration.between(staleSince.get(), clock.instant()).getSeconds();
+            Duration staleFor = Duration.between(staleSince.get(), clock.instant());
             Status status = initialReplayDuration.map(s -> {
-                if (staleSeconds > 30) { return CRITICAL; } else { return WARNING; }
-            }).orElse(staleSeconds > maxInitialReplayDuration ? CRITICAL : OK);
+                if (staleFor.getSeconds() > 30) { return CRITICAL; } else { return WARNING; }
+            }).orElse(staleFor.compareTo(maxInitialReplayDuration) > 0 ? CRITICAL : OK);
 
             String currentVersionText = currentPosition.map(v -> "Currently at version " + v + ".").orElse("No events processed yet.");
-            return new Report(status, "Stale, catching up. " + currentVersionText + " (Stale for " + staleSeconds + "s)");
+            return new Report(status, "Stale, catching up. " + currentVersionText + " (Stale for " + staleFor + ")");
         } else if (initialReplayDuration.isPresent()) {
-            if (initialReplayDuration.get() < maxInitialReplayDuration) {
-                return new Report(OK, "Caught up at version " + currentPosition.map(Object::toString).orElse("") + ". Initial replay took " + initialReplayDuration.get() + "s.");
+            if (initialReplayDuration.get().compareTo(maxInitialReplayDuration) < 0) {
+                return new Report(OK, "Caught up at version " + currentPosition.map(Object::toString).orElse("") + ". Initial replay took " + initialReplayDuration.get());
             } else {
-                return new Report(WARNING, "Caught up at version " + currentPosition.map(Object::toString).orElse("") + ". Initial replay took " + initialReplayDuration.get() + "s. " +
-                        "This is longer than expected limit of " + maxInitialReplayDuration + "s.");
+                return new Report(WARNING, "Caught up at version " + currentPosition.map(Object::toString).orElse("") + ". Initial replay took " + initialReplayDuration.get() + "; " +
+                        "this is longer than expected limit of " + maxInitialReplayDuration + ".");
             }
         } else {
             return new Report(WARNING, "Awaiting events.");
@@ -66,7 +66,7 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
     @Override
     public void caughtUpAt(Position position) {
         if (!initialReplayDuration.isPresent()) {
-            initialReplayDuration = Optional.of(Duration.between(startTime, clock.instant()).getSeconds());
+            initialReplayDuration = Optional.of(Duration.between(startTime, clock.instant()));
         }
 
         staleSince = Optional.empty();
