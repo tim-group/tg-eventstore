@@ -1,20 +1,26 @@
 package com.timgroup.eventstore.memory;
 
+import java.time.Clock;
+import java.util.Collection;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+
 import com.timgroup.eventstore.api.*;
 import com.timgroup.eventstore.api.legacy.LegacyStore;
 
-import java.time.Clock;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Stream;
-
 public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamReader, EventCategoryReader, EventReader {
-    private final Collection<ResolvedEvent> events = new ArrayList<>();
+    private final Collection<ResolvedEvent> events;
     private final Clock clock;
 
-    public JavaInMemoryEventStore(Clock clock) {
+    public JavaInMemoryEventStore(Supplier<Collection<ResolvedEvent>> storageSupplier, Clock clock) {
         this.clock = clock;
+        this.events = storageSupplier.get();
+    }
+
+    public JavaInMemoryEventStore(Clock clock) {
+        this(CopyOnWriteArrayList::new, clock);
     }
 
     @Override
