@@ -10,7 +10,7 @@ import java.util.stream.Stream;
 import com.timgroup.eventstore.api.*;
 import com.timgroup.eventstore.api.legacy.LegacyStore;
 
-public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamReader, EventCategoryReader, EventReader {
+public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamReader, EventCategoryReader, EventReader, PositionCodec {
     private final Collection<ResolvedEvent> events;
     private final Clock clock;
 
@@ -50,6 +50,16 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     @Override
     public Position emptyStorePosition() {
         return new InMemoryEventStorePosition(0);
+    }
+
+    @Override
+    public Position deserializePosition(String string) {
+        return new InMemoryEventStorePosition(Long.parseLong(string));
+    }
+
+    @Override
+    public String serializePosition(Position position) {
+        return Long.toString(((InMemoryEventStorePosition) position).eventNumber);
     }
 
     public EventStore toLegacy() {
