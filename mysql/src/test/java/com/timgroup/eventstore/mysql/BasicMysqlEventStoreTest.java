@@ -1,9 +1,6 @@
 package com.timgroup.eventstore.mysql;
 
-import com.timgroup.eventstore.api.EventCategoryReader;
-import com.timgroup.eventstore.api.EventReader;
-import com.timgroup.eventstore.api.EventStreamReader;
-import com.timgroup.eventstore.api.EventStreamWriter;
+import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.JavaEventStoreTest;
 import org.junit.Before;
 
@@ -32,22 +29,7 @@ public class BasicMysqlEventStoreTest extends JavaEventStoreTest {
     }
 
     @Override
-    public EventStreamWriter writer() {
-        return new BasicMysqlEventStreamWriter(connectionProvider, tableName);
-    }
-
-    @Override
-    public EventStreamReader streamEventReader() {
-        return new BasicMysqlEventStreamReader(connectionProvider, tableName);
-    }
-
-    @Override
-    public EventReader allEventReader() {
-        return new BasicMysqlEventReader(connectionProvider, tableName);
-    }
-
-    @Override
-    public EventCategoryReader eventByCategoryReader() {
-        return new BasicMysqlEventCategoryReader(connectionProvider, tableName);
+    public EventSource eventSource() {
+        return new BasicMysqlEventSource(connectionProvider, tableName);
     }
 }
