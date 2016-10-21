@@ -7,6 +7,9 @@ public final class StreamId {
     private final String id;
 
     private StreamId(String category, String id) {
+        if (category.indexOf('-') != -1) {
+            throw new IllegalArgumentException("Event category cannot contain -. Got " + category);
+        }
         this.category = requireNonNull(category);
         this.id = requireNonNull(id);
     }
