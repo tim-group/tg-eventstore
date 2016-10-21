@@ -14,7 +14,10 @@ public class DisruptorDeserializationAdapter<T> implements WorkHandler<EventCont
     @Override
     public void onEvent(EventContainer<T> eventContainer) throws Exception {
         try {
-            eventContainer.deserializedEvent = deserializer.deserialize(eventContainer.event.eventRecord());
+            eventContainer.deserializedEvent = null;
+            deserializer.deserialize(eventContainer.event.eventRecord(), evt -> {
+                eventContainer.deserializedEvent = evt;
+            });
             processorListener.eventDeserialized(eventContainer.event.position());
         } catch (Exception e) {
             processorListener.eventDeserializationFailed(eventContainer.event.position(), e);

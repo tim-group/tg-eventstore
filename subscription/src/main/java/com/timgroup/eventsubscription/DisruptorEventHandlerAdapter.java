@@ -17,7 +17,9 @@ public class DisruptorEventHandlerAdapter<T> implements com.lmax.disruptor.Event
     public void onEvent(EventContainer<T> eventContainer, long sequence, boolean endOfBatch) throws Exception {
         try {
             Instant timestamp = eventContainer.event.eventRecord().timestamp();
-            eventHandler.apply(eventContainer.event.position(), new DateTime(timestamp.toEpochMilli()), eventContainer.deserializedEvent, endOfBatch);
+            if (eventContainer.deserializedEvent != null) {
+                eventHandler.apply(eventContainer.event.position(), new DateTime(timestamp.toEpochMilli()), eventContainer.deserializedEvent, endOfBatch);
+            }
             processorListener.eventProcessed(eventContainer.event.position());
         } catch (Exception e) {
             processorListener.eventProcessingFailed(eventContainer.event.position(), e);
