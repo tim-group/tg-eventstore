@@ -1,35 +1,34 @@
 package com.timgroup.eventsubscription;
 
-import com.timgroup.eventstore.api.EventReader;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.stream.Stream;
+
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
-import java.util.function.Consumer;
-import java.util.stream.Stream;
-
 public class EventStoreChaser implements Runnable {
-    private final EventReader eventStore;
+    private final Function<Position, Stream<ResolvedEvent>> eventSource;
     private final Consumer<ResolvedEvent> eventHandler;
     private final ChaserListener listener;
 
     private Position lastPosition;
 
     public EventStoreChaser(
-            EventReader eventStore,
+            Function<Position, Stream<ResolvedEvent>> eventSource,
             Position startingPosition,
             Consumer<ResolvedEvent> eventHandler,
             ChaserListener listener) {
-        this.eventStore = eventStore;
+        this.eventSource = eventSource;
         this.eventHandler = eventHandler;
         this.listener = listener;
-
         this.lastPosition = startingPosition;
     }
 
     @Override
     public void run() {
         try {
-            try (Stream<ResolvedEvent> stream = eventStore.readAllForwards(lastPosition)) {
+            try (Stream<ResolvedEvent> stream = eventSource.apply(lastPosition)) {
                 stream.forEach(nextEvent -> {
                     listener.chaserReceived(nextEvent.position());
                     lastPosition = nextEvent.position();

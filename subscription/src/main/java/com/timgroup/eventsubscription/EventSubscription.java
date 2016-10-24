@@ -9,12 +9,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.ExceptionHandler;
 import com.lmax.disruptor.dsl.Disruptor;
+import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventsubscription.healthcheck.ChaserHealth;
 import com.timgroup.eventsubscription.healthcheck.EventSubscriptionStatus;
 import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
@@ -40,6 +44,22 @@ public class EventSubscription<T> {
 
     public EventSubscription(
             String name,
+            EventCategoryReader eventReader,
+            String category,
+            Deserializer<T> deserializer,
+            List<EventHandler<T>> eventHandlers,
+            Clock clock,
+            int bufferSize,
+            Duration runFrequency,
+            Position startingPosition,
+            Duration maxInitialReplayDuration,
+            List<SubscriptionListener> listeners
+    ) {
+        this(name, pos -> eventReader.readCategoryForwards(category, pos), deserializer, eventHandlers, clock, bufferSize, runFrequency, startingPosition, maxInitialReplayDuration, listeners);
+    }
+
+    public EventSubscription(
+            String name,
             EventReader eventReader,
             Deserializer<T> deserializer,
             List<EventHandler<T>> eventHandlers,
@@ -49,6 +69,21 @@ public class EventSubscription<T> {
             Position startingPosition,
             Duration maxInitialReplayDuration,
             List<SubscriptionListener> listeners
+    ) {
+        this(name, eventReader::readAllForwards, deserializer, eventHandlers, clock, bufferSize, runFrequency, startingPosition, maxInitialReplayDuration, listeners);
+    }
+
+    public EventSubscription(
+                String name,
+                Function<Position, Stream<ResolvedEvent>> eventSource,
+                Deserializer<T> deserializer,
+                List<EventHandler<T>> eventHandlers,
+                Clock clock,
+                int bufferSize,
+                Duration runFrequency,
+                Position startingPosition,
+                Duration maxInitialReplayDuration,
+                List<SubscriptionListener> listeners
     ) {
         this.runFrequency = runFrequency;
         ChaserHealth chaserHealth = new ChaserHealth(name, clock);
@@ -96,7 +131,7 @@ public class EventSubscription<T> {
 
         ChaserListener chaserListener = new BroadcastingChaserListener(chaserHealth, processorListener);
         EventContainer.Translator<T> translator = new EventContainer.Translator<>();
-        chaser = new EventStoreChaser(eventReader, startingPosition, event -> disruptor.publishEvent(translator.setting(event)), chaserListener);
+        chaser = new EventStoreChaser(eventSource, startingPosition, event -> disruptor.publishEvent(translator.setting(event)), chaserListener);
 
         statusComponents = new ArrayList<>();
         statusComponents.add(subscriptionStatus);

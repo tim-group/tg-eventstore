@@ -41,6 +41,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.core.StringContains.containsString;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 public class EndToEndTest {
     private final ManualClock clock = ManualClock.createDefault();
@@ -163,6 +164,38 @@ public class EndToEndTest {
                 Matchers.eq(new DateTime(clock.millis(), DateTimeZone.getDefault())),
                 Matchers.eq(new DeserialisedEvent(eventRecord(clock.instant(), stream, 1, event2.type(), event2.data(), event2.metadata()))),
                 Matchers.eq(true));
+    }
+
+    @Test
+    public void processes_only_category_events() throws Exception {
+        NewEvent event1 = newEvent();
+        NewEvent event2 = newEvent();
+        NewEvent event3 = newEvent();
+        store.write(streamId("alpha", "1"), Arrays.asList(event1));
+        store.write(streamId("beta", "1"), Arrays.asList(event2));
+        store.write(streamId("alpha", "2"), Arrays.asList(event3));
+        @SuppressWarnings("unchecked")
+        EventHandler<DeserialisedEvent> eventHandler = Mockito.mock(EventHandler.class);
+        subscription = new EventSubscription<>("test", store, "alpha", EndToEndTest::deserialize, singletonList(eventHandler), clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), emptyList());
+        subscription.start();
+
+        eventually(() -> {
+            assertThat(subscription.health().get(), is(healthy));
+        });
+
+        verify(eventHandler).apply(
+                Matchers.argThat(inMemoryPosition(1)),
+                Matchers.eq(new DateTime(clock.millis(), DateTimeZone.getDefault())),
+                Matchers.eq(new DeserialisedEvent(eventRecord(clock.instant(), streamId("alpha", "1"), 0, event1.type(), event1.data(), event1.metadata()))),
+                Matchers.anyBoolean());
+
+        verify(eventHandler).apply(
+                Matchers.argThat(inMemoryPosition(3)),
+                Matchers.eq(new DateTime(clock.millis(), DateTimeZone.getDefault())),
+                Matchers.eq(new DeserialisedEvent(eventRecord(clock.instant(), streamId("alpha", "2"), 0, event3.type(), event3.data(), event3.metadata()))),
+                Matchers.eq(true));
+
+        verifyNoMoreInteractions(eventHandler);
     }
 
     @Test
