@@ -1,12 +1,19 @@
 package com.timgroup.eventsubscription;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
+import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collector;
 
 import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventstore.api.EventData;
@@ -37,6 +44,7 @@ import static com.timgroup.tucker.info.Status.CRITICAL;
 import static com.timgroup.tucker.info.Status.OK;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
+import static java.util.Objects.requireNonNull;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.core.StringContains.containsString;
@@ -214,13 +222,12 @@ public class EndToEndTest {
 
     @Test
     public void starts_up_healthy_when_there_are_no_events_after_fromversion() throws Exception {
-        AtomicReference<Position> lastPositionHolder = new AtomicReference<>();
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
-        store.readAllForwards().map(ResolvedEvent::position).forEachOrdered(lastPositionHolder::set);
+        Position lastPosition = store.readAllForwards().map(ResolvedEvent::position).collect(last()).get();
         AtomicInteger eventsProcessed = new AtomicInteger();
         subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(handler(e -> {
             eventsProcessed.incrementAndGet();
-        })), clock, 1024, Duration.ofMillis(1L), lastPositionHolder.get(), Duration.ofSeconds(320), emptyList());
+        })), clock, 1024, Duration.ofMillis(1L), lastPosition, Duration.ofSeconds(320), emptyList());
         subscription.start();
 
         eventually(() -> {
@@ -327,5 +334,43 @@ public class EndToEndTest {
         public void allowProcessing(int count) {
             lock.release(count);
         }
+    }
+
+    private static <T> Collector<T, ?, Optional<T>> last() {
+        return new Collector<T, ArrayList<T>, Optional<T>>() {
+            @Override
+            public Supplier<ArrayList<T>> supplier() {
+                return () -> new ArrayList<T>(1);
+            }
+
+            @Override
+            public BiConsumer<ArrayList<T>, T> accumulator() {
+                return (state, next) -> {
+                    state.clear();
+                    state.add(requireNonNull(next));
+                };
+            }
+
+            @Override
+            public BinaryOperator<ArrayList<T>> combiner() {
+                return (l, r) -> {
+                    if (l.isEmpty())
+                        return r;
+                    if (r.isEmpty())
+                        return l;
+                    throw new UnsupportedOperationException();
+                };
+            }
+
+            @Override
+            public Function<ArrayList<T>, Optional<T>> finisher() {
+                return state -> state.isEmpty() ? Optional.empty() : Optional.of(state.get(0));
+            }
+
+            @Override
+            public Set<Characteristics> characteristics() {
+                return EnumSet.noneOf(Characteristics.class);
+            }
+        };
     }
 }
