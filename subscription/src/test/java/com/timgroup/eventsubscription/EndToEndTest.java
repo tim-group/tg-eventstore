@@ -4,15 +4,16 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventstore.api.EventData;
 import com.timgroup.eventstore.api.EventRecord;
-import com.timgroup.eventstore.api.LegacyPositionAdapter;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import com.timgroup.tucker.info.Component;
@@ -24,7 +25,6 @@ import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
@@ -212,13 +212,15 @@ public class EndToEndTest {
         });
     }
 
-    @Test @Ignore("converting checkpoint to position not specified yet")
+    @Test
     public void starts_up_healthy_when_there_are_no_events_after_fromversion() throws Exception {
+        AtomicReference<Position> lastPositionHolder = new AtomicReference<>();
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
+        store.readAllForwards().map(ResolvedEvent::position).forEachOrdered(lastPositionHolder::set);
         AtomicInteger eventsProcessed = new AtomicInteger();
         subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(handler(e -> {
             eventsProcessed.incrementAndGet();
-        })), clock, 1024, Duration.ofMillis(1L), new LegacyPositionAdapter(3L), Duration.ofSeconds(320), emptyList());
+        })), clock, 1024, Duration.ofMillis(1L), lastPositionHolder.get(), Duration.ofSeconds(320), emptyList());
         subscription.start();
 
         eventually(() -> {
