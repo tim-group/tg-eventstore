@@ -73,7 +73,7 @@ public class EventSubscription<T> {
         this(name, eventReader::readAllForwards, deserializer, eventHandlers, clock, bufferSize, runFrequency, startingPosition, maxInitialReplayDuration, listeners);
     }
 
-    public EventSubscription(
+    private EventSubscription(
                 String name,
                 Function<Position, Stream<ResolvedEvent>> eventSource,
                 Deserializer<T> deserializer,
