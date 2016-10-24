@@ -32,14 +32,9 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     }
 
     @Override
-    public Stream<ResolvedEvent> readAllForwards() {
-        return events.stream();
-    }
-
-    @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
         InMemoryEventStorePosition inMemoryPosition = (InMemoryEventStorePosition) positionExclusive;
-        return readAllForwards().skip(inMemoryPosition.eventNumber);
+        return events.stream().skip(inMemoryPosition.eventNumber);
     }
 
     @Override
@@ -95,13 +90,13 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     }
 
     @Override
-    public Stream<ResolvedEvent> readCategoryForwards(String category) {
-        return readAllForwards().filter(evt -> evt.eventRecord().streamId().category().equals(category));
+    public Stream<ResolvedEvent> readCategoryForwards(String category, Position position) {
+        return readAllForwards(position).filter(evt -> evt.eventRecord().streamId().category().equals(category));
     }
 
     @Override
-    public Stream<ResolvedEvent> readCategoryForwards(String category, Position position) {
-        return readAllForwards(position).filter(evt -> evt.eventRecord().streamId().category().equals(category));
+    public Position emptyCategoryPosition(String category) {
+        return emptyStorePosition();
     }
 
     private Stream<ResolvedEvent> internalReadStream(StreamId streamId, long eventNumberExclusive) {
