@@ -23,28 +23,17 @@ public class BasicMysqlEventStoreSetup {
     }
 
     public void create() {
-        try (Connection connection = connectionProvider.getConnection();
-             Statement statement = connection.createStatement()) {
-            statement.execute("create table " + tableName + "(" +
-                    "position bigint primary key, " +
-                    "timestamp datetime not null, " +
-                    "stream_category varchar(255) not null, " +
-                    "stream_id varchar(255) not null, " +
-                    "event_number bigint not null, " +
-                    "event_type varchar(255) not null," +
-                    "data blob not null, " +
-                    "metadata blob not null," +
-                    "unique(stream_category, stream_id, event_number)" +
-                    ")");
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+        create(false);
     }
 
     public void lazyCreate() {
+        create(true);
+    }
+
+    private void create(boolean drop) {
         try (Connection connection = connectionProvider.getConnection();
              Statement statement = connection.createStatement()) {
-            statement.execute("create table if not exists " + tableName + "(" +
+            statement.execute("create table " + (drop ? "if not exists" : "") + " " + tableName + "(" +
                     "position bigint primary key, " +
                     "timestamp datetime not null, " +
                     "stream_category varchar(255) not null, " +
@@ -53,7 +42,8 @@ public class BasicMysqlEventStoreSetup {
                     "event_type varchar(255) not null," +
                     "data blob not null, " +
                     "metadata blob not null," +
-                    "unique(stream_category, stream_id, event_number)" +
+                    "unique(stream_category, stream_id, event_number)," +
+                    "key(stream_category, position)" +
                     ")");
         } catch (SQLException e) {
             throw new RuntimeException(e);
