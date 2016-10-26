@@ -2,11 +2,11 @@ package com.timgroup.eventstore.stitching;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
-import org.joda.time.DateTime;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -17,14 +17,20 @@ public final class EventStoreStitchingIterator implements Iterator<EventInIdenti
     private final Clock clock;
     private final Duration delay;
     private final List<PeekingIterator<EventInIdentifiedStream>> underlying;
+    private final Comparator<EventInIdentifiedStream> order;
 
     private Long cutOffTime;
     private PeekingIterator<EventInIdentifiedStream> iteratorWhoseHeadIsNext;
 
     public EventStoreStitchingIterator(Clock clock, Duration delay, List<Iterator<EventInIdentifiedStream>> iterators) {
+        this(clock, delay, iterators, (a, b) -> a.event.effectiveTimestamp().compareTo(b.event.effectiveTimestamp()));
+    }
+
+    public EventStoreStitchingIterator(Clock clock, Duration delay, List<Iterator<EventInIdentifiedStream>> iterators, Comparator<EventInIdentifiedStream> order) {
         this.clock = clock;
         this.delay = delay;
         this.underlying = iterators.stream().map(Iterators::peekingIterator).collect(toList());
+        this.order = order;
     }
 
     @Override
@@ -52,11 +58,9 @@ public final class EventStoreStitchingIterator implements Iterator<EventInIdenti
 
             Instant potentialCutoffTime = clock.instant();
             if (eventStream.hasNext()) {
-                EventInIdentifiedStream candidate = eventStream.peek();
-                DateTime candidateTimestamp = candidate.event.effectiveTimestamp();
-                if (cutOffTime != null && candidateTimestamp.isAfter(cutOffTime)) {
+                if (cutOffTime != null && eventStream.peek().event.effectiveTimestamp().isAfter(cutOffTime)) {
                     streams.remove();
-                } else if (iteratorWhoseHeadIsNext == null || candidateTimestamp.isBefore(iteratorWhoseHeadIsNext.peek().event.effectiveTimestamp())) {
+                } else if (iteratorWhoseHeadIsNext == null || order.compare(eventStream.peek(), iteratorWhoseHeadIsNext.peek()) < 0) {
                     iteratorWhoseHeadIsNext = eventStream;
                 }
             } else {
