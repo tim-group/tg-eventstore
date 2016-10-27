@@ -10,25 +10,31 @@ import com.timgroup.eventstore.api.PositionCodec;
 public class BasicMysqlEventSource implements EventSource {
     private final ConnectionProvider connectionProvider;
     private final String tableName;
+    private final int batchSize;
 
-    public BasicMysqlEventSource(ConnectionProvider connectionProvider, String tableName) {
+    public BasicMysqlEventSource(ConnectionProvider connectionProvider, String tableName, int batchSize) {
         this.connectionProvider = connectionProvider;
         this.tableName = tableName;
+        this.batchSize = batchSize;
+    }
+
+    public BasicMysqlEventSource(ConnectionProvider connectionProvider, String tableName) {
+        this(connectionProvider, tableName, 100000);
     }
 
     @Override
     public EventReader readAll() {
-        return new BasicMysqlEventReader(connectionProvider, tableName);
+        return new BasicMysqlEventReader(connectionProvider, tableName, batchSize);
     }
 
     @Override
     public EventCategoryReader readCategory() {
-        return new BasicMysqlEventCategoryReader(connectionProvider, tableName);
+        return new BasicMysqlEventCategoryReader(connectionProvider, tableName, batchSize);
     }
 
     @Override
     public EventStreamReader readStream() {
-        return new BasicMysqlEventStreamReader(connectionProvider, tableName);
+        return new BasicMysqlEventStreamReader(connectionProvider, tableName, batchSize);
     }
 
     @Override

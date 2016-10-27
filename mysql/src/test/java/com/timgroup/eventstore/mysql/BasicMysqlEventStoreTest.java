@@ -30,6 +30,6 @@ public class BasicMysqlEventStoreTest extends JavaEventStoreTest {
 
     @Override
     public EventSource eventSource() {
-        return new BasicMysqlEventSource(connectionProvider, tableName);
+        return new BasicMysqlEventSource(connectionProvider, tableName, 1);
     }
 }

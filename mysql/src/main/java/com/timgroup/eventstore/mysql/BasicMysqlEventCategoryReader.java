@@ -13,21 +13,19 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
     private static final BasicMysqlEventStorePosition EMPTY_CATEGORY_POSITION = new BasicMysqlEventStorePosition(-1);
     private final ConnectionProvider connectionProvider;
     private final String tableName;
+    private final int batchSize;
 
-    public BasicMysqlEventCategoryReader(ConnectionProvider connectionProvider, String tableName) {
+    public BasicMysqlEventCategoryReader(ConnectionProvider connectionProvider, String tableName, int batchSize) {
         this.connectionProvider = connectionProvider;
         this.tableName = tableName;
+        this.batchSize = batchSize;
     }
 
     @Override
-    public Stream<ResolvedEvent> readCategoryForwards(String category, Position position) {
-        BasicMysqlEventStorePosition basicMysqlEventStorePosition = (BasicMysqlEventStorePosition) position;
+    public Stream<ResolvedEvent> readCategoryForwards(String category, Position positionExclusive) {
+        EventSpliterator spliterator = new EventSpliterator(connectionProvider, batchSize, tableName, (BasicMysqlEventStorePosition) positionExclusive, String.format("stream_category = '%s'", category));
 
-        EventSpliterator spliterator = new EventSpliterator(connectionProvider,
-                format("select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata " +
-                        "from %s where stream_category = '%s' and position > %s order by position asc", tableName, category, basicMysqlEventStorePosition.value));
-
-        return stream(spliterator, false).onClose(spliterator::close);
+        return stream(spliterator, false);
     }
 
     @Override

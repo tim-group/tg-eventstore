@@ -14,21 +14,19 @@ public class BasicMysqlEventReader implements EventReader {
     private static final BasicMysqlEventStorePosition EMPTY_STORE_POSITION = new BasicMysqlEventStorePosition(-1);
     private final ConnectionProvider connectionProvider;
     private final String tableName;
+    private final int batchSize;
 
-    public BasicMysqlEventReader(ConnectionProvider connectionProvider, String tableName) {
+    public BasicMysqlEventReader(ConnectionProvider connectionProvider, String tableName, int batchSize) {
         this.connectionProvider = connectionProvider;
         this.tableName = tableName;
+        this.batchSize = batchSize;
     }
 
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-        BasicMysqlEventStorePosition basicMysqlEventStorePosition = (BasicMysqlEventStorePosition) positionExclusive;
+        EventSpliterator spliterator = new EventSpliterator(connectionProvider, batchSize, tableName, (BasicMysqlEventStorePosition) positionExclusive, "");
 
-        EventSpliterator spliterator = new EventSpliterator(connectionProvider,
-                format("select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata " +
-                        "from %s where position > %s order by position asc", tableName, basicMysqlEventStorePosition.value));
-
-        return stream(spliterator, false).onClose(spliterator::close);
+        return stream(spliterator, false);
     }
 
     @Override

@@ -15,19 +15,19 @@ import static java.util.stream.StreamSupport.stream;
 public class BasicMysqlEventStreamReader implements EventStreamReader {
     private final ConnectionProvider connectionProvider;
     private final String tableName;
+    private final int batchSize;
 
-    public BasicMysqlEventStreamReader(ConnectionProvider connectionProvider, String tableName) {
+    public BasicMysqlEventStreamReader(ConnectionProvider connectionProvider, String tableName, int batchSize) {
         this.connectionProvider = connectionProvider;
         this.tableName = tableName;
+        this.batchSize = batchSize;
     }
 
     @Override
     public Stream<ResolvedEvent> readStreamForwards(StreamId streamId, long eventNumber) {
-        EventSpliterator spliterator = new EventSpliterator(connectionProvider,
-                format("select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata " +
-                        "from %s where stream_category = '%s' and stream_id = '%s' and event_number > %s order by position asc", tableName, streamId.category(), streamId.id(), eventNumber));
+        EventSpliterator spliterator = new EventSpliterator(connectionProvider, batchSize, tableName, new BasicMysqlEventStorePosition(-1), String.format("stream_category = '%s' and stream_id = '%s' and event_number > %s", streamId.category(), streamId.id(), eventNumber));
 
-        return stream(new NotEmptySpliterator<ResolvedEvent>(spliterator, streamId), false).onClose(spliterator::close);
+        return stream(new NotEmptySpliterator<>(spliterator, streamId), false);
     }
 
     private static final class NotEmptySpliterator<T> implements Spliterator<T> {
