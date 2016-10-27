@@ -9,6 +9,7 @@ import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
+import static com.timgroup.eventstore.mysql.BasicMysqlEventStorePosition.EMPTY_STORE_POSITION;
 import static java.lang.String.format;
 import static java.util.stream.StreamSupport.stream;
 
@@ -25,7 +26,13 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
 
     @Override
     public Stream<ResolvedEvent> readStreamForwards(StreamId streamId, long eventNumber) {
-        EventSpliterator spliterator = new EventSpliterator(connectionProvider, batchSize, tableName, new BasicMysqlEventStorePosition(-1), String.format("stream_category = '%s' and stream_id = '%s' and event_number > %s", streamId.category(), streamId.id(), eventNumber));
+        EventSpliterator spliterator = new EventSpliterator(
+                connectionProvider,
+                batchSize,
+                tableName,
+                EMPTY_STORE_POSITION,
+                format("stream_category = '%s' and stream_id = '%s' and event_number > %s", streamId.category(), streamId.id(), eventNumber)
+        );
 
         return stream(new NotEmptySpliterator<>(spliterator, streamId), false);
     }

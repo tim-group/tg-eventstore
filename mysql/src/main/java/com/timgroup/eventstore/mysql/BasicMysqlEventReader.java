@@ -7,11 +7,11 @@ import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 
 import java.util.stream.Stream;
 
+import static com.timgroup.eventstore.mysql.BasicMysqlEventStorePosition.EMPTY_STORE_POSITION;
 import static java.lang.String.format;
 import static java.util.stream.StreamSupport.stream;
 
 public class BasicMysqlEventReader implements EventReader {
-    private static final BasicMysqlEventStorePosition EMPTY_STORE_POSITION = new BasicMysqlEventStorePosition(-1);
     private final ConnectionProvider connectionProvider;
     private final String tableName;
     private final int batchSize;
@@ -24,7 +24,13 @@ public class BasicMysqlEventReader implements EventReader {
 
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-        EventSpliterator spliterator = new EventSpliterator(connectionProvider, batchSize, tableName, (BasicMysqlEventStorePosition) positionExclusive, "");
+        EventSpliterator spliterator = new EventSpliterator(
+                connectionProvider,
+                batchSize,
+                tableName,
+                (BasicMysqlEventStorePosition) positionExclusive,
+                ""
+        );
 
         return stream(spliterator, false);
     }

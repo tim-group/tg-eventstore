@@ -3,6 +3,7 @@ package com.timgroup.eventstore.mysql;
 import com.timgroup.eventstore.api.Position;
 
 final class BasicMysqlEventStorePosition implements Position {
+    static final BasicMysqlEventStorePosition EMPTY_STORE_POSITION = new BasicMysqlEventStorePosition(-1);
     final long value;
 
     BasicMysqlEventStorePosition(long value) {

@@ -6,11 +6,11 @@ import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
+import static com.timgroup.eventstore.mysql.BasicMysqlEventStorePosition.EMPTY_STORE_POSITION;
 import static java.lang.String.format;
 import static java.util.stream.StreamSupport.stream;
 
 public class BasicMysqlEventCategoryReader implements EventCategoryReader {
-    private static final BasicMysqlEventStorePosition EMPTY_CATEGORY_POSITION = new BasicMysqlEventStorePosition(-1);
     private final ConnectionProvider connectionProvider;
     private final String tableName;
     private final int batchSize;
@@ -23,13 +23,18 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
 
     @Override
     public Stream<ResolvedEvent> readCategoryForwards(String category, Position positionExclusive) {
-        EventSpliterator spliterator = new EventSpliterator(connectionProvider, batchSize, tableName, (BasicMysqlEventStorePosition) positionExclusive, String.format("stream_category = '%s'", category));
+        EventSpliterator spliterator = new EventSpliterator(
+                connectionProvider,
+                batchSize,
+                tableName,
+                (BasicMysqlEventStorePosition) positionExclusive,
+                format("stream_category = '%s'", category));
 
         return stream(spliterator, false);
     }
 
     @Override
     public Position emptyCategoryPosition(String category) {
-        return EMPTY_CATEGORY_POSITION;
+        return EMPTY_STORE_POSITION;
     }
 }
