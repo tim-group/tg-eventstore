@@ -2,10 +2,15 @@ package com.timgroup.eventstore.mysql;
 
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.JavaEventStoreTest;
+import com.typesafe.config.Config;
 import org.junit.Before;
 
 import java.sql.DriverManager;
 import java.sql.SQLException;
+
+import static com.typesafe.config.ConfigFactory.parseString;
+import static com.typesafe.config.ConfigParseOptions.defaults;
+import static com.typesafe.config.ConfigSyntax.PROPERTIES;
 
 public class BasicMysqlEventStoreTest extends JavaEventStoreTest {
     static {
@@ -30,6 +35,13 @@ public class BasicMysqlEventStoreTest extends JavaEventStoreTest {
 
     @Override
     public EventSource eventSource() {
-        return new BasicMysqlEventSource(connectionProvider, tableName, 1);
+        Config config = parseString(
+                "hostname=localhost\n" +
+                "port=3306\n" +
+                "database=sql_eventstore\n" +
+                "username=\n" +
+                "password=\n" +
+                "driver=com.mysql.jdbc.Driver", defaults().setSyntax(PROPERTIES));
+        return BasicMysqlEventSource.pooledMasterDbEventSource(config, tableName, "test");
     }
 }

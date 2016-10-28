@@ -34,6 +34,7 @@ val JUnit = Seq(
 )
 
 val eventstore_api = Project(id = "eventstore-api", base = file("api"))
+  .settings(libraryDependencies += "com.timgroup" % "Tucker" % autobump)
   .settings(libraryDependencies ++= joda)
   .settings(libraryDependencies ++= JUnit)
   .settings(compatibleScalaTestDependency)
@@ -49,6 +50,8 @@ val eventstore_mysql = Project(id = "eventstore-mysql", base = file("mysql"))
   .settings(
     parallelExecution in Test := false,
     compatibleScalaTestDependency,
+    libraryDependencies += "com.typesafe" % "config" % "1.2.1",
+    libraryDependencies += "c3p0" % "c3p0" % "0.9.1.2",
     libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.20" % "test",
     libraryDependencies += "com.timgroup" %% "tim-slogger" % autobump
   )
@@ -69,7 +72,6 @@ val eventstore_subscription = Project(id = "eventstore-subscription", base = fil
   .settings(
     publishArtifact in (Compile, packageDoc) := false,
     libraryDependencies ++= Seq(
-  "com.timgroup" % "Tucker" % autobump,
   "com.lmax" % "disruptor" % "3.3.2",
   "org.mockito" % "mockito-core" % "1.9.5" % "test"
 ))

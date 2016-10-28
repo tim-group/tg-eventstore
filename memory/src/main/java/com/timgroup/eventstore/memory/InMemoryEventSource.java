@@ -6,6 +6,10 @@ import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.PositionCodec;
+import com.timgroup.tucker.info.Component;
+
+import java.util.Collection;
+import java.util.Collections;
 
 public class InMemoryEventSource implements EventSource {
     private final JavaInMemoryEventStore eventStore;
@@ -37,5 +41,10 @@ public class InMemoryEventSource implements EventSource {
     @Override
     public PositionCodec positionCodec() {
         return eventStore;
+    }
+
+    @Override
+    public Collection<Component> monitoring() {
+        return Collections.emptyList();
     }
 }
