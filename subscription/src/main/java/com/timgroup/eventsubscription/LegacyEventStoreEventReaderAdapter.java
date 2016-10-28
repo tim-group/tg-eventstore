@@ -3,9 +3,11 @@ package com.timgroup.eventsubscription;
 import com.timgroup.eventstore.api.EventInStream;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventStore;
+import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.LegacyPositionAdapter;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.api.StreamId;
 
 import java.time.Instant;
 import java.util.stream.Stream;
@@ -13,7 +15,7 @@ import java.util.stream.Stream;
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static com.timgroup.eventstore.api.StreamId.streamId;
 
-public class LegacyEventStoreEventReaderAdapter implements EventReader {
+public class LegacyEventStoreEventReaderAdapter implements EventReader, EventStreamReader {
     private final EventStore eventStore;
 
     public LegacyEventStoreEventReaderAdapter(EventStore eventStore) {
@@ -47,5 +49,13 @@ public class LegacyEventStoreEventReaderAdapter implements EventReader {
                         new byte[0]
                 )
         );
+    }
+
+    @Override
+    public Stream<ResolvedEvent> readStreamForwards(StreamId streamId, long eventNumber) {
+        if (!streamId.equals(streamId("all", "all"))) {
+            throw new IllegalArgumentException("Cannot read " + streamId + " using legacy adapter");
+        }
+        return eventStore.streamingFromAll(eventNumber).map(this::toResolvedEvent);
     }
 }
