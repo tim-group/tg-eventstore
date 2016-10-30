@@ -2,7 +2,9 @@ package com.timgroup.eventstore.ges.http;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.timgroup.eventstore.api.EventStreamReader;
+import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import org.apache.http.HttpHost;
@@ -38,7 +40,7 @@ public class HttpGesEventStreamReader implements EventStreamReader {
             //todo: metadata
             //todo: streamId
 
-            client.execute(HttpHost.create(host), readRequest, response -> {
+            return client.execute(HttpHost.create(host), readRequest, response -> {
                 if (response.getStatusLine().getStatusCode() != 200) {
                     throw new RuntimeException("Write request failed: " + response.getStatusLine());
                 }
@@ -48,19 +50,20 @@ public class HttpGesEventStreamReader implements EventStreamReader {
 
                 System.out.println(new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(jsonNode));
 
-                GesHttpResponse r = new ObjectMapper().configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
+                GesHttpResponse r = new ObjectMapper().registerModule(new JavaTimeModule()).configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
                         .readerFor(GesHttpResponse.class).readValue(jsonNode);
 
-//                new ObjectMapper().readTree(response.getEntity().getContent());
-
                 return r.entries.stream()
-                        .map(e -> new ResolvedEvent(null, eventRecord(e.updated, null, e.eventNumber, e.eventType, e.data.getBytes(UTF_8), new byte[0])))
+                        .map(e -> new ResolvedEvent(new GesHttpPosition(), eventRecord(e.updated, e.streamId(), e.eventNumber, e.eventType, e.data.getBytes(UTF_8), new byte[0])))
                         .sorted((e1, e2) -> Long.compare(e1.eventRecord().eventNumber(), e2.eventRecord().eventNumber()));
             });
-            return Stream.empty();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static class GesHttpPosition implements Position {
+
     }
 
     private static class GesHttpResponse {
@@ -78,6 +81,15 @@ public class HttpGesEventStreamReader implements EventStreamReader {
         public final Instant updated;
         public final String data;
 
+
+        private StreamId streamId() {
+            int categorySeparatorPosition = streamId.indexOf('-');
+            if (categorySeparatorPosition == -1) {
+                throw new RuntimeException("StreamId " + streamId + " does not have a category");
+            }
+
+            return StreamId.streamId(streamId.substring(0, categorySeparatorPosition), streamId.substring(categorySeparatorPosition + 1));
+        }
 
         private GesHttpReadEvent() {
             eventNumber = 0L;
