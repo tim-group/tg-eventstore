@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import static com.timgroup.eventstore.api.EventStreamReader.EmptyStreamEventNumber;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.eventstore.api.ObjectPropertiesMatcher.objectWith;
 import static com.timgroup.eventstore.api.StreamId.streamId;
@@ -22,6 +23,7 @@ import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.is;
 
 public abstract class JavaEventStoreTest {
     @Rule
@@ -163,6 +165,13 @@ public abstract class JavaEventStoreTest {
                 objectWith(EventRecord::eventNumber, 0L),
                 objectWith(EventRecord::eventNumber, 1L)
         ));
+    }
+
+    @Test public void
+    can_write_expecting_empty_stream() {
+        eventSource().writeStream().write(stream_1, asList(event_1), EmptyStreamEventNumber);
+
+        assertThat(eventSource().readStream().readStreamForwards(stream_1).count(), is(1L));
     }
 
     @Test
