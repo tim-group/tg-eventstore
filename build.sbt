@@ -67,6 +67,13 @@ val eventstore_stitching = Project(id = "eventstore-stitching", base = file("sti
   "com.google.guava" % "guava" % "19.0"
 ))
 
+val eventstore_ges_http = Project(id = "eventstore-ges-http", base = file("ges-http"))
+  .dependsOn(eventstore_api % "compile->compile; test->test")
+  .settings(libraryDependencies += "org.apache.httpcomponents" % "httpclient" % "4.5.2")
+  .settings(libraryDependencies += "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.2")
+  .settings(libraryDependencies += "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % "2.7.2")
+  .settings(overridePublishSettings)
+
 val eventstore_subscription = Project(id = "eventstore-subscription", base = file("subscription"))
   .dependsOn(eventstore_api, eventstore_memory % "compile->test")
   .settings(
