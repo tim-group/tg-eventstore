@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.ges.http;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.NewEvent;
@@ -16,7 +17,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
 
 public class HttpGesEventStreamWriter implements EventStreamWriter {
@@ -33,11 +33,24 @@ public class HttpGesEventStreamWriter implements EventStreamWriter {
 
             HttpPost writeRequest = new HttpPost("/streams/" + streamId.category() + "-" + streamId.id());
 
-            //todo: metadata
-            //todo: non-json body?
-            List<HttpEvent> httpEvents = events.stream().map(e -> new HttpEvent(UUID.randomUUID().toString(), e.type(), new String(e.data(), UTF_8))).collect(toList());
+            ObjectMapper mapper = new ObjectMapper();
 
-            byte[] bytes = new ObjectMapper().writer().writeValueAsBytes(httpEvents);
+            //todo: non-json body?
+            List<HttpEvent> httpEvents = events.stream()
+                    .map(e -> {
+                        try {
+                            return new HttpEvent(
+                                    UUID.randomUUID().toString(),
+                                    e.type(),
+                                    mapper.readTree(e.data()),
+                                    mapper.readTree(e.metadata())
+                            );
+                        } catch (IOException e1) {
+                            throw new RuntimeException(e1);
+                        }
+                    }).collect(toList());
+
+            byte[] bytes = mapper.writer().writeValueAsBytes(httpEvents);
 
             writeRequest.setEntity(new ByteArrayEntity(bytes, ContentType.create("application/vnd.eventstore.events+json")));
 
@@ -61,16 +74,14 @@ public class HttpGesEventStreamWriter implements EventStreamWriter {
     private static class HttpEvent {
         public final String eventId;
         public final String eventType;
-        public final String data;
+        public final JsonNode data;
+        public final JsonNode metadata;
 
-        private HttpEvent(String eventId, String eventType, String data) {
+        private HttpEvent(String eventId, String eventType, JsonNode data, JsonNode metadata) {
             this.eventId = eventId;
             this.eventType = eventType;
             this.data = data;
+            this.metadata = metadata;
         }
-    }
-
-    public static class WriteResposne {
-
     }
 }

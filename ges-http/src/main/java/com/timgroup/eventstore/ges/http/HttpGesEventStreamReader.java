@@ -33,18 +33,15 @@ public class HttpGesEventStreamReader implements EventStreamReader {
         try {
             CloseableHttpClient client = HttpClientBuilder.create().build();
 
-            HttpGet readRequest = new HttpGet("/streams/" + streamId.category() + "-" + streamId.id() + "?embed=tryharder");
+            HttpGet readRequest = new HttpGet("/streams/" + streamId.category() + "-" + streamId.id() + "?embed=body");
             readRequest.setHeader("Accept", "application/json");
 
             //todo: pagination
-            //todo: metadata
-            //todo: streamId
 
             return client.execute(HttpHost.create(host), readRequest, response -> {
                 if (response.getStatusLine().getStatusCode() != 200) {
                     throw new RuntimeException("Write request failed: " + response.getStatusLine());
                 }
-
 
                 JsonNode jsonNode = new ObjectMapper().readTree(response.getEntity().getContent());;
 
@@ -54,7 +51,7 @@ public class HttpGesEventStreamReader implements EventStreamReader {
                         .readerFor(GesHttpResponse.class).readValue(jsonNode);
 
                 return r.entries.stream()
-                        .map(e -> new ResolvedEvent(new GesHttpPosition(), eventRecord(e.updated, e.streamId(), e.eventNumber, e.eventType, e.data.getBytes(UTF_8), new byte[0])))
+                        .map(e -> new ResolvedEvent(new GesHttpPosition(), eventRecord(e.updated, e.streamId(), e.eventNumber, e.eventType, e.data.getBytes(UTF_8), e.metaData.getBytes(UTF_8))))
                         .sorted((e1, e2) -> Long.compare(e1.eventRecord().eventNumber(), e2.eventRecord().eventNumber()));
             });
         } catch (IOException e) {
@@ -80,6 +77,7 @@ public class HttpGesEventStreamReader implements EventStreamReader {
         public final String streamId;
         public final Instant updated;
         public final String data;
+        public final String metaData;
 
 
         private StreamId streamId() {
@@ -97,6 +95,7 @@ public class HttpGesEventStreamReader implements EventStreamReader {
             streamId = null;
             updated = null;
             data = null;
+            metaData = null;
         }
     }
 }
