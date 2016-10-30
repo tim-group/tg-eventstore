@@ -15,6 +15,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import static com.timgroup.eventstore.api.ObjectPropertiesMatcher.objectWith;
+import static com.timgroup.eventstore.api.StreamId.streamId;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -24,9 +25,9 @@ public abstract class JavaEventStoreTest {
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
-    private final StreamId stream_1 = StreamId.streamId("stream", "1");
-    private final StreamId stream_2 = StreamId.streamId("stream", "2");
-    private final StreamId stream_3 = StreamId.streamId("stream", "3");
+    private final StreamId stream_1 = streamId(randomStream(), "1");
+    private final StreamId stream_2 = streamId(randomStream(), "2");
+    private final StreamId stream_3 = streamId(randomStream(), "3");
 
     public abstract EventSource eventSource();
 
@@ -161,14 +162,14 @@ public abstract class JavaEventStoreTest {
     can_read_events_by_category() {
         NewEvent event1 = anEvent();
         NewEvent event4 = anEvent();
-        eventSource().writeStream().write(StreamId.streamId("Cat1", "Id1"), asList(event1));
-        eventSource().writeStream().write(StreamId.streamId("Cat3", "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(StreamId.streamId("Cat2", "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(StreamId.streamId("Cat1", "Id2"), asList(event4));
+        eventSource().writeStream().write(streamId("Cat1", "Id1"), asList(event1));
+        eventSource().writeStream().write(streamId("Cat3", "Id1"), asList(anEvent()));
+        eventSource().writeStream().write(streamId("Cat2", "Id1"), asList(anEvent()));
+        eventSource().writeStream().write(streamId("Cat1", "Id2"), asList(event4));
 
         assertThat(eventSource().readCategory().readCategoryForwards("Cat1").map(ResolvedEvent::eventRecord).collect(toList()), contains(
-                objectWith(EventRecord::streamId, StreamId.streamId("Cat1", "Id1")),
-                objectWith(EventRecord::streamId, StreamId.streamId("Cat1", "Id2"))
+                objectWith(EventRecord::streamId, streamId("Cat1", "Id1")),
+                objectWith(EventRecord::streamId, streamId("Cat1", "Id2"))
         ));
     }
 
@@ -177,15 +178,15 @@ public abstract class JavaEventStoreTest {
     can_continue_reading_from_position_of_category() {
         NewEvent event1 = anEvent();
         NewEvent event4 = anEvent();
-        eventSource().writeStream().write(StreamId.streamId("Cat1", "Id1"), asList(event1));
-        eventSource().writeStream().write(StreamId.streamId("Cat3", "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(StreamId.streamId("Cat2", "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(StreamId.streamId("Cat1", "Id2"), asList(event4));
+        eventSource().writeStream().write(streamId("Cat1", "Id1"), asList(event1));
+        eventSource().writeStream().write(streamId("Cat3", "Id1"), asList(anEvent()));
+        eventSource().writeStream().write(streamId("Cat2", "Id1"), asList(anEvent()));
+        eventSource().writeStream().write(streamId("Cat1", "Id2"), asList(event4));
 
         Position position = eventSource().readCategory().readCategoryForwards("Cat1").collect(toList()).get(0).position();
 
         assertThat(eventSource().readCategory().readCategoryForwards("Cat1", position).map(ResolvedEvent::eventRecord).collect(toList()), Matchers.contains(
-                objectWith(EventRecord::streamId, StreamId.streamId("Cat1", "Id2"))
+                objectWith(EventRecord::streamId, streamId("Cat1", "Id2"))
         ));
     }
 
@@ -209,5 +210,9 @@ public abstract class JavaEventStoreTest {
 
     private static NewEvent anEvent() {
         return NewEvent.newEvent(UUID.randomUUID().toString(), UUID.randomUUID().toString().getBytes(), UUID.randomUUID().toString().getBytes());
+    }
+
+    private String randomStream() {
+        return "stream_" + UUID.randomUUID().toString().replace("-", "");
     }
 }
