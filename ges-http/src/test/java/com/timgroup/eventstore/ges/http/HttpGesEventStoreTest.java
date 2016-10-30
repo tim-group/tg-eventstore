@@ -6,6 +6,6 @@ import com.timgroup.eventstore.api.JavaEventStoreTest;
 public class HttpGesEventStoreTest extends JavaEventStoreTest {
     @Override
     public EventSource eventSource() {
-        return new HttpGesEventSource("http://192.168.99.100:32820");
+        return new HttpGesEventSource("http://localhost:2113");
     }
 }

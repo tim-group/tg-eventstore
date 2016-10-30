@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.timgroup.eventstore.api.EventStreamReader;
+import com.timgroup.eventstore.api.NoSuchStreamException;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
@@ -39,13 +40,13 @@ public class HttpGesEventStreamReader implements EventStreamReader {
             //todo: pagination
 
             return client.execute(HttpHost.create(host), readRequest, response -> {
-                if (response.getStatusLine().getStatusCode() != 200) {
-                    throw new RuntimeException("Write request failed: " + response.getStatusLine());
+                if (response.getStatusLine().getStatusCode() == 404) {
+                    throw new NoSuchStreamException(streamId);
+                } else if (response.getStatusLine().getStatusCode() != 200) {
+                    throw new RuntimeException("Read request failed: " + response.getStatusLine());
                 }
 
                 JsonNode jsonNode = new ObjectMapper().readTree(response.getEntity().getContent());;
-
-                System.out.println(new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(jsonNode));
 
                 GesHttpResponse r = new ObjectMapper().registerModule(new JavaTimeModule()).configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
                         .readerFor(GesHttpResponse.class).readValue(jsonNode);

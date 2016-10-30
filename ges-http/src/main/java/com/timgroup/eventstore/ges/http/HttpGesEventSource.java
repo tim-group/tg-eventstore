@@ -26,7 +26,7 @@ public class HttpGesEventSource implements EventSource {
 
     @Override
     public EventCategoryReader readCategory() {
-        return null;
+        return new HttpGesEventCategoryReader(readStream());
     }
 
     @Override
