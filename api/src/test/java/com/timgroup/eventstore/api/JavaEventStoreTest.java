@@ -221,6 +221,6 @@ public abstract class JavaEventStoreTest {
     }
 
     private static byte[] randomData() {
-        return ("{\"value\":\"" + UUID.randomUUID() + "\"}").getBytes(UTF_8);
+        return ("{\n  \"value\": \"" + UUID.randomUUID() + "\"\n}").getBytes(UTF_8);
     }
 }
