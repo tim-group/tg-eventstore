@@ -14,8 +14,10 @@ import java.time.Instant;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.eventstore.api.ObjectPropertiesMatcher.objectWith;
 import static com.timgroup.eventstore.api.StreamId.streamId;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -28,6 +30,10 @@ public abstract class JavaEventStoreTest {
     private final StreamId stream_1 = streamId(randomStream(), "1");
     private final StreamId stream_2 = streamId(randomStream(), "2");
     private final StreamId stream_3 = streamId(randomStream(), "3");
+
+    private final NewEvent event_1 = newEvent("type-A", randomData(), randomData());
+    private final NewEvent event_2 = newEvent("type-B", randomData(), randomData());
+    private final NewEvent event_3 = newEvent("type-C", randomData(), randomData());
 
     public abstract EventSource eventSource();
 
@@ -42,22 +48,21 @@ public abstract class JavaEventStoreTest {
     public void
     can_read_written_events() {
         eventSource().writeStream().write(stream_1, asList(
-                NewEvent.newEvent("type-A", "data-A".getBytes(), "metadata-A".getBytes()),
-                NewEvent.newEvent("type-B", "data-B".getBytes(), "metadata-B".getBytes())
+                event_1, event_2
         ));
 
         assertThat(eventSource().readStream().readStreamForwards(stream_1).map(ResolvedEvent::eventRecord).collect(toList()), contains(
                 objectWith(EventRecord::streamId, stream_1)
                         .and(EventRecord::eventNumber, 0L)
-                        .and(EventRecord::eventType, "type-A")
-                        .and(EventRecord::data, "data-A".getBytes())
-                        .and(EventRecord::metadata, "metadata-A".getBytes())
+                        .and(EventRecord::eventType, event_1.type())
+                        .and(EventRecord::data, event_1.data())
+                        .and(EventRecord::metadata, event_1.metadata())
                         .andMatching(EventRecord::timestamp, shortlyAfter(timeBeforeTest)),
                 objectWith(EventRecord::streamId, stream_1)
                         .and(EventRecord::eventNumber, 1L)
-                        .and(EventRecord::eventType, "type-B")
-                        .and(EventRecord::data, "data-B".getBytes())
-                        .and(EventRecord::metadata, "metadata-B".getBytes())
+                        .and(EventRecord::eventType, event_2.type())
+                        .and(EventRecord::data, event_2.data())
+                        .and(EventRecord::metadata, event_2.metadata())
                         .andMatching(EventRecord::timestamp, shortlyAfter(timeBeforeTest))
         ));
     }
@@ -65,8 +70,8 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     can_read_and_write_to_streams_independently() {
-        eventSource().writeStream().write(stream_1, asList(NewEvent.newEvent("type-A", "data-A".getBytes(), "metadata-A".getBytes())));
-        eventSource().writeStream().write(stream_2, asList(NewEvent.newEvent("type-B", "data-B".getBytes(), "metadata-B".getBytes())));
+        eventSource().writeStream().write(stream_1, asList(event_1));
+        eventSource().writeStream().write(stream_2, asList(event_2));
 
         assertThat(eventSource().readStream().readStreamForwards(stream_1).map(ResolvedEvent::eventRecord).collect(toList()), contains(
                 objectWith(EventRecord::eventNumber, 0L).and(EventRecord::streamId, stream_1)
@@ -80,8 +85,7 @@ public abstract class JavaEventStoreTest {
     public void
     can_read_from_specific_event_number() {
         eventSource().writeStream().write(stream_1, asList(
-                NewEvent.newEvent("type-A", "data-A".getBytes(), "metadata-A".getBytes()),
-                NewEvent.newEvent("type-B", "data-B".getBytes(), "metadata-B".getBytes())
+                event_1, event_2
         ));
 
         assertThat(eventSource().readStream().readStreamForwards(stream_1, 0).map(ResolvedEvent::eventRecord).collect(toList()), contains(
@@ -99,9 +103,9 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     can_read_all_events() {
-        eventSource().writeStream().write(stream_1, asList(NewEvent.newEvent("type-A", "data-A".getBytes(), "metadata-A".getBytes())));
-        eventSource().writeStream().write(stream_2, asList(NewEvent.newEvent("type-B", "data-B".getBytes(), "metadata-B".getBytes())));
-        eventSource().writeStream().write(stream_3, asList(NewEvent.newEvent("type-C", "data-C".getBytes(), "metadata-C".getBytes())));
+        eventSource().writeStream().write(stream_1, asList(event_1));
+        eventSource().writeStream().write(stream_2, asList(event_2));
+        eventSource().writeStream().write(stream_3, asList(event_3));
 
         assertThat(eventSource().readAll().readAllForwards().map(ResolvedEvent::eventRecord).collect(toList()), contains(
                 objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 0L),
@@ -113,9 +117,9 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     can_continue_reading_from_position() {
-        eventSource().writeStream().write(stream_1, asList(NewEvent.newEvent("type-A", "data-A".getBytes(), "metadata-A".getBytes())));
-        eventSource().writeStream().write(stream_2, asList(NewEvent.newEvent("type-B", "data-B".getBytes(), "metadata-B".getBytes())));
-        eventSource().writeStream().write(stream_3, asList(NewEvent.newEvent("type-C", "data-C".getBytes(), "metadata-C".getBytes())));
+        eventSource().writeStream().write(stream_1, asList(event_1));
+        eventSource().writeStream().write(stream_2, asList(event_2));
+        eventSource().writeStream().write(stream_3, asList(event_3));
 
         try (Stream<ResolvedEvent> stream = eventSource().readAll().readAllForwards()) {
             Position position = stream.limit(1).reduce((a, b) -> b).get().position();
@@ -131,25 +135,25 @@ public abstract class JavaEventStoreTest {
     public void
     fails_if_expected_version_has_not_been_reached() {
         thrown.expect(WrongExpectedVersionException.class);
-        eventSource().writeStream().write(stream_1, asList(NewEvent.newEvent("type-B", "data-B".getBytes(), "metadata-B".getBytes())), 0);
+        eventSource().writeStream().write(stream_1, asList(event_2), 0);
     }
 
     @Test
     public void
     fails_if_expected_version_has_passed() {
-        eventSource().writeStream().write(stream_1, asList(NewEvent.newEvent("type-A", "data-A".getBytes(), "metadata-A".getBytes())));
-        eventSource().writeStream().write(stream_1, asList(NewEvent.newEvent("type-B", "data-A".getBytes(), "metadata-A".getBytes())));
+        eventSource().writeStream().write(stream_1, asList(event_1));
+        eventSource().writeStream().write(stream_1, asList(event_2));
 
         thrown.expect(WrongExpectedVersionException.class);
-        eventSource().writeStream().write(stream_1, asList(NewEvent.newEvent("type-B", "data-B".getBytes(), "metadata-B".getBytes())), 0);
+        eventSource().writeStream().write(stream_1, asList(event_3), 0);
     }
 
     @Test
     public void
     writes_when_expected_version_matches() {
-        eventSource().writeStream().write(stream_1, asList(NewEvent.newEvent("type-A", "data-A".getBytes(), "metadata-A".getBytes())));
+        eventSource().writeStream().write(stream_1, asList(event_1));
 
-        eventSource().writeStream().write(stream_1, asList(NewEvent.newEvent("type-B", "data-B".getBytes(), "metadata-B".getBytes())), 0);
+        eventSource().writeStream().write(stream_1, asList(event_2), 0);
 
         assertThat(eventSource().readStream().readStreamForwards(stream_1).map(ResolvedEvent::eventRecord).collect(toList()), contains(
                 objectWith(EventRecord::eventNumber, 0L),
@@ -209,10 +213,14 @@ public abstract class JavaEventStoreTest {
     }
 
     private static NewEvent anEvent() {
-        return NewEvent.newEvent(UUID.randomUUID().toString(), UUID.randomUUID().toString().getBytes(), UUID.randomUUID().toString().getBytes());
+        return newEvent(UUID.randomUUID().toString(), randomData(), randomData());
     }
 
-    private String randomStream() {
+    private static String randomStream() {
         return "stream_" + UUID.randomUUID().toString().replace("-", "");
+    }
+
+    private static byte[] randomData() {
+        return ("{\"value\":\"" + UUID.randomUUID() + "\"}").getBytes(UTF_8);
     }
 }
