@@ -48,12 +48,14 @@ public class HttpGesEventStreamReader implements EventStreamReader {
 
                 JsonNode jsonNode = new ObjectMapper().readTree(response.getEntity().getContent());;
 
+//                System.out.println(new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(jsonNode));
+
                 GesHttpResponse r = new ObjectMapper().registerModule(new JavaTimeModule()).configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
                         .readerFor(GesHttpResponse.class).readValue(jsonNode);
 
                 return r.entries.stream()
-                        .map(e -> new ResolvedEvent(new GesHttpPosition(), eventRecord(e.updated, e.streamId(), e.eventNumber, e.eventType, e.data.getBytes(UTF_8), e.metaData.getBytes(UTF_8))))
-                        .sorted((e1, e2) -> Long.compare(e1.eventRecord().eventNumber(), e2.eventRecord().eventNumber()));
+                        .sorted((e1, e2) -> Long.compare(e1.positionEventNumber, e2.positionEventNumber))
+                        .map(e -> new ResolvedEvent(new GesHttpPosition(e.positionEventNumber), eventRecord(e.updated, e.streamId(), e.eventNumber, e.eventType, e.data.getBytes(UTF_8), e.metaData.getBytes(UTF_8))));
             });
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -61,7 +63,11 @@ public class HttpGesEventStreamReader implements EventStreamReader {
     }
 
     private static class GesHttpPosition implements Position {
+        private final long value;
 
+        private GesHttpPosition(long value) {
+            this.value = value;
+        }
     }
 
     private static class GesHttpResponse {
@@ -75,6 +81,7 @@ public class HttpGesEventStreamReader implements EventStreamReader {
     private static class GesHttpReadEvent {
         public final String eventType;
         public final long eventNumber;
+        public final long positionEventNumber;
         public final String streamId;
         public final Instant updated;
         public final String data;
@@ -92,6 +99,7 @@ public class HttpGesEventStreamReader implements EventStreamReader {
 
         private GesHttpReadEvent() {
             eventNumber = 0L;
+            positionEventNumber = 0L;
             eventType = null;
             streamId = null;
             updated = null;
