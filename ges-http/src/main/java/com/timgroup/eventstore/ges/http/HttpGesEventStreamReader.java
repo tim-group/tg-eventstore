@@ -34,9 +34,10 @@ public class HttpGesEventStreamReader implements EventStreamReader {
         try {
             CloseableHttpClient client = HttpClientBuilder.create().build();
 
-            HttpGet readRequest = new HttpGet("/streams/" + streamId.category() + "-" + streamId.id() + "?embed=body");
+            HttpGet readRequest = new HttpGet("/streams/" + streamId.category() + "-" + streamId.id() + "/" + (eventNumber + 1) + "/forward/100?embed=body");
             readRequest.setHeader("Accept", "application/json");
 
+            //todo: work out if we need to start with the head page and walk backwards
             //todo: pagination
 
             return client.execute(HttpHost.create(host), readRequest, response -> {
@@ -48,7 +49,7 @@ public class HttpGesEventStreamReader implements EventStreamReader {
 
                 JsonNode jsonNode = new ObjectMapper().readTree(response.getEntity().getContent());;
 
-//                System.out.println(new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(jsonNode));
+                System.out.println(new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(jsonNode));
 
                 GesHttpResponse r = new ObjectMapper().registerModule(new JavaTimeModule()).configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
                         .readerFor(GesHttpResponse.class).readValue(jsonNode);
@@ -62,10 +63,10 @@ public class HttpGesEventStreamReader implements EventStreamReader {
         }
     }
 
-    private static class GesHttpPosition implements Position {
-        private final long value;
+    static class GesHttpPosition implements Position {
+        final long value;
 
-        private GesHttpPosition(long value) {
+        GesHttpPosition(long value) {
             this.value = value;
         }
     }
