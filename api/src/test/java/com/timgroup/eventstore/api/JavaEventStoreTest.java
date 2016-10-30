@@ -27,9 +27,13 @@ public abstract class JavaEventStoreTest {
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
-    private final StreamId stream_1 = streamId(randomStream(), "1");
-    private final StreamId stream_2 = streamId(randomStream(), "2");
-    private final StreamId stream_3 = streamId(randomStream(), "3");
+    private final String category_1 = randomCategory();
+    private final String category_2 = randomCategory();
+    private final String category_3 = randomCategory();
+    
+    private final StreamId stream_1 = streamId(category_1, "1");
+    private final StreamId stream_2 = streamId(category_2, "2");
+    private final StreamId stream_3 = streamId(category_3, "3");
 
     private final NewEvent event_1 = newEvent("type-A", randomData(), randomData());
     private final NewEvent event_2 = newEvent("type-B", randomData(), randomData());
@@ -166,14 +170,14 @@ public abstract class JavaEventStoreTest {
     can_read_events_by_category() {
         NewEvent event1 = anEvent();
         NewEvent event4 = anEvent();
-        eventSource().writeStream().write(streamId("Cat1", "Id1"), asList(event1));
-        eventSource().writeStream().write(streamId("Cat3", "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(streamId("Cat2", "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(streamId("Cat1", "Id2"), asList(event4));
+        eventSource().writeStream().write(streamId(category_1, "Id1"), asList(event1));
+        eventSource().writeStream().write(streamId(category_3, "Id1"), asList(anEvent()));
+        eventSource().writeStream().write(streamId(category_2, "Id1"), asList(anEvent()));
+        eventSource().writeStream().write(streamId(category_1, "Id2"), asList(event4));
 
-        assertThat(eventSource().readCategory().readCategoryForwards("Cat1").map(ResolvedEvent::eventRecord).collect(toList()), contains(
-                objectWith(EventRecord::streamId, streamId("Cat1", "Id1")),
-                objectWith(EventRecord::streamId, streamId("Cat1", "Id2"))
+        assertThat(eventSource().readCategory().readCategoryForwards(category_1).map(ResolvedEvent::eventRecord).collect(toList()), contains(
+                objectWith(EventRecord::streamId, streamId(category_1, "Id1")),
+                objectWith(EventRecord::streamId, streamId(category_1, "Id2"))
         ));
     }
 
@@ -182,15 +186,15 @@ public abstract class JavaEventStoreTest {
     can_continue_reading_from_position_of_category() {
         NewEvent event1 = anEvent();
         NewEvent event4 = anEvent();
-        eventSource().writeStream().write(streamId("Cat1", "Id1"), asList(event1));
-        eventSource().writeStream().write(streamId("Cat3", "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(streamId("Cat2", "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(streamId("Cat1", "Id2"), asList(event4));
+        eventSource().writeStream().write(streamId(category_1, "Id1"), asList(event1));
+        eventSource().writeStream().write(streamId(category_3, "Id1"), asList(anEvent()));
+        eventSource().writeStream().write(streamId(category_2, "Id1"), asList(anEvent()));
+        eventSource().writeStream().write(streamId(category_1, "Id2"), asList(event4));
 
-        Position position = eventSource().readCategory().readCategoryForwards("Cat1").collect(toList()).get(0).position();
+        Position position = eventSource().readCategory().readCategoryForwards(category_1).collect(toList()).get(0).position();
 
-        assertThat(eventSource().readCategory().readCategoryForwards("Cat1", position).map(ResolvedEvent::eventRecord).collect(toList()), Matchers.contains(
-                objectWith(EventRecord::streamId, streamId("Cat1", "Id2"))
+        assertThat(eventSource().readCategory().readCategoryForwards(category_1, position).map(ResolvedEvent::eventRecord).collect(toList()), Matchers.contains(
+                objectWith(EventRecord::streamId, streamId(category_1, "Id2"))
         ));
     }
 
@@ -216,7 +220,7 @@ public abstract class JavaEventStoreTest {
         return newEvent(UUID.randomUUID().toString(), randomData(), randomData());
     }
 
-    private static String randomStream() {
+    private static String randomCategory() {
         return "stream_" + UUID.randomUUID().toString().replace("-", "");
     }
 
