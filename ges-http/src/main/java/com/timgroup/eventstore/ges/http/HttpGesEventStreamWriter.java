@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.StreamId;
+import com.timgroup.eventstore.api.WrongExpectedVersionException;
 import org.apache.http.HttpHost;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ByteArrayEntity;
@@ -15,11 +16,14 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.OptionalLong;
 import java.util.UUID;
 
+import static java.lang.Long.MIN_VALUE;
 import static java.util.stream.Collectors.toList;
 
 public class HttpGesEventStreamWriter implements EventStreamWriter {
+    private final ObjectMapper mapper = new ObjectMapper();
     private final String host;
 
     public HttpGesEventStreamWriter(String host) {
@@ -28,14 +32,24 @@ public class HttpGesEventStreamWriter implements EventStreamWriter {
 
     @Override
     public void write(StreamId streamId, Collection<NewEvent> events) {
+        write(streamId, events, OptionalLong.empty());
+    }
+
+    @Override
+    public void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
+        write(streamId, events, OptionalLong.of(expectedVersion));
+    }
+
+    private void write(StreamId streamId, Collection<NewEvent> events, OptionalLong maybeExpectedVersion) {
         try {
             CloseableHttpClient client = HttpClientBuilder.create().build();
 
             HttpPost writeRequest = new HttpPost("/streams/" + streamId.category() + "-" + streamId.id());
 
-            ObjectMapper mapper = new ObjectMapper();
+            maybeExpectedVersion.ifPresent(expectedVersion -> {
+                writeRequest.setHeader("ES-ExpectedVersion", Long.toString(expectedVersion));
+            });
 
-            //todo: non-json body?
             List<HttpEvent> httpEvents = events.stream()
                     .map(e -> {
                         try {
@@ -55,7 +69,10 @@ public class HttpGesEventStreamWriter implements EventStreamWriter {
             writeRequest.setEntity(new ByteArrayEntity(bytes, ContentType.create("application/vnd.eventstore.events+json")));
 
             client.execute(HttpHost.create(host), writeRequest, response -> {
-                if (response.getStatusLine().getStatusCode() != 201) {
+                if (response.getStatusLine().getStatusCode() == 400 && response.getStatusLine().getReasonPhrase().equals("Wrong expected EventNumber")) {
+                    //todo: remove need for MIN_VALUE
+                    throw new WrongExpectedVersionException(MIN_VALUE, maybeExpectedVersion.getAsLong());
+                } else if (response.getStatusLine().getStatusCode() != 201) {
                     throw new RuntimeException("Write request failed: " + response.getStatusLine());
                 }
                 return null;
@@ -63,11 +80,6 @@ public class HttpGesEventStreamWriter implements EventStreamWriter {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    @Override
-    public void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
-
     }
 
 
