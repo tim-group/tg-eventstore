@@ -107,5 +107,13 @@ public class HttpGesEventStreamReader implements EventStreamReader {
             data = null;
             metaData = null;
         }
+
+        public byte[] data() {
+            return data.getBytes(UTF_8);
+        }
+
+        public byte[] metaData() {
+            return metaData.getBytes(UTF_8);
+        }
     }
 }

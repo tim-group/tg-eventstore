@@ -18,7 +18,6 @@ import java.util.stream.Stream;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.http.auth.AuthScope.ANY;
 
 public class HttpGesEventReader implements EventReader {
@@ -55,6 +54,7 @@ public class HttpGesEventReader implements EventReader {
 
                 return r.entries.stream()
                         .sorted((e1, e2) -> Long.compare(e1.positionEventNumber, e2.positionEventNumber))
+                        .filter(e -> !e.streamId.startsWith("$"))
                         .map(e -> new ResolvedEvent(
                                 new HttpGesEventStreamReader.GesHttpPosition(e.positionEventNumber),
                                 eventRecord(
@@ -62,8 +62,8 @@ public class HttpGesEventReader implements EventReader {
                                         e.streamId(),
                                         e.eventNumber,
                                         e.eventType,
-                                        e.data.getBytes(UTF_8),
-                                        e.metaData.getBytes(UTF_8))));
+                                        e.data(),
+                                        e.metaData())));
             });
         } catch (IOException e) {
             throw new RuntimeException(e);
