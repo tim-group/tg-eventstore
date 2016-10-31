@@ -10,6 +10,7 @@ import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.component.DatabaseConnectionComponent;
 import com.typesafe.config.Config;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 
@@ -86,7 +87,11 @@ public class BasicMysqlEventSource implements EventSource {
             throw new RuntimeException(e);
         }
 
-        new BasicMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
+        try {
+            new BasicMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
+        } catch (Exception e) {
+            LoggerFactory.getLogger(BasicMysqlEventSource.class).warn("Failed to ensure ES schme is created", e);
+        }
 
         return new BasicMysqlEventSource(dataSource::getConnection, tableName, DefaultBatchSize, name);
     }
