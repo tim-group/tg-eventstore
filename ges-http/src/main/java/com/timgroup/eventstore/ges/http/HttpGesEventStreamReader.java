@@ -71,7 +71,7 @@ public class HttpGesEventStreamReader implements EventStreamReader {
         }
     }
 
-    private static class GesHttpResponse {
+    static class GesHttpResponse {
         public final List<GesHttpReadEvent> entries;
 
         private GesHttpResponse() {
@@ -79,7 +79,7 @@ public class HttpGesEventStreamReader implements EventStreamReader {
         }
     }
 
-    private static class GesHttpReadEvent {
+    static class GesHttpReadEvent {
         public final String eventType;
         public final long eventNumber;
         public final long positionEventNumber;
@@ -89,7 +89,7 @@ public class HttpGesEventStreamReader implements EventStreamReader {
         public final String metaData;
 
 
-        private StreamId streamId() {
+        StreamId streamId() {
             int categorySeparatorPosition = streamId.indexOf('-');
             if (categorySeparatorPosition == -1) {
                 throw new RuntimeException("StreamId " + streamId + " does not have a category");

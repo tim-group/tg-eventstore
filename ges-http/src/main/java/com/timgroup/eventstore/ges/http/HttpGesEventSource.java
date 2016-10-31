@@ -21,7 +21,7 @@ public class HttpGesEventSource implements EventSource {
 
     @Override
     public EventReader readAll() {
-        return null;
+        return new HttpGesEventReader(host);
     }
 
     @Override
