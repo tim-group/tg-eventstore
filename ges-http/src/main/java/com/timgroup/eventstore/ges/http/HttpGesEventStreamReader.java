@@ -38,6 +38,8 @@ public class HttpGesEventStreamReader implements EventStreamReader {
             readRequest.setHeader("Accept", "application/json");
 
             //todo: work out if we need to start with the head page and walk backwards
+            //todo: work out what happens when we delete a stream
+            //todo: work out what happens with TTLs
             //todo: pagination
 
             return client.execute(HttpHost.create(host), readRequest, response -> {
