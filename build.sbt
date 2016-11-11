@@ -72,6 +72,7 @@ val eventstore_ges_http = Project(id = "eventstore-ges-http", base = file("ges-h
   .settings(libraryDependencies += "org.apache.httpcomponents" % "httpclient" % "4.5.2")
   .settings(libraryDependencies += "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.2")
   .settings(libraryDependencies += "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % "2.7.2")
+  .settings(publishArtifact in (Compile, packageDoc) := false)
   .settings(overridePublishSettings)
 
 val eventstore_subscription = Project(id = "eventstore-subscription", base = file("subscription"))
