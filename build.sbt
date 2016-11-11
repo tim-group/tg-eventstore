@@ -15,6 +15,7 @@ publishTo in ThisBuild := Some("publish-repo" at "http://repo.youdevise.com:8081
 
 credentials in ThisBuild += Credentials(new File("/etc/sbt/credentials"))
 
+resolvers in ThisBuild += "TIM Group Repo" at "http://repo/nexus/content/groups/public"
 
 val joda = Seq(
   "joda-time" % "joda-time" % "2.3",
