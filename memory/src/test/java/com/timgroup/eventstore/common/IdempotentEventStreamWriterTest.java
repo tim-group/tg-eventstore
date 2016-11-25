@@ -28,6 +28,14 @@ public class IdempotentEventStreamWriterTest {
     private final StreamId stream = streamId("stream", "1");
 
     @Test public void
+    successful_if_writes_at_start_of_stream() {
+        idempotent(underlying, reader)
+                .write(stream, singletonList(newEvent("type", "data".getBytes(), "metadata".getBytes())), EmptyStreamEventNumber);
+
+        assertThat(reader.readStreamForwards(stream).count(), is(1L));
+    }
+
+    @Test public void
     successful_if_writes_same_data_again() {
         underlying
                 .write(stream, singletonList(newEvent("type", "data".getBytes(), "metadata".getBytes())), EmptyStreamEventNumber);

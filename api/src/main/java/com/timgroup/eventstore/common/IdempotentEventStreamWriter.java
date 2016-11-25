@@ -25,30 +25,29 @@ public class IdempotentEventStreamWriter implements EventStreamWriter {
 
     @Override
     public void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) throws IncompatibleNewEventException {
-        Stream<ResolvedEvent> currentEvents = reader.readStreamForwards(streamId, expectedVersion);
-        Iterator<ResolvedEvent> currentEventsIt = currentEvents.iterator();
         Iterator<NewEvent> newEventsIt = events.iterator();
-
+        long newExpectedVersion = expectedVersion;
         try {
-            long newExpectedVersion = expectedVersion;
+            Iterator<ResolvedEvent> currentEventsIt = reader.readStreamForwards(streamId, expectedVersion).iterator();
+
             while (newEventsIt.hasNext() && currentEventsIt.hasNext()) {
                 newExpectedVersion += 1;
                 NewEvent newEvent = newEventsIt.next();
                 ResolvedEvent currentEvent = currentEventsIt.next();
                 isCompatible.throwIfIncompatible(currentEvent, newEvent);
             }
+        } catch (NoSuchStreamException e) {
+            // Ignore
+        }
 
-            if (newEventsIt.hasNext()) {
-                final Collection<NewEvent> newEventsToSave = new LinkedList<>();
-                newEventsIt.forEachRemaining(newEventsToSave::add);
-                try {
-                    underlying.write(streamId, newEventsToSave, newExpectedVersion);
-                } catch (WrongExpectedVersionException e) {
-                    write(streamId, newEventsToSave, newExpectedVersion);
-                }
+        if (newEventsIt.hasNext()) {
+            final Collection<NewEvent> newEventsToSave = new LinkedList<>();
+            newEventsIt.forEachRemaining(newEventsToSave::add);
+            try {
+                underlying.write(streamId, newEventsToSave, newExpectedVersion);
+            } catch (WrongExpectedVersionException e) {
+                write(streamId, newEventsToSave, newExpectedVersion);
             }
-        } finally {
-            currentEvents.close();
         }
     }
 
