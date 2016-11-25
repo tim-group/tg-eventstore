@@ -1,4 +1,4 @@
-package com.timgroup.eventstore.mysql;
+package com.timgroup.eventstore.common;
 
 import com.timgroup.eventstore.api.*;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static com.timgroup.eventstore.api.EventStreamReader.EmptyStreamEventNumber;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.eventstore.api.StreamId.streamId;
-import static com.timgroup.eventstore.mysql.IdempotentEventStreamWriter.idempotent;
+import static com.timgroup.eventstore.common.IdempotentEventStreamWriter.idempotent;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;

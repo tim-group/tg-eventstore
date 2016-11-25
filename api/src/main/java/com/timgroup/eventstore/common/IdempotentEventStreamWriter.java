@@ -1,4 +1,4 @@
-package com.timgroup.eventstore.mysql;
+package com.timgroup.eventstore.common;
 
 import com.timgroup.eventstore.api.*;
 
