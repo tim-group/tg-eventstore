@@ -69,16 +69,16 @@ public class IdempotentEventStreamWriterTest {
     }
 
     @Test public void
-    throws_WrongExpectedVersionException_when_stream_moves_past_expected_version_during_save() {
-        // Probably wrong semantics -- should "retry" to see if idempotent writes succeed
-        thrown.expect(WrongExpectedVersionException.class);
-
+   successful_event_when_stream_moves_past_expected_version_during_save() {
         underlying
                 .write(stream, singletonList(newEvent("type", "data".getBytes(), "metadata".getBytes())), EmptyStreamEventNumber);
 
         idempotent(underlying, reader, writeOnceSoToFailOptimisticConcurrencyCheck())
                 .write(stream, asList(newEvent("type", "data".getBytes(), "metadata".getBytes()),
-                                      newEvent("type", "data2".getBytes(), "metadata".getBytes())), EmptyStreamEventNumber);
+                                      newEvent("type", "data2".getBytes(), "metadata".getBytes()),
+                                      newEvent("type", "data3".getBytes(), "metadata".getBytes())), EmptyStreamEventNumber);
+
+        assertThat(reader.readStreamForwards(stream).count(), is(3L));
     }
 
     @Test public void

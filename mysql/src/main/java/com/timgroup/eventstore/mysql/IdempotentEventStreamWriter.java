@@ -39,9 +39,13 @@ public class IdempotentEventStreamWriter implements EventStreamWriter {
             }
 
             if (newEventsIt.hasNext()) {
-                final Collection<NewEvent> eventsToSave = new LinkedList<>();
-                newEventsIt.forEachRemaining(eventsToSave::add);
-                underlying.write(streamId, eventsToSave, newExpectedVersion);
+                final Collection<NewEvent> newEventsToSave = new LinkedList<>();
+                newEventsIt.forEachRemaining(newEventsToSave::add);
+                try {
+                    underlying.write(streamId, newEventsToSave, newExpectedVersion);
+                } catch (WrongExpectedVersionException e) {
+                    write(streamId, newEventsToSave, newExpectedVersion);
+                }
             }
         } finally {
             currentEvents.close();
