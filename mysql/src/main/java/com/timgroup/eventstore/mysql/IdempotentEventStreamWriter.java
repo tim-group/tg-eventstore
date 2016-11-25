@@ -5,6 +5,8 @@ import com.timgroup.eventstore.api.*;
 import java.util.*;
 import java.util.stream.Stream;
 
+import static com.timgroup.eventstore.api.EventStreamReader.EmptyStreamEventNumber;
+
 public class IdempotentEventStreamWriter implements EventStreamWriter {
     private final EventStreamWriter underlying;
     private final EventStreamReader reader;
@@ -18,8 +20,7 @@ public class IdempotentEventStreamWriter implements EventStreamWriter {
 
     @Override
     public void write(StreamId streamId, Collection<NewEvent> events) {
-        // TODO, use Stream<ResolvedEvent> currentEvents = reader.readStreamForwards(streamId);
-        throw new RuntimeException("Not yet implemented");
+        write(streamId, events, EmptyStreamEventNumber);
     }
 
     @Override

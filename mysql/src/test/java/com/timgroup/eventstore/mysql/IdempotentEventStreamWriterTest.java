@@ -38,6 +38,27 @@ public class IdempotentEventStreamWriterTest {
     }
 
     @Test public void
+    successful_if_writes_same_data_again_using_write_without_expectedVersion() {
+        underlying
+                .write(stream, singletonList(newEvent("type", "data".getBytes(), "metadata".getBytes())), EmptyStreamEventNumber);
+        idempotent(underlying, reader)
+                .write(stream, singletonList(newEvent("type", "data".getBytes(), "metadata".getBytes())));
+
+        assertThat(reader.readStreamForwards(stream).count(), is(1L));
+    }
+
+    @Test public void
+    successful_if_writes_same_data_again_using_write_without_expectedVersion_and_adds_new_data() {
+        underlying
+                .write(stream, singletonList(newEvent("type", "data".getBytes(), "metadata".getBytes())), EmptyStreamEventNumber);
+        idempotent(underlying, reader)
+                .write(stream, asList(newEvent("type", "data".getBytes(), "metadata".getBytes()),
+                                      newEvent("type", "data2".getBytes(), "metadata".getBytes())));
+
+        assertThat(reader.readStreamForwards(stream).count(), is(2L));
+    }
+
+    @Test public void
     successful_if_metadata_is_different() {
         underlying
                 .write(stream, singletonList(newEvent("type", "data".getBytes(), "metadata".getBytes())), EmptyStreamEventNumber);
