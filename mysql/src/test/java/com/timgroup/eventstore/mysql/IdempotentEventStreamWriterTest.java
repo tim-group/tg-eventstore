@@ -7,10 +7,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.time.Clock;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.timgroup.eventstore.api.EventStreamReader.EmptyStreamEventNumber;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
@@ -51,7 +48,7 @@ public class IdempotentEventStreamWriterTest {
     }
 
     @Test public void
-    throws_OptimisticConcurrencyFailure_when_stream_moves_past_expected_version_during_save() {
+    throws_WrongExpectedVersionException_when_stream_moves_past_expected_version_during_save() {
         // Probably wrong semantics -- should "retry" to see if idempotent writes succeed
         thrown.expect(WrongExpectedVersionException.class);
 
@@ -63,17 +60,8 @@ public class IdempotentEventStreamWriterTest {
                                       newEvent("type", "data2".getBytes(), "metadata".getBytes())), EmptyStreamEventNumber);
     }
 
-    private IdempotentEventStreamWriter.CompatibilityPredicate writeOnceSoToFailOptimisticConcurrencyCheck() {
-        AtomicBoolean shouldWrite = new AtomicBoolean(true);
-        return (a, b) -> {
-            if (shouldWrite.getAndSet(false)) {
-                store.write(stream, singletonList(newEvent("type", "data2".getBytes(), "metadata".getBytes())));
-            }
-        };
-    }
-
     @Test public void
-    throws_IdempotentWriteFailure_when_we_write_different_stuff_with_the_same_version() {
+    throws_IdempotentWriteFailure_for_different_event_with_the_same_version() {
         thrown.expect(IdempotentWriteFailure.class);
 
         underlying
@@ -83,10 +71,10 @@ public class IdempotentEventStreamWriterTest {
     }
 
     @Test public void
-    idempotent_write_allowed_if_the_second_write_overlaps_with_the_first() {
+    successful_if_write_starts_later_in_stream() {
         underlying
                 .write(stream, asList(newEvent("type", "data".getBytes(), "metadata".getBytes()),
-                                      newEvent("type", "data2".getBytes(), "metadata".getBytes())), EmptyStreamEventNumber);
+                        newEvent("type", "data2".getBytes(), "metadata".getBytes())), EmptyStreamEventNumber);
         idempotent(underlying, reader)
                 .write(stream, singletonList(newEvent("type", "data2".getBytes(), "metadata".getBytes())), 0);
 
@@ -94,7 +82,7 @@ public class IdempotentEventStreamWriterTest {
     }
 
     @Test public void
-    idempotent_write_allowed_if_the_second_write_overlaps_and_extends_the_first() {
+    successful_if_write_starts_later_in_stream_and_adds_new_data() {
         underlying
                 .write(stream, asList(newEvent("type", "data".getBytes(), "metadata".getBytes()),
                                       newEvent("type", "data2".getBytes(), "metadata".getBytes())), EmptyStreamEventNumber);
@@ -107,7 +95,7 @@ public class IdempotentEventStreamWriterTest {
     }
 
     @Test public void
-    idempotent_write_not_allowed_if_the_second_write_overlaps_but_doesnt_match_the_first() {
+    fails_if_the_second_write_overlaps_but_doesnt_match_the_first() {
         thrown.expect(IdempotentWriteFailure.class);
 
         underlying
@@ -154,4 +142,14 @@ public class IdempotentEventStreamWriterTest {
                         newEvent("type", "different data".getBytes(), "metadata".getBytes())),
                         0);
     }
+
+    private IdempotentEventStreamWriter.CompatibilityPredicate writeOnceSoToFailOptimisticConcurrencyCheck() {
+        AtomicBoolean shouldWrite = new AtomicBoolean(true);
+        return (a, b) -> {
+            if (shouldWrite.getAndSet(false)) {
+                store.write(stream, singletonList(newEvent("type", "data2".getBytes(), "metadata".getBytes())));
+            }
+        };
+    }
+
 }
