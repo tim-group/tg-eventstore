@@ -83,7 +83,7 @@ public class IdempotentEventStreamWriterTest {
 
     @Test public void
     throws_IdempotentWriteFailure_for_different_event_with_the_same_version() {
-        thrown.expect(IdempotentWriteFailure.class);
+        thrown.expect(IdempotentEventStreamWriter.IncompatibleNewEventException.class);
 
         underlying
                 .write(stream, singletonList(newEvent("type", "data".getBytes(), "metadata".getBytes())), EmptyStreamEventNumber);
@@ -117,7 +117,7 @@ public class IdempotentEventStreamWriterTest {
 
     @Test public void
     fails_if_the_second_write_overlaps_but_doesnt_match_the_first() {
-        thrown.expect(IdempotentWriteFailure.class);
+        thrown.expect(IdempotentEventStreamWriter.IncompatibleNewEventException.class);
 
         underlying
                 .write(stream, asList(newEvent("type", "data".getBytes(), "metadata".getBytes()),
@@ -164,7 +164,7 @@ public class IdempotentEventStreamWriterTest {
                         0);
     }
 
-    private IdempotentEventStreamWriter.CompatibilityPredicate writeOnceSoToFailOptimisticConcurrencyCheck() {
+    private IdempotentEventStreamWriter.IsCompatible writeOnceSoToFailOptimisticConcurrencyCheck() {
         AtomicBoolean shouldWrite = new AtomicBoolean(true);
         return (a, b) -> {
             if (shouldWrite.getAndSet(false)) {
