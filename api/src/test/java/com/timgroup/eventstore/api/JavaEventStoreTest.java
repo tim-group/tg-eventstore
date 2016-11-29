@@ -5,6 +5,7 @@ import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -22,8 +23,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 
 public abstract class JavaEventStoreTest {
     @Rule
@@ -99,11 +99,30 @@ public abstract class JavaEventStoreTest {
         ));
     }
 
+    @Ignore
+    @Test
+    public void
+    can_read_empty_set_of_events_from_end_of_stream() {
+        eventSource().writeStream().write(stream_1, asList(
+                event_1, event_2
+        ));
+
+        assertThat(eventSource().readStream().readStreamForwards(stream_1, 1).collect(toList()), hasSize(0));
+    }
+
     @Test
     public void
     throws_exception_when_stream_does_not_exist() {
         thrown.expect(NoSuchStreamException.class);
         eventSource().readStream().readStreamForwards(stream_1, 0).collect(toList());
+    }
+
+    @Ignore
+    @Test
+    public void
+    throws_exception_when_stream_does_not_exist_on_stream_creation() {
+        thrown.expect(NoSuchStreamException.class);
+        eventSource().readStream().readStreamForwards(stream_1, 0);
     }
 
     @Test
