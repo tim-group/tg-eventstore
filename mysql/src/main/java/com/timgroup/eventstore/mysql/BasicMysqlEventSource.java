@@ -1,6 +1,7 @@
 package com.timgroup.eventstore.mysql;
 
 import java.util.Collection;
+import java.util.Properties;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 import com.timgroup.eventstore.api.EventCategoryReader;
@@ -82,6 +83,30 @@ public class BasicMysqlEventSource implements EventSource {
 
         try {
             Class.forName(config.getString("driver"));
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+        try {
+            new BasicMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
+        } catch (Exception e) {
+            LoggerFactory.getLogger(BasicMysqlEventSource.class).warn("Failed to ensure ES schme is created", e);
+        }
+
+        return new PooledMysqlEventSource(dataSource, tableName, DefaultBatchSize, name);
+    }
+
+    public static PooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name) {
+        ComboPooledDataSource dataSource = new ComboPooledDataSource();
+        dataSource.setJdbcUrl(format("jdbc:mysql://%s:%d/%s?rewriteBatchedStatements=true",
+                properties.getProperty(configPrefix + "hostname"),
+                Integer.parseInt(properties.getProperty(configPrefix + "port")),
+                properties.get(configPrefix + "database")));
+        dataSource.setUser(properties.getProperty(configPrefix + "username"));
+        dataSource.setPassword(properties.getProperty(configPrefix + "password"));
+
+        try {
+            Class.forName(properties.getProperty(configPrefix + "driver"));
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
