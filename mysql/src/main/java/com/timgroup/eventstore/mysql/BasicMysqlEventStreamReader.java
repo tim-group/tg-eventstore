@@ -5,6 +5,10 @@ import com.timgroup.eventstore.api.NoSuchStreamException;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -26,6 +30,7 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
 
     @Override
     public Stream<ResolvedEvent> readStreamForwards(StreamId streamId, long eventNumber) {
+        ensureStreamExists(streamId);
         EventSpliterator spliterator = new EventSpliterator(
                 connectionProvider,
                 batchSize,
@@ -34,44 +39,19 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
                 format("stream_category = '%s' and stream_id = '%s' and event_number > %s", streamId.category(), streamId.id(), eventNumber)
         );
 
-        return stream(new NotEmptySpliterator<>(spliterator, streamId), false);
+        return stream(spliterator, false);
     }
 
-    private static final class NotEmptySpliterator<T> implements Spliterator<T> {
-        private final Spliterator<T> underlying;
-        private final StreamId streamId;
-        private boolean seenValue;
-
-        private NotEmptySpliterator(Spliterator<T> underlying, StreamId streamId) {
-            this.underlying = underlying;
-            this.streamId = streamId;
-        }
-
-        @Override
-        public boolean tryAdvance(Consumer<? super T> action) {
-            if (seenValue) {
-                return underlying.tryAdvance(action);
-            }
-            if (!underlying.tryAdvance(action)) {
+    private void ensureStreamExists(StreamId streamId) throws NoSuchStreamException {
+        try (Connection connection = connectionProvider.getConnection();
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(String.format("select position from %s where stream_category = '%s' and stream_id = '%s' limit 1", tableName, streamId.category(), streamId.id()));
+        ) {
+            if (!resultSet.first()) {
                 throw new NoSuchStreamException(streamId);
             }
-            seenValue = true;
-            return true;
-        }
-
-        @Override
-        public Spliterator<T> trySplit() {
-            return null;
-        }
-
-        @Override
-        public long estimateSize() {
-            return underlying.estimateSize();
-        }
-
-        @Override
-        public int characteristics() {
-            return underlying.characteristics();
+        } catch (SQLException e) {
+            throw new RuntimeException(String.format("Error checking whether stream '%s' exists", streamId), e);
         }
     }
 }

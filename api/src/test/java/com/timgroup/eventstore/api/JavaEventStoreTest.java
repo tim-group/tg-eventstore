@@ -99,7 +99,6 @@ public abstract class JavaEventStoreTest {
         ));
     }
 
-    @Ignore
     @Test
     public void
     can_read_empty_set_of_events_from_end_of_stream() {
@@ -117,7 +116,6 @@ public abstract class JavaEventStoreTest {
         eventSource().readStream().readStreamForwards(stream_1, 0).collect(toList());
     }
 
-    @Ignore
     @Test
     public void
     throws_exception_when_stream_does_not_exist_on_stream_creation() {
