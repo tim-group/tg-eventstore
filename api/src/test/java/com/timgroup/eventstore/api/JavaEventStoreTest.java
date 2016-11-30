@@ -158,6 +158,20 @@ public abstract class JavaEventStoreTest {
 
     @Test
     public void
+    can_continue_reading_from_position_at_end_of_stream() {
+        eventSource().writeStream().write(stream_1, asList(event_1));
+        eventSource().writeStream().write(stream_2, asList(event_2));
+        eventSource().writeStream().write(stream_3, asList(event_3));
+
+        try (Stream<ResolvedEvent> stream = eventSource().readAll().readAllForwards()) {
+            Position position = stream.reduce((a, b) -> b).get().position();
+
+            assertThat(eventSource().readAll().readAllForwards(position).collect(toList()), empty());
+        }
+    }
+
+    @Test
+    public void
     fails_if_expected_version_has_not_been_reached() {
         thrown.expect(WrongExpectedVersionException.class);
         eventSource().writeStream().write(stream_1, asList(event_2), 0);
@@ -224,6 +238,21 @@ public abstract class JavaEventStoreTest {
         assertThat(eventSource().readCategory().readCategoryForwards(category_1, position).map(ResolvedEvent::eventRecord).collect(toList()), Matchers.contains(
                 objectWith(EventRecord::streamId, streamId(category_1, "Id2"))
         ));
+    }
+
+    @Test
+    public void
+    can_continue_reading_from_position_at_end_of_category() {
+        NewEvent event1 = anEvent();
+        NewEvent event4 = anEvent();
+        eventSource().writeStream().write(streamId(category_1, "Id1"), asList(event1));
+        eventSource().writeStream().write(streamId(category_3, "Id1"), asList(anEvent()));
+        eventSource().writeStream().write(streamId(category_2, "Id1"), asList(anEvent()));
+        eventSource().writeStream().write(streamId(category_1, "Id2"), asList(event4));
+
+        Position position = eventSource().readCategory().readCategoryForwards(category_1).reduce((a, b) -> b).get().position();
+
+        assertThat(eventSource().readCategory().readCategoryForwards(category_1, position).collect(toList()), empty());
     }
 
     private static Matcher<Instant> shortlyAfter(Instant expected) {
