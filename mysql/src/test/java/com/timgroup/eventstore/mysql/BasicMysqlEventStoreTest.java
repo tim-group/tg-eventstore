@@ -3,6 +3,7 @@ package com.timgroup.eventstore.mysql;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.JavaEventStoreTest;
 import com.typesafe.config.Config;
+import org.junit.After;
 import org.junit.Before;
 
 import java.sql.DriverManager;
@@ -25,6 +26,16 @@ public class BasicMysqlEventStoreTest extends JavaEventStoreTest {
 
     private final String tableName = "basic_eventstore";
 
+    private final Config config = parseString(
+            "hostname=localhost\n" +
+                    "port=3306\n" +
+                    "database=sql_eventstore\n" +
+                    "username=\n" +
+                    "password=\n" +
+                    "driver=com.mysql.jdbc.Driver", defaults().setSyntax(PROPERTIES));
+
+    private final BasicMysqlEventSource eventSource = BasicMysqlEventSource.pooledMasterDbEventSource(config, tableName, "test");
+
     @Before
     public void createTables() throws SQLException {
         BasicMysqlEventStoreSetup setup = new BasicMysqlEventStoreSetup(connectionProvider, tableName);
@@ -35,13 +46,11 @@ public class BasicMysqlEventStoreTest extends JavaEventStoreTest {
 
     @Override
     public EventSource eventSource() {
-        Config config = parseString(
-                "hostname=localhost\n" +
-                "port=3306\n" +
-                "database=sql_eventstore\n" +
-                "username=\n" +
-                "password=\n" +
-                "driver=com.mysql.jdbc.Driver", defaults().setSyntax(PROPERTIES));
-        return BasicMysqlEventSource.pooledMasterDbEventSource(config, tableName, "test");
+        return eventSource;
+    }
+
+    @After
+    public void closeEventSource() {
+        ((BasicMysqlEventSource.PooledMysqlEventSource)eventSource).close();
     }
 }
