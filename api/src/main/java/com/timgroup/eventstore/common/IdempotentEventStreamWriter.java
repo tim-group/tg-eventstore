@@ -5,6 +5,8 @@ import com.timgroup.eventstore.api.*;
 import java.util.*;
 import java.util.stream.Stream;
 
+import com.timgroup.eventstore.common.IdempotentEventStreamWriter.IsCompatible;
+
 import static com.timgroup.eventstore.api.EventStreamReader.EmptyStreamEventNumber;
 
 public class IdempotentEventStreamWriter implements EventStreamWriter {
