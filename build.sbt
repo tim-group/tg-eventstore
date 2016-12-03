@@ -6,6 +6,8 @@ organization in ThisBuild := "com.timgroup"
 
 scalaVersion in ThisBuild := "2.11.8"
 
+crossScalaVersions := Seq("2.11.8", "2.12.0")
+
 javaVersion in ThisBuild := "1.8"
 
 javacOptions += "-g"
@@ -22,8 +24,7 @@ val joda = Seq(
   "org.joda" % "joda-convert" % "1.3.1")
 
 val compatibleScalaTestDependency = libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest" % "2.1.3" % "test",
-  "org.scala-lang.modules" %% "scala-xml" % "1.0.2" % "test"
+  "org.scalatest" %% "scalatest" % "3.0.1" % "test"
 )
 
 val JUnit = Seq(
