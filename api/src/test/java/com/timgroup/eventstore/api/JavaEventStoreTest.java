@@ -12,6 +12,7 @@ import org.junit.rules.ExpectedException;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Iterator;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -71,6 +72,25 @@ public abstract class JavaEventStoreTest {
                         .and(EventRecord::metadata, event_2.metadata())
                         .andMatching(EventRecord::timestamp, shortlyAfter(timeBeforeTest))
         ));
+    }
+
+    @Ignore
+    @Test
+    public void
+    can_not_read_from_stream_after_reaching_end_despite_writing_more_events() {
+        eventSource().writeStream().write(stream_1, asList(
+                event_1
+        ));
+
+        Iterator<ResolvedEvent> it = eventSource().readStream().readStreamForwards(stream_1).iterator();
+        assertThat(it.hasNext(), is(true));
+        it.next();
+        assertThat(it.hasNext(), is(false));
+
+        eventSource().writeStream().write(stream_1, asList(
+                event_2
+        ));
+        assertThat(it.hasNext(), is(false));
     }
 
     @Test
