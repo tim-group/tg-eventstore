@@ -1,6 +1,5 @@
 package com.timgroup.eventstore.mysql;
 
-import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 
@@ -23,6 +22,7 @@ class EventSpliterator implements Spliterator<ResolvedEvent> {
     private BasicMysqlEventStorePosition lastPosition;
     private final String condition;
     private Iterator<ResolvedEvent> currentPage = Collections.emptyIterator();
+    private boolean streamExhausted = false;
 
     EventSpliterator(ConnectionProvider connectionProvider, int batchSize, String tableName, BasicMysqlEventStorePosition startingPosition, String condition) {
         this.connectionProvider = connectionProvider;
@@ -34,7 +34,7 @@ class EventSpliterator implements Spliterator<ResolvedEvent> {
 
     @Override
     public boolean tryAdvance(Consumer<? super ResolvedEvent> action) {
-        if (!currentPage.hasNext()) {
+        if (!currentPage.hasNext() && !streamExhausted) {
             try (Connection connection = connectionProvider.getConnection();
                  Statement statement = streamingStatementFrom(connection);
                  ResultSet resultSet = statement.executeQuery(String.format("select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata " +
@@ -68,6 +68,7 @@ class EventSpliterator implements Spliterator<ResolvedEvent> {
             lastPosition = ((BasicMysqlEventStorePosition) next.position());
             return true;
         } else {
+            streamExhausted = true;
             return false;
         }
     }

@@ -74,7 +74,6 @@ public abstract class JavaEventStoreTest {
         ));
     }
 
-    @Ignore
     @Test
     public void
     can_not_read_from_stream_after_reaching_end_despite_writing_more_events() {
