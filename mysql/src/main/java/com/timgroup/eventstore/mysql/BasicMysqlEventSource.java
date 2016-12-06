@@ -68,8 +68,9 @@ public class BasicMysqlEventSource implements EventSource {
 
     @Override
     public Collection<Component> monitoring() {
+        String id = "EventStore-" + this.name;
         String label = "EventStore (" + this.name + ")";
-        return singletonList(new DatabaseConnectionComponent(label, label, connectionProvider::getConnection));
+        return singletonList(new DatabaseConnectionComponent(id, label, connectionProvider::getConnection));
     }
 
     public static PooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name) {
