@@ -6,7 +6,7 @@ organization in ThisBuild := "com.timgroup"
 
 scalaVersion in ThisBuild := "2.11.8"
 
-crossScalaVersions := Seq("2.11.8", "2.12.0")
+crossScalaVersions := Seq("2.11.8", "2.12.1")
 
 javaVersion in ThisBuild := "1.8"
 
