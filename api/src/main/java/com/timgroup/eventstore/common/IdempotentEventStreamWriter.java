@@ -12,6 +12,22 @@ import static com.timgroup.eventstore.api.EventStreamReader.EmptyStreamEventNumb
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public final class IdempotentEventStreamWriter implements EventStreamWriter {
+
+    public static class IncompatibleNewEventException extends RuntimeException {
+        public final ResolvedEvent currentEvent;
+        public final NewEvent newEvent;
+
+        public IncompatibleNewEventException(String message, ResolvedEvent currentEvent, NewEvent newEvent) {
+            super(message);
+            this.newEvent = newEvent;
+            this.currentEvent = currentEvent;
+        }
+    }
+
+    public interface IsCompatible {
+        void throwIfIncompatible(ResolvedEvent currentEvent, NewEvent newEvent) throws IncompatibleNewEventException;
+    }
+
     private final EventStreamWriter underlying;
     private final EventStreamReader reader;
     private final IsCompatible isCompatible;
@@ -68,21 +84,6 @@ public final class IdempotentEventStreamWriter implements EventStreamWriter {
 
     public static EventStreamWriter idempotent(EventStreamWriter underlying, EventStreamReader reader, IsCompatible isCompatible) {
         return new IdempotentEventStreamWriter(underlying, reader, isCompatible);
-    }
-
-    public interface IsCompatible {
-        void throwIfIncompatible(ResolvedEvent currentEvent, NewEvent newEvent) throws IncompatibleNewEventException;
-    }
-
-    public static class IncompatibleNewEventException extends RuntimeException {
-        final public ResolvedEvent currentEvent;
-        final public NewEvent newEvent;
-
-        public IncompatibleNewEventException(String message, ResolvedEvent currentEvent, NewEvent newEvent) {
-            super(message);
-            this.newEvent = newEvent;
-            this.currentEvent = currentEvent;
-        }
     }
 
     @SuppressWarnings("WeakerAccess")
