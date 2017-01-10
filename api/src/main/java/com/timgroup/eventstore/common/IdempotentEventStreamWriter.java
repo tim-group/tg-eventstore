@@ -66,23 +66,6 @@ public final class IdempotentEventStreamWriter implements EventStreamWriter {
         });
     }
 
-    @SuppressWarnings("WeakerAccess")
-    public static final IsCompatible BASIC_COMPATIBILITY_CHECK = (a, b) -> {
-        if (!a.eventRecord().eventType().equals(b.type())) {
-            throw new IncompatibleNewEventException("Event types don't match -- old: " + a.eventRecord().eventType() + ", new: " + b.type(), a, b);
-        }
-        if (!Arrays.equals(a.eventRecord().data(), b.data())) {
-            throw new IncompatibleNewEventException("Event bodies don't match -- old: " + new String(a.eventRecord().data(), UTF_8) + ", new: " + new String(b.data(), UTF_8), a, b);
-        }
-    };
-
-    @SuppressWarnings("WeakerAccess")
-    public static final IsCompatible METADATA_COMPATIBILITY_CHECK = (a, b) -> {
-        if (!Arrays.equals(a.eventRecord().metadata(), b.metadata())) {
-            throw new IncompatibleNewEventException("Event metadata doesn't match -- old: " + new String(a.eventRecord().metadata(), UTF_8) + ", new: " + new String(b.metadata(), UTF_8), a, b);
-        }
-    };
-
     public static EventStreamWriter idempotent(EventStreamWriter underlying, EventStreamReader reader, IsCompatible isCompatible) {
         return new IdempotentEventStreamWriter(underlying, reader, isCompatible);
     }
@@ -101,4 +84,21 @@ public final class IdempotentEventStreamWriter implements EventStreamWriter {
             this.currentEvent = currentEvent;
         }
     }
+
+    @SuppressWarnings("WeakerAccess")
+    public static final IsCompatible BASIC_COMPATIBILITY_CHECK = (a, b) -> {
+        if (!a.eventRecord().eventType().equals(b.type())) {
+            throw new IncompatibleNewEventException("Event types don't match -- old: " + a.eventRecord().eventType() + ", new: " + b.type(), a, b);
+        }
+        if (!Arrays.equals(a.eventRecord().data(), b.data())) {
+            throw new IncompatibleNewEventException("Event bodies don't match -- old: " + new String(a.eventRecord().data(), UTF_8) + ", new: " + new String(b.data(), UTF_8), a, b);
+        }
+    };
+
+    @SuppressWarnings("WeakerAccess")
+    public static final IsCompatible METADATA_COMPATIBILITY_CHECK = (a, b) -> {
+        if (!Arrays.equals(a.eventRecord().metadata(), b.metadata())) {
+            throw new IncompatibleNewEventException("Event metadata doesn't match -- old: " + new String(a.eventRecord().metadata(), UTF_8) + ", new: " + new String(b.metadata(), UTF_8), a, b);
+        }
+    };
 }
