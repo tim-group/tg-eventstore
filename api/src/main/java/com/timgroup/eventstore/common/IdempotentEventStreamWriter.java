@@ -2,14 +2,16 @@ package com.timgroup.eventstore.common;
 
 import com.timgroup.eventstore.api.*;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.stream.Stream;
 
-import com.timgroup.eventstore.common.IdempotentEventStreamWriter.IsCompatible;
-
 import static com.timgroup.eventstore.api.EventStreamReader.EmptyStreamEventNumber;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
-public class IdempotentEventStreamWriter implements EventStreamWriter {
+public final class IdempotentEventStreamWriter implements EventStreamWriter {
     private final EventStreamWriter underlying;
     private final EventStreamReader reader;
     private final IsCompatible isCompatible;
@@ -29,8 +31,8 @@ public class IdempotentEventStreamWriter implements EventStreamWriter {
     public void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) throws IncompatibleNewEventException {
         Iterator<NewEvent> newEventsIt = events.iterator();
         long newExpectedVersion = expectedVersion;
-        try {
-            Iterator<ResolvedEvent> currentEventsIt = reader.readStreamForwards(streamId, expectedVersion).iterator();
+        try (Stream<ResolvedEvent> resolvedEventStream = reader.readStreamForwards(streamId, expectedVersion)){
+            Iterator<ResolvedEvent> currentEventsIt = resolvedEventStream.iterator();
 
             while (newEventsIt.hasNext() && currentEventsIt.hasNext()) {
                 newExpectedVersion += 1;
@@ -54,16 +56,32 @@ public class IdempotentEventStreamWriter implements EventStreamWriter {
     }
 
     public static EventStreamWriter idempotent(EventStreamWriter underlying, EventStreamReader reader) {
+        return idempotent(underlying, reader, BASIC_COMPATIBILITY_CHECK);
+    }
+
+    public static EventStreamWriter idempotentWithMetadataCheck(EventStreamWriter underlying, EventStreamReader reader) {
         return idempotent(underlying, reader, (a, b) -> {
-            if (!a.eventRecord().eventType().equals(b.type())) {
-                throw new IncompatibleNewEventException("Event types don't match -- old: " + a.eventRecord().eventType() + ", new: " + b.type(), a, b);
-            }
-            if (!Arrays.equals(a.eventRecord().data(), b.data())) {
-                throw new IncompatibleNewEventException("Event bodies don't match -- old: " + new String(a.eventRecord().data()) + ", new: " + new String(b.data()), a, b);
-            }
-            return;
+            BASIC_COMPATIBILITY_CHECK.throwIfIncompatible(a, b);
+            METADATA_COMPATIBILITY_CHECK.throwIfIncompatible(a, b);
         });
     }
+
+    @SuppressWarnings("WeakerAccess")
+    public static final IsCompatible BASIC_COMPATIBILITY_CHECK = (a, b) -> {
+        if (!a.eventRecord().eventType().equals(b.type())) {
+            throw new IncompatibleNewEventException("Event types don't match -- old: " + a.eventRecord().eventType() + ", new: " + b.type(), a, b);
+        }
+        if (!Arrays.equals(a.eventRecord().data(), b.data())) {
+            throw new IncompatibleNewEventException("Event bodies don't match -- old: " + new String(a.eventRecord().data(), UTF_8) + ", new: " + new String(b.data(), UTF_8), a, b);
+        }
+    };
+
+    @SuppressWarnings("WeakerAccess")
+    public static final IsCompatible METADATA_COMPATIBILITY_CHECK = (a, b) -> {
+        if (!Arrays.equals(a.eventRecord().metadata(), b.metadata())) {
+            throw new IncompatibleNewEventException("Event metadata doesn't match -- old: " + new String(a.eventRecord().metadata(), UTF_8) + ", new: " + new String(b.metadata(), UTF_8), a, b);
+        }
+    };
 
     public static EventStreamWriter idempotent(EventStreamWriter underlying, EventStreamReader reader, IsCompatible isCompatible) {
         return new IdempotentEventStreamWriter(underlying, reader, isCompatible);

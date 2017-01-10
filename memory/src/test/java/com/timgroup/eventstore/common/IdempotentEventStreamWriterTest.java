@@ -1,6 +1,9 @@
 package com.timgroup.eventstore.common;
 
-import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.EventStreamReader;
+import com.timgroup.eventstore.api.EventStreamWriter;
+import com.timgroup.eventstore.api.IdempotentWriteFailure;
+import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Rule;
 import org.junit.Test;
@@ -13,6 +16,7 @@ import static com.timgroup.eventstore.api.EventStreamReader.EmptyStreamEventNumb
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.eventstore.api.StreamId.streamId;
 import static com.timgroup.eventstore.common.IdempotentEventStreamWriter.idempotent;
+import static com.timgroup.eventstore.common.IdempotentEventStreamWriter.idempotentWithMetadataCheck;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -76,8 +80,9 @@ public class IdempotentEventStreamWriterTest {
         assertThat(reader.readStreamForwards(stream).count(), is(1L));
     }
 
+
     @Test public void
-   successful_event_when_stream_moves_past_expected_version_during_save() {
+    successful_event_when_stream_moves_past_expected_version_during_save() {
         underlying
                 .write(stream, singletonList(newEvent("type", "data".getBytes(), "metadata".getBytes())), EmptyStreamEventNumber);
 
@@ -97,6 +102,18 @@ public class IdempotentEventStreamWriterTest {
                 .write(stream, singletonList(newEvent("type", "data".getBytes(), "metadata".getBytes())), EmptyStreamEventNumber);
         idempotent(underlying, reader)
                 .write(stream, singletonList(newEvent("type", "different data".getBytes(), "metadata".getBytes())), EmptyStreamEventNumber);
+    }
+
+    @Test public void
+    throws_IdempotentWriteFailure_for_different_metadata_with_the_same_version() {
+        thrown.expect(IdempotentEventStreamWriter.IncompatibleNewEventException.class);
+
+        underlying
+                .write(stream, singletonList(newEvent("type", "data".getBytes(), "metadata".getBytes())), EmptyStreamEventNumber);
+        idempotentWithMetadataCheck(underlying, reader)
+                .write(stream, singletonList(newEvent("type", "data".getBytes(), "different metadata".getBytes())), EmptyStreamEventNumber);
+
+        assertThat(reader.readStreamForwards(stream).count(), is(1L));
     }
 
     @Test public void
@@ -146,14 +163,13 @@ public class IdempotentEventStreamWriterTest {
                         newEvent("type", "data2".getBytes(), "metadata".getBytes()),
                         newEvent("type", "data3".getBytes(), "metadata".getBytes())
                         ), EmptyStreamEventNumber);
-        idempotent(underlying, reader, (a, b) -> {
-            return;
-        })
+        idempotent(underlying, reader, (a, b) -> {})
                 .write(stream, asList(
                         newEvent("type", "data2".getBytes(), "metadata".getBytes()),
                         newEvent("type", "different data".getBytes(), "metadata".getBytes())),
                         0);
     }
+
     @Test public void
     allows_custom_matching_to_cause_not_matching() {
         IdempotentWriteFailure e = new IdempotentWriteFailure("Because I said say!");
