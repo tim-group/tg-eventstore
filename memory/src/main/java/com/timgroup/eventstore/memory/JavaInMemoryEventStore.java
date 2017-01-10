@@ -7,7 +7,19 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.EventCategoryReader;
+import com.timgroup.eventstore.api.EventReader;
+import com.timgroup.eventstore.api.EventRecord;
+import com.timgroup.eventstore.api.EventStore;
+import com.timgroup.eventstore.api.EventStreamReader;
+import com.timgroup.eventstore.api.EventStreamWriter;
+import com.timgroup.eventstore.api.NewEvent;
+import com.timgroup.eventstore.api.NoSuchStreamException;
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
+import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.api.StreamId;
+import com.timgroup.eventstore.api.WrongExpectedVersionException;
 import com.timgroup.eventstore.api.legacy.LegacyStore;
 
 public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamReader, EventCategoryReader, EventReader, PositionCodec {
@@ -55,6 +67,13 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     @Override
     public String serializePosition(Position position) {
         return Long.toString(((InMemoryEventStorePosition) position).eventNumber);
+    }
+
+    @Override
+    public int comparePositions(Position left, Position right) {
+        long leftValue = ((InMemoryEventStorePosition) left).eventNumber;
+        long rightValue = ((InMemoryEventStorePosition) left).eventNumber;
+        return Long.compare(leftValue, rightValue);
     }
 
     public EventStore toLegacy() {

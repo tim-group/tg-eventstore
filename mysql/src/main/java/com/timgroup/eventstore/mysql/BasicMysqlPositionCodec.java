@@ -13,4 +13,11 @@ public class BasicMysqlPositionCodec implements PositionCodec {
     public String serializePosition(Position position) {
         return Long.toString(((BasicMysqlEventStorePosition) position).value);
     }
+
+    @Override
+    public int comparePositions(Position left, Position right) {
+        long leftValue = ((BasicMysqlEventStorePosition) left).value;
+        long rightValue = ((BasicMysqlEventStorePosition) right).value;
+        return Long.compare(leftValue, rightValue);
+    }
 }
