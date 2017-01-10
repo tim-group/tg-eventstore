@@ -11,7 +11,9 @@ import java.util.stream.Stream;
 import static com.timgroup.eventstore.api.EventStreamReader.EmptyStreamEventNumber;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-public class IdempotentEventStreamWriter implements EventStreamWriter {
+import com.timgroup.eventstore.common.IdempotentEventStreamWriter.IsCompatible;
+
+public final class IdempotentEventStreamWriter implements EventStreamWriter {
 
     public static class IncompatibleNewEventException extends RuntimeException {
         public final ResolvedEvent currentEvent;
