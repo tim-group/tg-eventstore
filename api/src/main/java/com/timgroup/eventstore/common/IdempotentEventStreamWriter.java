@@ -20,7 +20,7 @@ public final class IdempotentEventStreamWriter implements EventStreamWriter {
         public final NewEvent newEvent;
 
         public IncompatibleNewEventException(String message, ResolvedEvent currentEvent, NewEvent newEvent) {
-            super(message);
+            super("at position " + currentEvent.position() + ": " + message);
             this.newEvent = newEvent;
             this.currentEvent = currentEvent;
         }
