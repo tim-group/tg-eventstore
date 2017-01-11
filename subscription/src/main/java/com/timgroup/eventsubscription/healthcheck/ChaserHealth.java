@@ -59,4 +59,8 @@ public class ChaserHealth extends Component implements ChaserListener {
         currentPosition = position;
         lastPollTimestamp = Optional.of(clock.instant());
     }
+
+    public Optional<Position> getCurrentPosition() {
+        return Optional.ofNullable(currentPosition);
+    }
 }
