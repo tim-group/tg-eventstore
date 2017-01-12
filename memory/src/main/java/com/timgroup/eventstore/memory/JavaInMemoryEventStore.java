@@ -72,7 +72,7 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     @Override
     public int comparePositions(Position left, Position right) {
         long leftValue = ((InMemoryEventStorePosition) left).eventNumber;
-        long rightValue = ((InMemoryEventStorePosition) left).eventNumber;
+        long rightValue = ((InMemoryEventStorePosition) right).eventNumber;
         return Long.compare(leftValue, rightValue);
     }
 
