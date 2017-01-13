@@ -9,8 +9,6 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Spliterator;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import static com.timgroup.eventstore.mysql.BasicMysqlEventStorePosition.EMPTY_STORE_POSITION;
@@ -42,10 +40,30 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
         return stream(spliterator, false);
     }
 
+    @Override
+    public Stream<ResolvedEvent> readStreamBackwards(StreamId streamId) {
+        return readStreamBackwards(streamId, Long.MAX_VALUE);
+    }
+
+    @Override
+    public Stream<ResolvedEvent> readStreamBackwards(StreamId streamId, long eventNumber) {
+        ensureStreamExists(streamId);
+        EventSpliterator spliterator = new EventSpliterator(
+                connectionProvider,
+                batchSize,
+                tableName,
+                new BasicMysqlEventStorePosition(Long.MAX_VALUE),
+                format("stream_category = '%s' and stream_id = '%s' and event_number < %s", streamId.category(), streamId.id(), eventNumber),
+                true
+        );
+
+        return stream(spliterator, false);
+    }
+
     private void ensureStreamExists(StreamId streamId) throws NoSuchStreamException {
         try (Connection connection = connectionProvider.getConnection();
              Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(String.format("select position from %s where stream_category = '%s' and stream_id = '%s' limit 1", tableName, streamId.category(), streamId.id()));
+             ResultSet resultSet = statement.executeQuery(String.format("select position from %s where stream_category = '%s' and stream_id = '%s' limit 1", tableName, streamId.category(), streamId.id()))
         ) {
             if (!resultSet.first()) {
                 throw new NoSuchStreamException(streamId);

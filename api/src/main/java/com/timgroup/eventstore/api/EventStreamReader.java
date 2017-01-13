@@ -10,4 +10,12 @@ public interface EventStreamReader {
     }
 
     Stream<ResolvedEvent> readStreamForwards(StreamId streamId, long eventNumber);
+
+    default Stream<ResolvedEvent> readStreamBackwards(StreamId streamId) {
+        throw new UnsupportedOperationException("reading backwards is not yet supported");
+    }
+
+    default Stream<ResolvedEvent> readStreamBackwards(StreamId streamId, long eventNumber) {
+        throw new UnsupportedOperationException("reading backwards is not yet supported");
+    }
 }

@@ -76,7 +76,7 @@ public abstract class JavaEventStoreTest {
 
     @Test
     public void
-    can_not_read_from_stream_after_reaching_end_despite_writing_more_events() {
+    cannot_read_from_stream_after_reaching_end_despite_writing_more_events() {
         eventSource().writeStream().write(stream_1, asList(
                 event_1
         ));
@@ -130,6 +130,43 @@ public abstract class JavaEventStoreTest {
 
     @Test
     public void
+    can_read_event_stream_backwards() {
+        eventSource().writeStream().write(stream_1, asList(anEvent()));
+        eventSource().writeStream().write(stream_3, asList(anEvent()));
+        eventSource().writeStream().write(stream_2, asList(anEvent()));
+        eventSource().writeStream().write(stream_1, asList(anEvent()));
+
+        assertThat(eventSource().readStream().readStreamBackwards(stream_1).map(ResolvedEvent::eventRecord).collect(toList()), contains(
+                objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 1L),
+                objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 0L)
+        ));
+    }
+
+    @Test
+    public void
+    can_continue_reading_stream_backwards_from_position() {
+        eventSource().writeStream().write(stream_1, asList(anEvent()));
+        eventSource().writeStream().write(stream_3, asList(anEvent()));
+        eventSource().writeStream().write(stream_2, asList(anEvent()));
+        eventSource().writeStream().write(stream_1, asList(anEvent()));
+
+        assertThat(eventSource().readStream().readStreamBackwards(stream_1, 1L).map(ResolvedEvent::eventRecord).collect(toList()), contains(
+                objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 0L)
+        ));
+    }
+
+    @Test
+    public void
+    can_continue_reading_stream_backwards_from_position_at_beginning_of_stream() {
+        eventSource().writeStream().write(stream_1, asList(event_1));
+        eventSource().writeStream().write(stream_2, asList(event_2));
+        eventSource().writeStream().write(stream_3, asList(event_3));
+
+        assertThat(eventSource().readStream().readStreamBackwards(stream_1, 0L).collect(toList()), empty());
+    }
+
+    @Test
+    public void
     throws_exception_when_stream_does_not_exist() {
         thrown.expect(NoSuchStreamException.class);
         eventSource().readStream().readStreamForwards(stream_1, 0).collect(toList());
@@ -158,7 +195,7 @@ public abstract class JavaEventStoreTest {
 
     @Test
     public void
-    can_continue_reading_from_position() {
+    can_continue_reading_all_from_position() {
         eventSource().writeStream().write(stream_1, asList(event_1));
         eventSource().writeStream().write(stream_2, asList(event_2));
         eventSource().writeStream().write(stream_3, asList(event_3));
@@ -175,7 +212,7 @@ public abstract class JavaEventStoreTest {
 
     @Test
     public void
-    can_continue_reading_from_position_at_end_of_stream() {
+    can_continue_reading_all_from_position_at_end_of_stream() {
         eventSource().writeStream().write(stream_1, asList(event_1));
         eventSource().writeStream().write(stream_2, asList(event_2));
         eventSource().writeStream().write(stream_3, asList(event_3));
@@ -203,7 +240,7 @@ public abstract class JavaEventStoreTest {
 
     @Test
     public void
-    can_continue_reading_backwards_from_position() {
+    can_continue_reading_all_backwards_from_position() {
         eventSource().writeStream().write(stream_1, asList(event_1));
         eventSource().writeStream().write(stream_2, asList(event_2));
         eventSource().writeStream().write(stream_3, asList(event_3));
@@ -220,7 +257,7 @@ public abstract class JavaEventStoreTest {
 
     @Test
     public void
-    can_continue_reading_backwards_from_position_at_beginning_of_stream() {
+    can_continue_reading_all_backwards_from_position_at_beginning_of_stream() {
         eventSource().writeStream().write(stream_1, asList(event_1));
         eventSource().writeStream().write(stream_2, asList(event_2));
         eventSource().writeStream().write(stream_3, asList(event_3));
