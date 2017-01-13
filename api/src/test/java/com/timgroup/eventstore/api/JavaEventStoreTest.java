@@ -189,6 +189,51 @@ public abstract class JavaEventStoreTest {
 
     @Test
     public void
+    can_read_all_events_backwards() {
+        eventSource().writeStream().write(stream_1, asList(event_1));
+        eventSource().writeStream().write(stream_2, asList(event_2));
+        eventSource().writeStream().write(stream_3, asList(event_3));
+
+        assertThat(eventSource().readAll().readAllBackwards().map(ResolvedEvent::eventRecord).collect(toList()), contains(
+                objectWith(EventRecord::streamId, stream_3).and(EventRecord::eventNumber, 0L),
+                objectWith(EventRecord::streamId, stream_2).and(EventRecord::eventNumber, 0L),
+                objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 0L)
+        ));
+    }
+
+    @Test
+    public void
+    can_continue_reading_backwards_from_position() {
+        eventSource().writeStream().write(stream_1, asList(event_1));
+        eventSource().writeStream().write(stream_2, asList(event_2));
+        eventSource().writeStream().write(stream_3, asList(event_3));
+
+        try (Stream<ResolvedEvent> stream = eventSource().readAll().readAllBackwards()) {
+            Position position = stream.limit(1).reduce((a, b) -> b).get().position();
+
+            assertThat(eventSource().readAll().readAllBackwards(position).map(ResolvedEvent::eventRecord).collect(toList()), contains(
+                    objectWith(EventRecord::streamId, stream_2).and(EventRecord::eventNumber, 0L),
+                    objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 0L)
+            ));
+        }
+    }
+
+    @Test
+    public void
+    can_continue_reading_backwards_from_position_at_beginning_of_stream() {
+        eventSource().writeStream().write(stream_1, asList(event_1));
+        eventSource().writeStream().write(stream_2, asList(event_2));
+        eventSource().writeStream().write(stream_3, asList(event_3));
+
+        try (Stream<ResolvedEvent> stream = eventSource().readAll().readAllBackwards()) {
+            Position position = stream.reduce((a, b) -> b).get().position();
+
+            assertThat(eventSource().readAll().readAllBackwards(position).collect(toList()), empty());
+        }
+    }
+
+    @Test
+    public void
     fails_if_expected_version_has_not_been_reached() {
         thrown.expect(WrongExpectedVersionException.class);
         eventSource().writeStream().write(stream_1, asList(event_2), 0);

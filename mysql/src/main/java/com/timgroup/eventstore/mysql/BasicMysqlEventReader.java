@@ -3,12 +3,10 @@ package com.timgroup.eventstore.mysql;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
-import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 
 import java.util.stream.Stream;
 
 import static com.timgroup.eventstore.mysql.BasicMysqlEventStorePosition.EMPTY_STORE_POSITION;
-import static java.lang.String.format;
 import static java.util.stream.StreamSupport.stream;
 
 public class BasicMysqlEventReader implements EventReader {
@@ -30,6 +28,25 @@ public class BasicMysqlEventReader implements EventReader {
                 tableName,
                 (BasicMysqlEventStorePosition) positionExclusive,
                 ""
+        );
+
+        return stream(spliterator, false);
+    }
+
+    @Override
+    public Stream<ResolvedEvent> readAllBackwards() {
+        return readAllBackwards(new BasicMysqlEventStorePosition(Long.MAX_VALUE));
+    }
+
+    @Override
+    public Stream<ResolvedEvent> readAllBackwards(Position positionExclusive) {
+        EventSpliterator spliterator = new EventSpliterator(
+                connectionProvider,
+                batchSize,
+                tableName,
+                (BasicMysqlEventStorePosition) positionExclusive,
+                "",
+                true
         );
 
         return stream(spliterator, false);

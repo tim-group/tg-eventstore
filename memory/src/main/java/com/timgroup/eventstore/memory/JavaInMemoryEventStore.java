@@ -53,12 +53,14 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
         return events.stream().skip(inMemoryPosition.eventNumber);
     }
 
+    @Override
     public Stream<ResolvedEvent> readAllBackwards() {
         List<ResolvedEvent> reversed = new ArrayList<>(events);
         Collections.reverse(reversed);
         return reversed.stream();
     }
 
+    @Override
     public Stream<ResolvedEvent> readAllBackwards(Position positionExclusive) {
         InMemoryEventStorePosition inMemoryPosition = (InMemoryEventStorePosition) positionExclusive;
         List<ResolvedEvent> reversed = events.stream().limit(inMemoryPosition.eventNumber - 1).collect(Collectors.toList());
