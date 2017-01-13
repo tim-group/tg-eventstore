@@ -15,21 +15,26 @@ import static java.lang.Integer.MIN_VALUE;
 import static java.lang.Long.MAX_VALUE;
 
 class EventSpliterator implements Spliterator<ResolvedEvent> {
-    private final int batchSize;
-    private final String tableName;
     private final ConnectionProvider connectionProvider;
+    private final String queryString;
 
     private BasicMysqlEventStorePosition lastPosition;
-    private final String condition;
     private Iterator<ResolvedEvent> currentPage = Collections.emptyIterator();
     private boolean streamExhausted = false;
 
     EventSpliterator(ConnectionProvider connectionProvider, int batchSize, String tableName, BasicMysqlEventStorePosition startingPosition, String condition) {
+        this(connectionProvider, batchSize, tableName, startingPosition, condition, false);
+    }
+
+    EventSpliterator(ConnectionProvider connectionProvider, int batchSize, String tableName, BasicMysqlEventStorePosition startingPosition, String condition, boolean backwards) {
         this.connectionProvider = connectionProvider;
-        this.batchSize = batchSize;
-        this.tableName = tableName;
         this.lastPosition = startingPosition;
-        this.condition = condition;
+        this.queryString = "select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata" +
+                " from " + tableName +
+                " where position " + (backwards ? "<" : ">") + " %s" +
+                (condition.isEmpty() ? "" : " and " + condition) +
+                " order by position " + (backwards ? "desc" : "asc") +
+                " limit " + batchSize;
     }
 
     @Override
@@ -37,8 +42,7 @@ class EventSpliterator implements Spliterator<ResolvedEvent> {
         if (!currentPage.hasNext() && !streamExhausted) {
             try (Connection connection = connectionProvider.getConnection();
                  Statement statement = streamingStatementFrom(connection);
-                 ResultSet resultSet = statement.executeQuery(String.format("select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata " +
-                         "from %s where %s position > %s order by position asc limit %d", tableName, condition.isEmpty() ? "" : condition + " and ", lastPosition.value, batchSize));
+                 ResultSet resultSet = statement.executeQuery(String.format(queryString, lastPosition.value))
             ) {
 
                 List<ResolvedEvent> list = new ArrayList<>();
@@ -59,7 +63,6 @@ class EventSpliterator implements Spliterator<ResolvedEvent> {
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
-
         }
 
         if (currentPage.hasNext()) {

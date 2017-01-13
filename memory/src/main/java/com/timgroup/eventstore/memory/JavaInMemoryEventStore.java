@@ -1,10 +1,14 @@
 package com.timgroup.eventstore.memory;
 
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.timgroup.eventstore.api.EventCategoryReader;
@@ -47,6 +51,19 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
         InMemoryEventStorePosition inMemoryPosition = (InMemoryEventStorePosition) positionExclusive;
         return events.stream().skip(inMemoryPosition.eventNumber);
+    }
+
+    public Stream<ResolvedEvent> readAllBackwards() {
+        List<ResolvedEvent> reversed = new ArrayList<>(events);
+        Collections.reverse(reversed);
+        return reversed.stream();
+    }
+
+    public Stream<ResolvedEvent> readAllBackwards(Position positionExclusive) {
+        InMemoryEventStorePosition inMemoryPosition = (InMemoryEventStorePosition) positionExclusive;
+        List<ResolvedEvent> reversed = events.stream().limit(inMemoryPosition.eventNumber - 1).collect(Collectors.toList());
+        Collections.reverse(reversed);
+        return reversed.stream();
     }
 
     @Override
@@ -111,6 +128,16 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     @Override
     public Stream<ResolvedEvent> readCategoryForwards(String category, Position position) {
         return readAllForwards(position).filter(evt -> evt.eventRecord().streamId().category().equals(category));
+    }
+
+    @Override
+    public Stream<ResolvedEvent> readCategoryBackwards(String category) {
+        return readAllBackwards().filter(evt -> evt.eventRecord().streamId().category().equals(category));
+    }
+
+    @Override
+    public Stream<ResolvedEvent> readCategoryBackwards(String category, Position position) {
+        return readAllBackwards(position).filter(evt -> evt.eventRecord().streamId().category().equals(category));
     }
 
     @Override

@@ -272,6 +272,54 @@ public abstract class JavaEventStoreTest {
         assertThat(eventSource().readCategory().readCategoryForwards(category_1, position).collect(toList()), empty());
     }
 
+    @Test
+    public void
+    can_read_events_backwards_by_category() {
+        NewEvent event1 = anEvent();
+        NewEvent event4 = anEvent();
+        eventSource().writeStream().write(streamId(category_1, "Id1"), asList(event1));
+        eventSource().writeStream().write(streamId(category_3, "Id1"), asList(anEvent()));
+        eventSource().writeStream().write(streamId(category_2, "Id1"), asList(anEvent()));
+        eventSource().writeStream().write(streamId(category_1, "Id2"), asList(event4));
+
+        assertThat(eventSource().readCategory().readCategoryBackwards(category_1).map(ResolvedEvent::eventRecord).collect(toList()), contains(
+                objectWith(EventRecord::streamId, streamId(category_1, "Id2")),
+                objectWith(EventRecord::streamId, streamId(category_1, "Id1"))
+        ));
+    }
+
+    @Test
+    public void
+    can_continue_reading_backwards_from_position_of_category() {
+        NewEvent event1 = anEvent();
+        NewEvent event4 = anEvent();
+        eventSource().writeStream().write(streamId(category_1, "Id1"), asList(event1));
+        eventSource().writeStream().write(streamId(category_3, "Id1"), asList(anEvent()));
+        eventSource().writeStream().write(streamId(category_2, "Id1"), asList(anEvent()));
+        eventSource().writeStream().write(streamId(category_1, "Id2"), asList(event4));
+
+        Position position = eventSource().readCategory().readCategoryBackwards(category_1).collect(toList()).get(0).position();
+
+        assertThat(eventSource().readCategory().readCategoryBackwards(category_1, position).map(ResolvedEvent::eventRecord).collect(toList()), Matchers.contains(
+                objectWith(EventRecord::streamId, streamId(category_1, "Id1"))
+        ));
+    }
+
+    @Test
+    public void
+    can_continue_reading_backwards_from_position_at_beginning_of_category() {
+        NewEvent event1 = anEvent();
+        NewEvent event4 = anEvent();
+        eventSource().writeStream().write(streamId(category_1, "Id1"), asList(event1));
+        eventSource().writeStream().write(streamId(category_3, "Id1"), asList(anEvent()));
+        eventSource().writeStream().write(streamId(category_2, "Id1"), asList(anEvent()));
+        eventSource().writeStream().write(streamId(category_1, "Id2"), asList(event4));
+
+        Position position = eventSource().readCategory().readCategoryBackwards(category_1).reduce((a, b) -> b).get().position();
+
+        assertThat(eventSource().readCategory().readCategoryBackwards(category_1, position).collect(toList()), empty());
+    }
+
     private static Matcher<Instant> shortlyAfter(Instant expected) {
         return new TypeSafeDiagnosingMatcher<Instant>() {
             @Override
