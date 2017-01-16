@@ -167,16 +167,38 @@ public abstract class JavaEventStoreTest {
 
     @Test
     public void
-    throws_exception_when_stream_does_not_exist() {
+    throws_exception_when_stream_does_not_exist_on_stream_creation() {
+        EventStreamReader eventStreamReader = eventSource().readStream();
+
         thrown.expect(NoSuchStreamException.class);
-        eventSource().readStream().readStreamForwards(stream_1, 0).collect(toList());
+        eventStreamReader.readStreamForwards(stream_1);
     }
 
     @Test
     public void
-    throws_exception_when_stream_does_not_exist_on_stream_creation() {
+    throws_exception_when_stream_does_not_exist_on_stream_creation_with_event_number() {
+        EventStreamReader eventStreamReader = eventSource().readStream();
+
         thrown.expect(NoSuchStreamException.class);
-        eventSource().readStream().readStreamForwards(stream_1, 0);
+        eventStreamReader.readStreamForwards(stream_1, 0);
+    }
+
+    @Test
+    public void
+    throws_exception_when_stream_does_not_exist_on_backwards_stream_creation() {
+        EventStreamReader eventStreamReader = eventSource().readStream();
+
+        thrown.expect(NoSuchStreamException.class);
+        eventStreamReader.readStreamBackwards(stream_1);
+    }
+
+    @Test
+    public void
+    throws_exception_when_stream_does_not_exist_on_backwards_stream_creation_with_event_number() {
+        EventStreamReader eventStreamReader = eventSource().readStream();
+
+        thrown.expect(NoSuchStreamException.class);
+        eventStreamReader.readStreamBackwards(stream_1, Long.MAX_VALUE);
     }
 
     @Test

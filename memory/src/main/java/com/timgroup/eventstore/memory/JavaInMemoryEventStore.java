@@ -29,9 +29,7 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
 
     @Override
     public Stream<ResolvedEvent> readStreamForwards(StreamId streamId, long eventNumberExclusive) {
-        internalReadStream(streamId, Long.MIN_VALUE)
-                .findAny()
-                .orElseThrow(() -> new NoSuchStreamException(streamId));
+        ensureStreamExists(streamId);
         return internalReadStream(streamId, eventNumberExclusive);
     }
 
@@ -132,11 +130,13 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
 
     @Override
     public Stream<ResolvedEvent> readStreamBackwards(StreamId streamId) {
+        ensureStreamExists(streamId);
         return readAllBackwards().filter(evt -> evt.eventRecord().streamId().equals(streamId));
     }
 
     @Override
     public Stream<ResolvedEvent> readStreamBackwards(StreamId streamId, long eventNumberExclusive) {
+        ensureStreamExists(streamId);
         return readAllBackwards()
                 .filter(evt -> evt.eventRecord().streamId().equals(streamId))
                 .filter(evt -> evt.eventRecord().eventNumber() < eventNumberExclusive);
@@ -145,6 +145,12 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     @Override
     public Position emptyCategoryPosition(String category) {
         return emptyStorePosition();
+    }
+
+    private void ensureStreamExists(StreamId streamId) {
+        internalReadStream(streamId, Long.MIN_VALUE)
+                .findAny()
+                .orElseThrow(() -> new NoSuchStreamException(streamId));
     }
 
     private Stream<ResolvedEvent> internalReadStream(StreamId streamId, long eventNumberExclusive) {
