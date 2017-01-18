@@ -31,31 +31,31 @@ public final class EventRecord {
         return new ResolvedEvent(position, this);
     }
 
+    public String locator() {
+        return String.format("<%s/%s/%s>(%s)",
+                streamId().category(),
+                streamId().id(),
+                eventNumber(),
+                eventType()
+        );
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
         EventRecord that = (EventRecord) o;
-
-        if (eventNumber != that.eventNumber) return false;
-        if (!timestamp.equals(that.timestamp)) return false;
-        if (!streamId.equals(that.streamId)) return false;
-        if (!eventType.equals(that.eventType)) return false;
-        if (!Arrays.equals(data, that.data)) return false;
-        return Arrays.equals(metadata, that.metadata);
-
+        return eventNumber == that.eventNumber &&
+                Objects.equals(timestamp, that.timestamp) &&
+                Objects.equals(streamId, that.streamId) &&
+                Objects.equals(eventType, that.eventType) &&
+                Arrays.equals(data, that.data) &&
+                Arrays.equals(metadata, that.metadata);
     }
 
     @Override
     public int hashCode() {
-        int result = timestamp.hashCode();
-        result = 31 * result + streamId.hashCode();
-        result = 31 * result + (int) (eventNumber ^ (eventNumber >>> 32));
-        result = 31 * result + eventType.hashCode();
-        result = 31 * result + Arrays.hashCode(data);
-        result = 31 * result + Arrays.hashCode(metadata);
-        return result;
+        return Objects.hash(timestamp, streamId, eventNumber, eventType, data, metadata);
     }
 
     @Override
