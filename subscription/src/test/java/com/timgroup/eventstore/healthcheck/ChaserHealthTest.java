@@ -1,10 +1,10 @@
 package com.timgroup.eventstore.healthcheck;
 
+import java.time.Instant;
+
 import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventsubscription.healthcheck.ChaserHealth;
 import org.junit.Test;
-
-import java.time.Instant;
 
 import static com.timgroup.tucker.info.Status.CRITICAL;
 import static com.timgroup.tucker.info.Status.OK;
@@ -17,7 +17,7 @@ import static org.hamcrest.Matchers.is;
 public class ChaserHealthTest {
     private final ManualClock clock = new ManualClock(Instant.now(), UTC);
 
-    private final ChaserHealth chaserHealth = new ChaserHealth("", clock);
+    private final ChaserHealth chaserHealth = new ChaserHealth("", clock, maxInitialReplayDuration);
 
     @Test public void
     reports_OK_if_chaser_polled_within_last_5s() {

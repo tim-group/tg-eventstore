@@ -1,22 +1,25 @@
 package com.timgroup.eventsubscription.healthcheck;
 
-import com.timgroup.eventstore.api.Position;
-import com.timgroup.eventsubscription.ChaserListener;
-import com.timgroup.tucker.info.Component;
-import com.timgroup.tucker.info.Report;
-import org.slf4j.LoggerFactory;
-
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventsubscription.ChaserListener;
+import com.timgroup.tucker.info.Component;
+import com.timgroup.tucker.info.Report;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static com.timgroup.tucker.info.Status.CRITICAL;
+import static com.timgroup.tucker.info.Status.INFO;
 import static com.timgroup.tucker.info.Status.OK;
 import static com.timgroup.tucker.info.Status.WARNING;
 import static java.lang.String.format;
 
 public class ChaserHealth extends Component implements ChaserListener {
+    private static final Logger LOG = LoggerFactory.getLogger(ChaserHealth.class);
     private final Clock clock;
     private volatile Optional<Instant> lastPollTimestamp = Optional.empty();
     private volatile Position currentPosition = null;
@@ -40,13 +43,12 @@ public class ChaserHealth extends Component implements ChaserListener {
             }
         }
 
-        return new Report(WARNING, "Awaiting initial catchup. Current version: " + currentPosition);
+        return new Report(INFO, "Awaiting initial catchup. Current version: " + currentPosition);
     }
 
     @Override
     public void transientFailure(Exception e) {
-        LoggerFactory.getLogger(getClass()).warn("Failure chasing eventstream.", e);
-
+        LOG.warn("Failure chasing eventstream.", e);
     }
 
     @Override
