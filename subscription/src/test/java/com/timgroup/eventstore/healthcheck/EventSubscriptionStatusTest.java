@@ -104,12 +104,30 @@ public class EventSubscriptionStatusTest {
     }
 
     @Test public void
-    reports_critical_if_stale_for_over_configured_maximum_duration_during_catchup() {
+    reports_ok_if_stale_for_less_than_a_second_during_catchup() {
+        adapter.chaserReceived(new TestPosition(1));
+        adapter.eventProcessed(new TestPosition(1));
+
+        clock.bumpMillis(500);
+        assertThat(status.getReport(), is(new Report(OK, "Stale, catching up. Currently at version 1. (Stale for PT0.5S)")));
+    }
+
+    @Test public void
+    reports_warning_if_stale_for_over_configured_maximum_duration_during_initial_catchup() {
         adapter.chaserReceived(new TestPosition(1));
         adapter.eventProcessed(new TestPosition(1));
 
         clock.bumpSeconds(124);
-        assertThat(status.getReport(), is(new Report(CRITICAL, "Stale, catching up. Currently at version 1. (Stale for PT2M4S)")));
+        assertThat(status.getReport(), is(new Report(WARNING, "Stale, catching up. Currently at version 1. (Stale for PT2M4S)")));
+    }
+
+    @Test public void
+    reports_warning_if_stale_for_more_than_25_pct_over_configured_maximum_duration_during_initial_catchup() {
+        adapter.chaserReceived(new TestPosition(1));
+        adapter.eventProcessed(new TestPosition(1));
+
+        clock.bumpSeconds(800);
+        assertThat(status.getReport(), is(new Report(CRITICAL, "Stale, catching up. Currently at version 1. (Stale for PT13M20S)")));
     }
 
     @Test public void
