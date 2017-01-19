@@ -19,6 +19,8 @@ import static java.lang.String.format;
 
 public class ChaserHealth extends Component implements ChaserListener {
     private static final Logger LOG = LoggerFactory.getLogger(ChaserHealth.class);
+    private static final Duration WARNING_THRESHOLD = Duration.ofSeconds(5);
+    private static final Duration CRITICAL_THRESHOLD = Duration.ofSeconds(30);
     private final Clock clock;
     private volatile Instant lastPollTimestamp;
     private volatile Position currentPosition;
@@ -30,15 +32,15 @@ public class ChaserHealth extends Component implements ChaserListener {
 
     @Override
     public Report getReport() {
-        if (lastPollTimestamp != null) {
-            Instant timestamp = lastPollTimestamp;
-            long seconds = Duration.between(timestamp, Instant.now(clock)).getSeconds();
-            if (seconds > 30) {
-                return new Report(CRITICAL, format("potentially stale. Last up-to-date at at %s. (%s seconds ago).", timestamp, seconds));
-            } else if (seconds > 5) {
-                return new Report(WARNING, format("potentially stale. Last up-to-date at at %s. (%s seconds ago).", timestamp, seconds));
+        Instant timestamp = lastPollTimestamp;
+        if (timestamp != null) {
+            Duration duration = Duration.between(timestamp, Instant.now(clock));
+            if (duration.compareTo(CRITICAL_THRESHOLD) > 0) {
+                return new Report(CRITICAL, format("potentially stale. Last up-to-date at at %s. (%s ago).", timestamp, duration));
+            } else if (duration.compareTo(WARNING_THRESHOLD) > 0) {
+                return new Report(WARNING, format("potentially stale. Last up-to-date at at %s. (%s ago).", timestamp, duration));
             } else {
-                return new Report(OK, format("up-to-date at at %s. (%s seconds ago). Current version: %s", timestamp, seconds, currentPosition));
+                return new Report(OK, format("up-to-date at at %s. (%s ago). Current version: %s", timestamp, duration, currentPosition));
             }
         }
 
