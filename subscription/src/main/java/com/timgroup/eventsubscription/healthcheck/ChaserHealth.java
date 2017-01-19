@@ -3,7 +3,6 @@ package com.timgroup.eventsubscription.healthcheck;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Optional;
 
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventsubscription.ChaserListener;
@@ -21,8 +20,8 @@ import static java.lang.String.format;
 public class ChaserHealth extends Component implements ChaserListener {
     private static final Logger LOG = LoggerFactory.getLogger(ChaserHealth.class);
     private final Clock clock;
-    private volatile Optional<Instant> lastPollTimestamp = Optional.empty();
-    private volatile Position currentPosition = null;
+    private volatile Instant lastPollTimestamp;
+    private volatile Position currentPosition;
 
     public ChaserHealth(String name, Clock clock) {
         super("event-store-chaser-" + name, "Eventstore chaser health (" + name + ")");
@@ -31,9 +30,9 @@ public class ChaserHealth extends Component implements ChaserListener {
 
     @Override
     public Report getReport() {
-        if (lastPollTimestamp.isPresent()) {
-            Instant timestamp = lastPollTimestamp.get();
-            long seconds = Duration.between(timestamp, clock.instant()).getSeconds();
+        if (lastPollTimestamp != null) {
+            Instant timestamp = lastPollTimestamp;
+            long seconds = Duration.between(timestamp, Instant.now(clock)).getSeconds();
             if (seconds > 30) {
                 return new Report(CRITICAL, format("potentially stale. Last up-to-date at at %s. (%s seconds ago).", timestamp, seconds));
             } else if (seconds > 5) {
@@ -59,6 +58,6 @@ public class ChaserHealth extends Component implements ChaserListener {
     @Override
     public void chaserUpToDate(Position position) {
         currentPosition = position;
-        lastPollTimestamp = Optional.of(clock.instant());
+        lastPollTimestamp = Instant.now(clock);
     }
 }

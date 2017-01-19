@@ -7,6 +7,7 @@ import com.timgroup.eventsubscription.healthcheck.ChaserHealth;
 import org.junit.Test;
 
 import static com.timgroup.tucker.info.Status.CRITICAL;
+import static com.timgroup.tucker.info.Status.INFO;
 import static com.timgroup.tucker.info.Status.OK;
 import static com.timgroup.tucker.info.Status.WARNING;
 import static java.time.ZoneOffset.UTC;
@@ -17,7 +18,7 @@ import static org.hamcrest.Matchers.is;
 public class ChaserHealthTest {
     private final ManualClock clock = new ManualClock(Instant.now(), UTC);
 
-    private final ChaserHealth chaserHealth = new ChaserHealth("", clock, maxInitialReplayDuration);
+    private final ChaserHealth chaserHealth = new ChaserHealth("", clock);
 
     @Test public void
     reports_OK_if_chaser_polled_within_last_5s() {
@@ -50,7 +51,7 @@ public class ChaserHealthTest {
         chaserHealth.chaserReceived(new TestPosition(1));
 
         clock.bumpSeconds(31);
-        assertThat(chaserHealth.getReport().getStatus(), is(WARNING));
+        assertThat(chaserHealth.getReport().getStatus(), is(INFO));
     }
 
 }
