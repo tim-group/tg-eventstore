@@ -92,7 +92,7 @@ public class BasicMysqlEventSource implements EventSource {
         try {
             new BasicMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
         } catch (Exception e) {
-            LoggerFactory.getLogger(BasicMysqlEventSource.class).warn("Failed to ensure ES schme is created", e);
+            LoggerFactory.getLogger(BasicMysqlEventSource.class).warn("Failed to ensure ES scheme is created", e);
         }
 
         return new PooledMysqlEventSource(dataSource, tableName, DefaultBatchSize, name);
@@ -116,7 +116,7 @@ public class BasicMysqlEventSource implements EventSource {
         try {
             new BasicMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
         } catch (Exception e) {
-            LoggerFactory.getLogger(BasicMysqlEventSource.class).warn("Failed to ensure ES schme is created", e);
+            LoggerFactory.getLogger(BasicMysqlEventSource.class).warn("Failed to ensure ES scheme is created", e);
         }
 
         return new PooledMysqlEventSource(dataSource, tableName, DefaultBatchSize, name);
