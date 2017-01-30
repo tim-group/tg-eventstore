@@ -3,6 +3,7 @@ package com.timgroup.eventsubscription;
 import com.timgroup.eventstore.api.EventInStream;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventStore;
+import com.timgroup.eventstore.api.EventStream;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.LegacyPositionAdapter;
 import com.timgroup.eventstore.api.Position;
@@ -10,10 +11,15 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 
 import java.time.Instant;
+import java.util.Iterator;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static com.timgroup.eventstore.api.StreamId.streamId;
+import static java.util.Spliterator.ORDERED;
+import static java.util.Spliterators.spliteratorUnknownSize;
+import static scala.collection.JavaConverters.asJavaIteratorConverter;
 
 public class LegacyEventStoreEventReaderAdapter implements EventReader, EventStreamReader {
     private final EventStore eventStore;
@@ -30,6 +36,13 @@ public class LegacyEventStoreEventReaderAdapter implements EventReader, EventStr
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
         return eventStore.streamingFromAll(((LegacyPositionAdapter) positionExclusive).version()).map(this::toResolvedEvent);
+    }
+
+    public Stream<ResolvedEvent> readAllForwardsBuffered(Position positionExclusive) {
+        EventStream eventStream = eventStore.fromAll(((LegacyPositionAdapter) positionExclusive).version());
+        Iterator<EventInStream> events = asJavaIteratorConverter(eventStream).asJava();
+
+        return StreamSupport.stream(spliteratorUnknownSize(events, ORDERED), false).map(this::toResolvedEvent);
     }
 
     @Override
