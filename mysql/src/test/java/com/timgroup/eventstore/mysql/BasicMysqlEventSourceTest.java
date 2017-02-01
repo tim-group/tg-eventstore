@@ -13,7 +13,7 @@ import static com.typesafe.config.ConfigFactory.parseString;
 import static com.typesafe.config.ConfigParseOptions.defaults;
 import static com.typesafe.config.ConfigSyntax.PROPERTIES;
 
-public class BasicMysqlEventStoreTest extends JavaEventStoreTest {
+public class BasicMysqlEventSourceTest extends JavaEventStoreTest {
     static {
         try {
             DriverManager.registerDriver(new com.mysql.jdbc.Driver());
