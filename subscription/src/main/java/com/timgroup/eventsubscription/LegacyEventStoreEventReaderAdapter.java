@@ -36,12 +36,26 @@ public class LegacyEventStoreEventReaderAdapter implements EventReader, EventStr
 
     @Override
     public Stream<ResolvedEvent> readAllForwards() {
-        return eventStore.streamingFromAll(0).map(this::toResolvedEvent);
+        return readAllForwards(0);
     }
 
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-        return eventStore.streamingFromAll(((LegacyPositionAdapter) positionExclusive).version()).map(this::toResolvedEvent);
+        long version = ((LegacyPositionAdapter) positionExclusive).version();
+        return readAllForwards(version);
+    }
+
+    @Override
+    public Stream<ResolvedEvent> readStreamForwards(StreamId streamId, long eventNumber) {
+        if (!streamId.equals(pretendStreamId)) {
+            throw new IllegalArgumentException("Cannot read " + streamId + " using legacy adapter");
+        }
+        return readAllForwards(eventNumber);
+    }
+
+    private Stream<ResolvedEvent> readAllForwards(long version) {
+        //TODO: streamingFromAll holds the SQL statement open for the duration, which causes blowup when processing is slow.
+        return eventStore.streamingFromAll(version).map(this::toResolvedEvent);
     }
 
     public Stream<ResolvedEvent> readAllForwardsBuffered(Position positionExclusive) {
@@ -68,13 +82,5 @@ public class LegacyEventStoreEventReaderAdapter implements EventReader, EventStr
                         new byte[0]
                 )
         );
-    }
-
-    @Override
-    public Stream<ResolvedEvent> readStreamForwards(StreamId streamId, long eventNumber) {
-        if (!streamId.equals(pretendStreamId)) {
-            throw new IllegalArgumentException("Cannot read " + streamId + " using legacy adapter");
-        }
-        return eventStore.streamingFromAll(eventNumber).map(this::toResolvedEvent);
     }
 }
