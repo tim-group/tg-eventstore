@@ -23,9 +23,15 @@ import static scala.collection.JavaConverters.asJavaIteratorConverter;
 
 public class LegacyEventStoreEventReaderAdapter implements EventReader, EventStreamReader {
     private final EventStore eventStore;
+    private final StreamId pretendStreamId;
 
     public LegacyEventStoreEventReaderAdapter(EventStore eventStore) {
+        this(eventStore, streamId("all", "all"));
+    }
+
+    public LegacyEventStoreEventReaderAdapter(EventStore eventStore, StreamId pretendStreamId) {
         this.eventStore = eventStore;
+        this.pretendStreamId = pretendStreamId;
     }
 
     @Override
@@ -55,7 +61,7 @@ public class LegacyEventStoreEventReaderAdapter implements EventReader, EventStr
                 new LegacyPositionAdapter(eventInStream.version()),
                 eventRecord(
                         Instant.ofEpochMilli(eventInStream.effectiveTimestamp().getMillis()),
-                        streamId("all", "all"),
+                        pretendStreamId,
                         eventInStream.version(),
                         eventInStream.eventData().eventType(),
                         eventInStream.eventData().body().data(),
@@ -66,7 +72,7 @@ public class LegacyEventStoreEventReaderAdapter implements EventReader, EventStr
 
     @Override
     public Stream<ResolvedEvent> readStreamForwards(StreamId streamId, long eventNumber) {
-        if (!streamId.equals(streamId("all", "all"))) {
+        if (!streamId.equals(pretendStreamId)) {
             throw new IllegalArgumentException("Cannot read " + streamId + " using legacy adapter");
         }
         return eventStore.streamingFromAll(eventNumber).map(this::toResolvedEvent);

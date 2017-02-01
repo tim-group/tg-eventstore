@@ -4,16 +4,19 @@ import com.timgroup.eventstore.api._
 
 import scala.collection.JavaConversions._
 
-class LegacyEventStoreEventStreamWriterAdapter(eventstore: EventStore) extends EventStreamWriter {
+class LegacyEventStoreEventStreamWriterAdapter(eventstore: EventStore, pretendStreamId: StreamId) extends EventStreamWriter {
+
+  def this(eventstore: EventStore) { this(eventstore, StreamId.streamId("all", "all")) }
+
   override def write(streamId: StreamId, events: java.util.Collection[NewEvent]): Unit = {
-    if (streamId != StreamId.streamId("all", "all")) {
+    if (streamId != pretendStreamId) {
       throw new IllegalArgumentException("Attempting to save to stream " + streamId + " with legacy adapter.")
     }
     eventstore.save(events.toList.map(toEventData))
   }
 
   override def write(streamId: StreamId, events: java.util.Collection[NewEvent], expectedVersion: Long): Unit = {
-    if (streamId != StreamId.streamId("all", "all")) {
+    if (streamId != pretendStreamId) {
       throw new IllegalArgumentException("Attempting to save to stream " + streamId + " with legacy adapter.")
     }
     eventstore.save(events.toList.map(toEventData), Some(expectedVersion))
