@@ -1,4 +1,4 @@
-package com.timgroup.eventstore.stitching;
+package com.timgroup.eventstore.merging;
 
 import com.timgroup.eventstore.api.EventInStream;
 

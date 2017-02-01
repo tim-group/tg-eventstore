@@ -1,4 +1,4 @@
-package com.timgroup.eventstore.stitching;
+package com.timgroup.eventstore.merging;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
@@ -13,7 +13,7 @@ import java.util.NoSuchElementException;
 
 import static java.util.stream.Collectors.toList;
 
-public final class EventStoreStitchingIterator implements Iterator<EventInIdentifiedStream> {
+public final class EventStoreMergingIterator implements Iterator<EventInIdentifiedStream> {
     private final Clock clock;
     private final Duration delay;
     private final List<PeekingIterator<EventInIdentifiedStream>> underlying;
@@ -22,11 +22,11 @@ public final class EventStoreStitchingIterator implements Iterator<EventInIdenti
     private Long cutOffTime;
     private PeekingIterator<EventInIdentifiedStream> iteratorWhoseHeadIsNext;
 
-    public EventStoreStitchingIterator(Clock clock, Duration delay, List<Iterator<EventInIdentifiedStream>> iterators) {
+    public EventStoreMergingIterator(Clock clock, Duration delay, List<Iterator<EventInIdentifiedStream>> iterators) {
         this(clock, delay, iterators, (a, b) -> a.event.effectiveTimestamp().compareTo(b.event.effectiveTimestamp()));
     }
 
-    public EventStoreStitchingIterator(Clock clock, Duration delay, List<Iterator<EventInIdentifiedStream>> iterators, Comparator<EventInIdentifiedStream> order) {
+    public EventStoreMergingIterator(Clock clock, Duration delay, List<Iterator<EventInIdentifiedStream>> iterators, Comparator<EventInIdentifiedStream> order) {
         this.clock = clock;
         this.delay = delay;
         this.underlying = iterators.stream().map(Iterators::peekingIterator).collect(toList());

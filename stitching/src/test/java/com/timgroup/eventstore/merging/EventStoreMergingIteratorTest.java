@@ -1,4 +1,4 @@
-package com.timgroup.eventstore.stitching;
+package com.timgroup.eventstore.merging;
 
 import com.timgroup.clocks.testing.LatchableClock;
 import com.timgroup.eventstore.api.Body;
@@ -23,7 +23,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 
-public final class EventStoreStitchingIteratorTest {
+public final class EventStoreMergingIteratorTest {
 
     private final LatchableClock clock = new LatchableClock(Clock.systemUTC());
 
@@ -35,7 +35,7 @@ public final class EventStoreStitchingIteratorTest {
         Iterator<EventInIdentifiedStream> stream2 = newArrayList(event(2, "2016-01-01T10:00:01Z", 215224L)).iterator();
 
         clock.latchTo(Instant.parse("2016-01-01T10:00:02Z"));
-        new EventStoreStitchingIterator(clock, Duration.ofSeconds(0), of(stream1, stream2)).forEachRemaining(outputStream);
+        new EventStoreMergingIterator(clock, Duration.ofSeconds(0), of(stream1, stream2)).forEachRemaining(outputStream);
 
         assertThat(outputStream.eventVersions(), contains(215224L, 123423L));
     }
@@ -46,7 +46,7 @@ public final class EventStoreStitchingIteratorTest {
         Iterator<EventInIdentifiedStream> stream2 = newArrayList(event(2, "2016-01-01T10:00:01Z", 215224L)).iterator();
 
         clock.latchTo(Instant.parse("2016-01-01T10:00:02Z"));
-        new EventStoreStitchingIterator(clock, Duration.ofSeconds(2), of(stream1, stream2)).forEachRemaining(outputStream);
+        new EventStoreMergingIterator(clock, Duration.ofSeconds(2), of(stream1, stream2)).forEachRemaining(outputStream);
         assertThat(outputStream.eventVersions(), empty());
     }
 
@@ -56,11 +56,11 @@ public final class EventStoreStitchingIteratorTest {
         List<EventInIdentifiedStream> stream2 = newArrayList(event(2, "2016-01-01T10:00:01Z", 2222L));
 
         clock.latchTo(Instant.parse("2016-01-01T10:00:00Z"));
-        new EventStoreStitchingIterator(clock, Duration.ofSeconds(0), of(emptyStream, stream2.iterator())).forEachRemaining(outputStream);
+        new EventStoreMergingIterator(clock, Duration.ofSeconds(0), of(emptyStream, stream2.iterator())).forEachRemaining(outputStream);
         assertThat(outputStream.eventVersions(), empty());
 
         clock.latchTo(Instant.parse("2016-01-01T10:00:00Z"));
-        new EventStoreStitchingIterator(clock, Duration.ofSeconds(0), of(stream2.iterator(), emptyStream)).forEachRemaining(outputStream);
+        new EventStoreMergingIterator(clock, Duration.ofSeconds(0), of(stream2.iterator(), emptyStream)).forEachRemaining(outputStream);
         assertThat(outputStream.eventVersions(), empty());
     }
 
@@ -70,13 +70,13 @@ public final class EventStoreStitchingIteratorTest {
         List<EventInIdentifiedStream> stream2 = newArrayList(event(2, "2016-01-01T10:00:00Z", 2222L));
 
         clock.latchTo(Instant.parse("2016-01-01T10:00:00Z"));
-        new EventStoreStitchingIterator(clock, Duration.ofSeconds(0), of(emptyStream, stream2.iterator())).forEachRemaining(outputStream);
+        new EventStoreMergingIterator(clock, Duration.ofSeconds(0), of(emptyStream, stream2.iterator())).forEachRemaining(outputStream);
         assertThat(outputStream.eventVersions(), contains(2222L));
 
         outputStream.events.clear();
 
         clock.latchTo(Instant.parse("2016-01-01T10:00:00Z"));
-        new EventStoreStitchingIterator(clock, Duration.ofSeconds(0), of(stream2.iterator(), emptyStream)).forEachRemaining(outputStream);
+        new EventStoreMergingIterator(clock, Duration.ofSeconds(0), of(stream2.iterator(), emptyStream)).forEachRemaining(outputStream);
         assertThat(outputStream.eventVersions(), contains(2222L));
     }
 
@@ -86,11 +86,11 @@ public final class EventStoreStitchingIteratorTest {
         List<EventInIdentifiedStream> stream2 = newArrayList(event(2, "2016-01-01T10:00:00Z", 2222L));
 
         clock.latchTo(Instant.parse("2016-01-01T10:00:00Z"));
-        new EventStoreStitchingIterator(clock, Duration.ofSeconds(1), of(emptyStream, stream2.iterator())).forEachRemaining(outputStream);
+        new EventStoreMergingIterator(clock, Duration.ofSeconds(1), of(emptyStream, stream2.iterator())).forEachRemaining(outputStream);
         assertThat(outputStream.eventVersions(), empty());
 
         clock.latchTo(Instant.parse("2016-01-01T10:00:00Z"));
-        new EventStoreStitchingIterator(clock, Duration.ofSeconds(1), of(stream2.iterator(), emptyStream)).forEachRemaining(outputStream);
+        new EventStoreMergingIterator(clock, Duration.ofSeconds(1), of(stream2.iterator(), emptyStream)).forEachRemaining(outputStream);
         assertThat(outputStream.eventVersions(), empty());
     }
 
@@ -101,7 +101,7 @@ public final class EventStoreStitchingIteratorTest {
         List<EventInIdentifiedStream> stream2 = newArrayList(event(2, "2016-01-01T10:00:01Z", 2222L));
 
         clock.latchTo(Instant.parse("2016-01-01T10:00:00Z"));
-        new EventStoreStitchingIterator(clock, Duration.ofSeconds(0), of(emptyStream1, emptyStream2, stream2.iterator())).forEachRemaining(outputStream);
+        new EventStoreMergingIterator(clock, Duration.ofSeconds(0), of(emptyStream1, emptyStream2, stream2.iterator())).forEachRemaining(outputStream);
         assertThat(outputStream.eventVersions(), empty());
     }
 
