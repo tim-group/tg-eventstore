@@ -6,10 +6,7 @@ import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.api.WrongExpectedVersionException;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.Collection;
 
 import static java.lang.String.format;
@@ -66,11 +63,12 @@ public final class LegacyMysqlEventStreamWriter implements EventStreamWriter {
     }
 
     private void write(Connection connection, long currentPosition, Collection<NewEvent> events) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("insert into " + tableName + "(version, effective_timestamp, eventType, body) values(?, UTC_TIMESTAMP(), ?, ?)")) {
+        try (PreparedStatement statement = connection.prepareStatement("insert into " + tableName + "(version, effective_timestamp, eventType, body) values(?, ?, ?, ?)")) {
             for (NewEvent event : events) {
                 statement.setLong(1, ++currentPosition);
-                statement.setString(2, event.type());
-                statement.setBytes(3, event.data());
+                statement.setTimestamp(2, LegacyMysqlMetadataCodec.effectiveTimestampFrom(event));
+                statement.setString(3, event.type());
+                statement.setBytes(4, event.data());
                 statement.addBatch();
             }
 

@@ -4,10 +4,7 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -46,15 +43,16 @@ final class LegacyMysqlEventSpliterator implements Spliterator<ResolvedEvent> {
 
                 while (resultSet.next()) {
                     LegacyMysqlEventPosition position = LegacyMysqlEventPosition.fromLegacyVersion(resultSet.getLong("version"));
+                    Timestamp effectiveTimestamp = resultSet.getTimestamp("effective_timestamp");
                     list.add(new ResolvedEvent(
                             position,
                             eventRecord(
-                                    resultSet.getTimestamp("effective_timestamp").toInstant(),
+                                    effectiveTimestamp.toInstant(),
                                     pretendStreamId,
                                     position.toEventNumber(),
                                     resultSet.getString("eventType"),
                                     resultSet.getBytes("body"),
-                                    new byte[0]
+                                    LegacyMysqlMetadataCodec.metadataFrom(effectiveTimestamp)
                             )));
                     currentPage = list.iterator();
                 }

@@ -1,6 +1,7 @@
 package com.timgroup.eventstore.mysql.legacy;
 
 import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.HasPropertyValueMatcher.PropertyToMatch;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
 import com.typesafe.config.Config;
 import org.hamcrest.Description;
@@ -98,8 +99,12 @@ public final class LegacyMysqlEventSourceTest {
     @Test
     public void
     can_read_written_events() {
+        final NewEvent event_1 = newEvent("type-A", randomData(), "{\"effective_timestamp\":\"2015-01-01T00:12:11Z\"}".getBytes(UTF_8));
+        final NewEvent event_2 = newEvent("type-B", randomData(), "{\"foo\":0,\"effective_timestamp\" : \"2016-02-01T12:32:02Z\", \"bar\":2}".getBytes(UTF_8));
+        final NewEvent event_3 = newEvent("type-C", randomData(), new byte[0]);
+
         eventSource().writeStream().write(stream_1, asList(
-                event_1, event_2
+                event_1, event_2, event_3
         ));
 
         assertThat(eventSource().readStream().readStreamForwards(stream_1).map(ResolvedEvent::eventRecord).collect(toList()), contains(
@@ -107,13 +112,20 @@ public final class LegacyMysqlEventSourceTest {
                         .and(EventRecord::eventNumber, 0L)
                         .and(EventRecord::eventType, event_1.type())
                         .and(EventRecord::data, event_1.data())
-                        .and(EventRecord::metadata, event_1.metadata())
-                        .andMatching(EventRecord::timestamp, shortlyAfter(timeBeforeTest)),
+                        .and(EventRecord::metadata, "{\"effective_timestamp\":\"2015-01-01T00:12:11Z\"}".getBytes(UTF_8))
+                        .and(EventRecord::timestamp, Instant.parse("2015-01-01T00:12:11Z")),
                 objectWith(EventRecord::streamId, stream_1)
                         .and(EventRecord::eventNumber, 1L)
                         .and(EventRecord::eventType, event_2.type())
                         .and(EventRecord::data, event_2.data())
-                        .and(EventRecord::metadata, event_2.metadata())
+                        .and(EventRecord::metadata, "{\"effective_timestamp\":\"2016-02-01T12:32:02Z\"}".getBytes(UTF_8))
+                        .and(EventRecord::timestamp, Instant.parse("2016-02-01T12:32:02Z")),
+                objectWith(EventRecord::streamId, stream_1)
+                        .and(EventRecord::eventNumber, 2L)
+                        .and(EventRecord::eventType, event_3.type())
+                        .and(EventRecord::data, event_3.data())
+                        .andMatching((PropertyToMatch<EventRecord, String>) eventData -> new String(eventData.metadata(), UTF_8),
+                                     startsWith("{\"effective_timestamp\":\"20"))
                         .andMatching(EventRecord::timestamp, shortlyAfter(timeBeforeTest))
         ));
     }
