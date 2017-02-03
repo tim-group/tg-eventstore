@@ -6,12 +6,16 @@ import com.timgroup.eventstore.api.PositionCodec;
 import java.util.regex.Pattern;
 
 final class StitchedPosition implements Position {
-    private final Position backfillPosition;
-    private final Position livePosition;
+    final Position backfillPosition;
+    final Position livePosition;
 
     StitchedPosition(Position backfillPosition, Position livePosition) {
         this.backfillPosition = backfillPosition;
         this.livePosition = livePosition;
+    }
+
+    public boolean isInBackfill(StitchedPosition emptyStorePosition) {
+        return this.livePosition.equals(emptyStorePosition.livePosition);
     }
 
     static final class StitchedPositionCodec implements PositionCodec {

@@ -7,35 +7,24 @@ import com.timgroup.tucker.info.Component;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Stream;
 
 public final class BackfillStitchingEventSource implements EventSource {
 
     private final EventSource backfill;
     private final EventSource live;
     private final StitchedPositionCodec positionCodec;
-    private final StitchedPosition emptyStorePosition;
+    private final EventReader eventReader;
 
     public BackfillStitchingEventSource(EventSource backfill, EventSource live, Position liveCutoffStartPosition) {
         this.backfill = backfill;
         this.live = live;
         this.positionCodec = new StitchedPositionCodec(backfill.positionCodec(), live.positionCodec());
-        this.emptyStorePosition = new StitchedPosition(backfill.readAll().emptyStorePosition(), liveCutoffStartPosition);
+        this.eventReader = new BackfillStitchingEventReader(backfill, live, liveCutoffStartPosition);
     }
 
     @Override
     public EventReader readAll() {
-        return new EventReader() {
-            @Override
-            public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-                return Stream.empty();
-            }
-
-            @Override
-            public Position emptyStorePosition() {
-                return emptyStorePosition;
-            }
-        };
+        return this.eventReader;
     }
 
     @Override

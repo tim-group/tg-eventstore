@@ -4,7 +4,6 @@ import com.timgroup.eventstore.api.*;
 import com.timgroup.eventstore.memory.InMemoryEventSource;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -13,6 +12,7 @@ import java.util.stream.Collectors;
 
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 
@@ -46,13 +46,12 @@ public final class BackfillStitchingEventSourceTest  {
         eventSource = new BackfillStitchingEventSource(backfill, live, stitchPosition);
     }
 
-    @Ignore
     @Test public void
     it_reads_all_events_from_backfill_and_those_required_from_live_when_querying_entire_eventstream() {
         List<NewEvent> readEvents = eventSource.readAll().readAllForwards()
                 .map(ResolvedEvent::eventRecord)
                 .map(p -> newEvent(p.eventType(), p.data(), p.metadata()))
-                .collect(Collectors.toList());
+                .collect(toList());
 
         assertThat(readEvents, contains(
                 event("B1"),
@@ -63,14 +62,14 @@ public final class BackfillStitchingEventSourceTest  {
         ));
     }
 
-    @Ignore
     @Test public void
     it_returns_only_events_from_live_if_cutoff_is_before_fromVersion() {
-        Position startPosition = live.positionCodec().deserializePosition("5");
+        Position startPosition = eventSource.readAll().readAllForwards().limit(4).collect(toList()).get(3).position();
+
         List<NewEvent> readEvents = eventSource.readAll().readAllForwards(startPosition)
                 .map(ResolvedEvent::eventRecord)
                 .map(p -> newEvent(p.eventType(), p.data(), p.metadata()))
-                .collect(Collectors.toList());
+                .collect(toList());
 
         assertThat(readEvents, contains(
                 event("L2")
