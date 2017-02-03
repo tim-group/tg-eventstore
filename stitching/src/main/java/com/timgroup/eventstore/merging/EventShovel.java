@@ -26,10 +26,12 @@ public final class EventShovel {
         try (Stream<ResolvedEvent> backwardsWrittenOutputEvents = output.readAll().readAllBackwards()) {
             Optional<ResolvedEvent> maybeLastWrittenEvent = backwardsWrittenOutputEvents.findFirst();
 
-            Position currentPosition = maybeLastWrittenEvent.map(evt -> readerPositionCodec.deserializePosition(new String(evt.eventRecord().metadata(), UTF_8))).orElse(reader.emptyStorePosition());
+            Position currentPosition = maybeLastWrittenEvent
+                    .map(re -> extractShovelPositionFromMetadata(re.eventRecord().metadata()))
+                    .orElse(reader.emptyStorePosition());
 
             reader.readAllForwards(currentPosition).forEach(evt -> {
-                byte[] metadata = readerPositionCodec.serializePosition(evt.position()).getBytes(UTF_8);
+                byte[] metadata = createMetadataWithShovelPosition(evt.position(), evt.eventRecord().metadata());
                 output.writeStream().write(
                         evt.eventRecord().streamId(),
                         singleton(newEvent(evt.eventRecord().eventType(), evt.eventRecord().data(), metadata))
@@ -37,4 +39,25 @@ public final class EventShovel {
             });
         }
     }
+
+    /* David Ellis 03/02/2017 - Please do this properly */
+    // metadata transfer from upstream -- need resolve how we combine our shovel position record with the upstream metadata
+    //    from upstream we have completely unknown black box of metadata as a byte[]
+    //    strategy: assume it is json -- prove by decoding
+    //        if json decode fails, throw away upstream metadata and just write ours downstream
+    //        if json decode passes, add our shovel_position field to it, and re-encode
+
+    private Position extractShovelPositionFromMetadata(byte[] metadata) {
+        return readerPositionCodec.deserializePosition(new String(metadata, UTF_8));
+    }
+
+    private byte[] createMetadataWithShovelPosition(Position shovelPosition, byte[] upstreamMetadata) {
+        return readerPositionCodec.serializePosition(shovelPosition).getBytes(UTF_8);
+    }
+
+    //TODO:
+    // batched writing
+    // optimistic locking
+
+
 }
