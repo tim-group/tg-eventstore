@@ -38,6 +38,7 @@ public final class EventShovel {
             try (Stream<ResolvedEvent> resolvedEventStream = reader.readAllForwards(currentPosition)) {
                 writeEvents(resolvedEventStream.map(evt -> new NewEventWithStreamId(
                         evt.eventRecord().streamId(),
+                        evt.eventRecord().eventNumber(),
                         newEvent(evt.eventRecord().eventType(),
                                 evt.eventRecord().data(),
                                 createMetadataWithShovelPosition(evt.position(), evt.eventRecord().metadata()))
@@ -68,9 +69,8 @@ public final class EventShovel {
     private void writeEvents(Stream<NewEventWithStreamId> eventsToWrite) {
         EventStreamWriter eventStreamWriter = output.writeStream();
         StreamId currentStreamId = null;
+        long expectedEventNumber = 0L;
         List<NewEvent> batch = new ArrayList<>();
-
-        //TODO: optimistic locking
 
         Iterator<NewEventWithStreamId> events = eventsToWrite.iterator();
         while (events.hasNext()) {
@@ -78,31 +78,36 @@ public final class EventShovel {
             if (next.streamId.equals(currentStreamId)) {
                 batch.add(next.event);
             } else {
-                eventStreamWriter.write(currentStreamId, batch);
-                batch.clear();
+                if (!batch.isEmpty()) {
+                    eventStreamWriter.write(currentStreamId, batch);
+                    batch.clear();
+                }
 
                 currentStreamId = next.streamId;
+                expectedEventNumber = next.eventNumber - 1L;
                 batch.add(next.event);
             }
             
             if (batch.size() > MAX_BATCH_SIZE) {
                 eventStreamWriter.write(currentStreamId, batch);
                 batch.clear();
+                currentStreamId = null;
             }
         }
 
-        eventStreamWriter.write(currentStreamId, batch);
+        eventStreamWriter.write(currentStreamId, batch, expectedEventNumber);
     }
 
     private static final class NewEventWithStreamId {
         private final StreamId streamId;
+        private final long eventNumber;
         private final NewEvent event;
 
-        public NewEventWithStreamId(StreamId streamId, NewEvent event) {
+        public NewEventWithStreamId(StreamId streamId, long eventNumber, NewEvent event) {
             this.streamId = streamId;
+            this.eventNumber = eventNumber;
             this.event = event;
         }
     }
-
 
 }

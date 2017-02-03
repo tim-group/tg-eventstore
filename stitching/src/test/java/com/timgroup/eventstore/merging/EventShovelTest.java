@@ -11,6 +11,8 @@ import org.junit.Test;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,8 +31,7 @@ public final class EventShovelTest {
     private final JavaInMemoryEventStore inputReader = new JavaInMemoryEventStore(clock);
     private final InMemoryEventSource inputSource = new InMemoryEventSource(inputReader);
 
-    private final JavaInMemoryEventStore outputStore = new JavaInMemoryEventStore(clock);
-    private final InMemoryEventSource outputSource = new InMemoryEventSource(outputStore);
+    private final InMemoryEventSource outputSource = new InMemoryEventSource(new JavaInMemoryEventStore(clock));
 
 
     private final EventShovel underTest = new EventShovel(inputSource.readAll(), inputSource.positionCodec(), outputSource);
@@ -136,6 +137,27 @@ public final class EventShovelTest {
                         "{\"effective_timestamp\":\"2015-02-12T04:23:34Z\",\"shovel_position\":\"1\"}".getBytes(UTF_8)
                 )
         ));
+    }
+
+    @Test public void
+    it_does_optimistic_locking() throws Exception {
+        inputEventArrived(streamId("david", "tom"), newEvent("CoolenessAdded", new byte[0], new byte[0]));
+        inputEventArrived(streamId("foo", "bar"), newEvent("CoolenessRemoved", new byte[0], new byte[0]));
+        inputEventArrived(streamId("david", "tom"), newEvent("CoolenessChanged", new byte[0], new byte[0]));
+
+        List<Long> expectedVersionsSeen = new ArrayList<>();
+        InMemoryEventSource contendedOutputSource = new InMemoryEventSource(new JavaInMemoryEventStore(clock) {
+            @Override
+            public void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
+                if (!events.isEmpty()) {
+                    super.write(streamId, events, expectedVersion);
+                    expectedVersionsSeen.add(expectedVersion);
+                }
+            }
+        });
+        new EventShovel(inputSource.readAll(), inputSource.positionCodec(), contendedOutputSource).shovelAllNewlyAvailableEvents();
+
+        assertThat(expectedVersionsSeen, contains(-1L, -1L, 0L));
     }
 
     private void inputEventArrived(StreamId streamId, NewEvent event) {
