@@ -1,13 +1,12 @@
 package com.timgroup.eventstore.merging;
 
-import com.timgroup.eventstore.api.EventReader;
-import com.timgroup.eventstore.api.Position;
-import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.api.*;
 
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.stream.Stream;
 
+import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static java.util.stream.Collectors.toList;
 
 public final class MergedEventReader implements EventReader {
@@ -22,7 +21,17 @@ public final class MergedEventReader implements EventReader {
         MergedEventReaderPosition mergedPositionExclusion = (MergedEventReaderPosition) positionExclusive;
 
         Iterator<Position> positions = Arrays.asList(mergedPositionExclusion.positions).iterator();
-        return Stream.of(readers).flatMap(r -> r.readAllForwards(positions.next()));
+        return Stream.of(readers).flatMap(r -> r.readAllForwards(positions.next())).map(re -> {
+            EventRecord record = re.eventRecord();
+            return new ResolvedEvent(re.position(), eventRecord(
+                    record.timestamp(),
+                    StreamId.streamId("input", "all"),
+                    record.eventNumber(),
+                    record.eventType(),
+                    record.data(),
+                    record.metadata()
+            ));
+        });
     }
 
     @Override

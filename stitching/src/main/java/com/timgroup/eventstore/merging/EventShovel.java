@@ -19,7 +19,7 @@ public final class EventShovel {
     public void shovelAllNewlyAvailableEvents() {
         reader.readAllForwards().forEach(evt ->
                 output.writeStream().write(
-                        streamId("input", "all"),
+                        evt.eventRecord().streamId(),
                         singleton(newEvent(evt.eventRecord().eventType(), evt.eventRecord().data(), evt.eventRecord().metadata()))
                 ));
     }
