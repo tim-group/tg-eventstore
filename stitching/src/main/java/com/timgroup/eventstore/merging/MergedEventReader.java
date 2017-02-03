@@ -47,4 +47,16 @@ public final class MergedEventReader implements EventReader {
             this.positions = positions;
         }
     }
+
+    public static class MergedEventReaderPositionCodec implements PositionCodec {
+        @Override
+        public Position deserializePosition(String string) {
+            return new MergedEventReaderPosition();
+        }
+
+        @Override
+        public String serializePosition(Position position) {
+            return "";
+        }
+    }
 }
