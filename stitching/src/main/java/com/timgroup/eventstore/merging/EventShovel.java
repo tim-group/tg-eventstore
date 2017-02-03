@@ -1,22 +1,21 @@
 package com.timgroup.eventstore.merging;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.timgroup.eventstore.api.*;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
-import static com.timgroup.eventstore.api.StreamId.streamId;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Collections.singleton;
 
 public final class EventShovel {
+    private static final int MAX_BATCH_SIZE = 100000;
     private final EventReader reader;
     private final PositionCodec readerPositionCodec;
     private final EventSource output;
@@ -36,13 +35,14 @@ public final class EventShovel {
                     .map(re -> extractShovelPositionFromMetadata(re.eventRecord().metadata()))
                     .orElse(reader.emptyStorePosition());
 
-            reader.readAllForwards(currentPosition).forEach(evt -> {
-                byte[] metadata = createMetadataWithShovelPosition(evt.position(), evt.eventRecord().metadata());
-                output.writeStream().write(
+            try (Stream<ResolvedEvent> resolvedEventStream = reader.readAllForwards(currentPosition)) {
+                writeEvents(resolvedEventStream.map(evt -> new NewEventWithStreamId(
                         evt.eventRecord().streamId(),
-                        singleton(newEvent(evt.eventRecord().eventType(), evt.eventRecord().data(), metadata))
-                );
-            });
+                        newEvent(evt.eventRecord().eventType(),
+                                evt.eventRecord().data(),
+                                createMetadataWithShovelPosition(evt.position(), evt.eventRecord().metadata()))
+                )));
+            }
         }
     }
 
@@ -65,8 +65,44 @@ public final class EventShovel {
         }
     }
 
-    //TODO:
-    // batched writing
-    // optimistic locking
+    private void writeEvents(Stream<NewEventWithStreamId> eventsToWrite) {
+        EventStreamWriter eventStreamWriter = output.writeStream();
+        StreamId currentStreamId = null;
+        List<NewEvent> batch = new ArrayList<>();
+
+        //TODO: optimistic locking
+
+        Iterator<NewEventWithStreamId> events = eventsToWrite.iterator();
+        while (events.hasNext()) {
+            NewEventWithStreamId next = events.next();
+            if (next.streamId.equals(currentStreamId)) {
+                batch.add(next.event);
+            } else {
+                eventStreamWriter.write(currentStreamId, batch);
+                batch.clear();
+
+                currentStreamId = next.streamId;
+                batch.add(next.event);
+            }
+            
+            if (batch.size() > MAX_BATCH_SIZE) {
+                eventStreamWriter.write(currentStreamId, batch);
+                batch.clear();
+            }
+        }
+
+        eventStreamWriter.write(currentStreamId, batch);
+    }
+
+    private static final class NewEventWithStreamId {
+        private final StreamId streamId;
+        private final NewEvent event;
+
+        public NewEventWithStreamId(StreamId streamId, NewEvent event) {
+            this.streamId = streamId;
+            this.event = event;
+        }
+    }
+
 
 }

@@ -38,6 +38,8 @@ public final class EventShovelTest {
     @Test public void
     it_shovels_all_events() throws Exception {
         inputEventArrived(streamId("david", "tom"), newEvent("CoolenessAdded", new byte[0], new byte[0]));
+        inputEventArrived(streamId("david", "tom"), newEvent("CoolenessChanged", new byte[0], new byte[0]));
+        inputEventArrived(streamId("foo", "bar"), newEvent("CoolenessRemoved", new byte[0], new byte[0]));
 
         underTest.shovelAllNewlyAvailableEvents();
 
@@ -51,6 +53,22 @@ public final class EventShovelTest {
                         "CoolenessAdded",
                         new byte[0],
                         "{\"shovel_position\":\"1\"}".getBytes(UTF_8)
+                ),
+                anEventRecord(
+                        clock.instant(),
+                        StreamId.streamId("david", "tom"),
+                        1L,
+                        "CoolenessChanged",
+                        new byte[0],
+                        "{\"shovel_position\":\"2\"}".getBytes(UTF_8)
+                ),
+                anEventRecord(
+                        clock.instant(),
+                        StreamId.streamId("foo", "bar"),
+                        0L,
+                        "CoolenessRemoved",
+                        new byte[0],
+                        "{\"shovel_position\":\"3\"}".getBytes(UTF_8)
                 )
         ));
     }
