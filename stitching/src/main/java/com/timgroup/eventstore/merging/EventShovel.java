@@ -16,7 +16,7 @@ public final class EventShovel {
         this.output = output;
     }
 
-    public void go() {
+    public void shovelAllNewlyAvailableEvents() {
         reader.readAllForwards().forEach(evt ->
                 output.writeStream().write(
                         streamId("input", "all"),
