@@ -53,6 +53,28 @@ public final class EventShovelTest {
         ));
     }
 
+    @Test public void
+    it_shovels_only_events_that_it_has_not_previously_shovelled() throws Exception {
+        inputEventArrived(streamId("previous", "event"), newEvent("CoolenessRemoved", new byte[0], new byte[0]));
+        underTest.shovelAllNewlyAvailableEvents();
+
+        inputEventArrived(streamId("david", "tom"), newEvent("CoolenessAdded", new byte[0], new byte[0]));
+        underTest.shovelAllNewlyAvailableEvents();
+
+        List<EventRecord> shovelledEvents = outputSource.readAll().readAllForwards().skip(1).map(ResolvedEvent::eventRecord).collect(Collectors.toList());
+
+        assertThat(shovelledEvents, contains(
+                anEventRecord(
+                        clock.instant(),
+                        StreamId.streamId("david", "tom"),
+                        0L,
+                        "CoolenessAdded",
+                        new byte[0],
+                        new byte[0]
+                )
+        ));
+    }
+
     private void inputEventArrived(StreamId streamId, NewEvent event) {
         inputReader.write(streamId, singleton(event));
     }
