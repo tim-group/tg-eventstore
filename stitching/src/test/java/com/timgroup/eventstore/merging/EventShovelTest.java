@@ -50,7 +50,7 @@ public final class EventShovelTest {
                         0L,
                         "CoolenessAdded",
                         new byte[0],
-                        "1".getBytes(UTF_8)
+                        "{\"shovel_position\":\"1\"}".getBytes(UTF_8)
                 )
         ));
     }
@@ -72,7 +72,7 @@ public final class EventShovelTest {
                         0L,
                         "CoolenessAdded",
                         new byte[0],
-                        "2".getBytes(UTF_8)
+                        "{\"shovel_position\":\"2\"}".getBytes(UTF_8)
                 )
         ));
     }
@@ -94,7 +94,28 @@ public final class EventShovelTest {
                         0L,
                         "CoolenessAdded",
                         new byte[0],
-                        "2".getBytes(UTF_8)
+                        "{\"shovel_position\":\"2\"}".getBytes(UTF_8)
+                )
+        ));
+    }
+
+    @Test public void
+    maintains_metadata_from_upstream() throws Exception {
+        String originalMetadata = "{\"effective_timestamp\":\"2015-02-12T04:23:34Z\"}";
+        inputEventArrived(streamId("david", "tom"), newEvent("CoolenessAdded", new byte[0], originalMetadata.getBytes(UTF_8)));
+
+        underTest.shovelAllNewlyAvailableEvents();
+
+        List<EventRecord> shovelledEvents = outputSource.readAll().readAllForwards().map(ResolvedEvent::eventRecord).collect(Collectors.toList());
+
+        assertThat(shovelledEvents, contains(
+                anEventRecord(
+                        clock.instant(),
+                        StreamId.streamId("david", "tom"),
+                        0L,
+                        "CoolenessAdded",
+                        new byte[0],
+                        "{\"effective_timestamp\":\"2015-02-12T04:23:34Z\",\"shovel_position\":\"1\"}".getBytes(UTF_8)
                 )
         ));
     }

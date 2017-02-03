@@ -1,7 +1,12 @@
 package com.timgroup.eventstore.merging;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.timgroup.eventstore.api.*;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -15,6 +20,7 @@ public final class EventShovel {
     private final EventReader reader;
     private final PositionCodec readerPositionCodec;
     private final EventSource output;
+    private final ObjectMapper json = new ObjectMapper();
 
     public EventShovel(EventReader reader, PositionCodec readerPositionCodec, EventSource output) {
         this.reader = reader;
@@ -40,24 +46,27 @@ public final class EventShovel {
         }
     }
 
-    /* David Ellis 03/02/2017 - Please do this properly */
-    // metadata transfer from upstream -- need resolve how we combine our shovel position record with the upstream metadata
-    //    from upstream we have completely unknown black box of metadata as a byte[]
-    //    strategy: assume it is json -- prove by decoding
-    //        if json decode fails, throw away upstream metadata and just write ours downstream
-    //        if json decode passes, add our shovel_position field to it, and re-encode
-
     private Position extractShovelPositionFromMetadata(byte[] metadata) {
-        return readerPositionCodec.deserializePosition(new String(metadata, UTF_8));
+        try {
+            ObjectNode jsonNode = (ObjectNode) json.readTree(new String(metadata, UTF_8));
+            return readerPositionCodec.deserializePosition(jsonNode.get("shovel_position").textValue());
+        } catch (Exception e) {
+            throw new IllegalStateException("unable to determine current position", e);
+        }
     }
 
     private byte[] createMetadataWithShovelPosition(Position shovelPosition, byte[] upstreamMetadata) {
-        return readerPositionCodec.serializePosition(shovelPosition).getBytes(UTF_8);
+        try {
+            ObjectNode jsonNode = (ObjectNode) json.readTree(upstreamMetadata);
+            jsonNode.put("shovel_position", readerPositionCodec.serializePosition(shovelPosition));
+            return json.writeValueAsBytes(jsonNode);
+        } catch (IOException e) {
+            return ("{\"shovel_position\":\"" + readerPositionCodec.serializePosition(shovelPosition) + "\"}").getBytes(UTF_8);
+        }
     }
 
     //TODO:
     // batched writing
     // optimistic locking
-
 
 }
