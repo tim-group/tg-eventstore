@@ -6,15 +6,15 @@ import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.empty;
 
 public final class BackfillStitchingEventSourceTest  {
 
@@ -25,22 +25,20 @@ public final class BackfillStitchingEventSourceTest  {
     private BackfillStitchingEventSource eventSource;
 
     @Before public void setup() {
-        backfill.writeStream().write(
-                StreamId.streamId("all", "all"),
-                Arrays.asList(
-                        event("B1"),
-                        event("B2"),
-                        event("B3")));
+        EventStreamWriter backfillWriter = backfill.writeStream();
+        backfillWriter.write(StreamId.streamId("category_1", "stream1"), Collections.singleton(event("B1")));
+        backfillWriter.write(StreamId.streamId("category_2", "streamx"), Collections.singleton(event("B2")));
+        backfillWriter.write(StreamId.streamId("category_1", "stream2"), Collections.singleton(event("B3")));
 
-        live.writeStream().write(
-                StreamId.streamId("all", "all"),
-                Arrays.asList(
-                        event("old-1"),
-                        event("old-2"),
-                        event("old-3"),
-                        event("old-4"),
-                        event("L1"),
-                        event("L2")));
+        EventStreamWriter liveWriter = live.writeStream();
+        liveWriter.write(StreamId.streamId("category_1", "stream1"), Collections.singleton(event("old-1")));
+        liveWriter.write(StreamId.streamId("category_2", "streamx"), Collections.singleton(event("old-2")));
+        liveWriter.write(StreamId.streamId("category_1", "stream2"), Collections.singleton(event("old-3")));
+        liveWriter.write(StreamId.streamId("category_2", "streamx"), Collections.singleton(event("old-4")));
+        liveWriter.write(StreamId.streamId("category_1", "stream1"), Collections.singleton(event("L1")));
+        liveWriter.write(StreamId.streamId("category_2", "streamx"), Collections.singleton(event("L2")));
+        liveWriter.write(StreamId.streamId("category_1", "stream2"), Collections.singleton(event("L3")));
+
 
         Position stitchPosition = live.positionCodec().deserializePosition("4");
         eventSource = new BackfillStitchingEventSource(backfill, live, stitchPosition);
@@ -58,7 +56,8 @@ public final class BackfillStitchingEventSourceTest  {
                 event("B2"),
                 event("B3"),
                 event("L1"),
-                event("L2")
+                event("L2"),
+                event("L3")
         ));
     }
 
@@ -72,8 +71,66 @@ public final class BackfillStitchingEventSourceTest  {
                 .collect(toList());
 
         assertThat(readEvents, contains(
-                event("L2")
+                event("L2"),
+                event("L3")
         ));
+    }
+
+    @Test
+    public void
+    can_read_events_by_category() {
+        List<NewEvent> readEvents = eventSource.readCategory().readCategoryForwards("category_1")
+                .map(ResolvedEvent::eventRecord)
+                .map(p -> newEvent(p.eventType(), p.data(), p.metadata()))
+                .collect(toList());
+
+        assertThat(readEvents, contains(
+                event("B1"),
+                event("B3"),
+                event("L1"),
+                event("L3")
+        ));
+    }
+
+    @Test
+    public void
+    can_continue_reading_from_position_of_category_in_backfill() {
+        Position startPosition = eventSource.readAll().readAllForwards().limit(1).collect(toList()).get(0).position();
+
+        List<NewEvent> readEvents = eventSource.readCategory().readCategoryForwards("category_1", startPosition)
+                .map(ResolvedEvent::eventRecord)
+                .map(p -> newEvent(p.eventType(), p.data(), p.metadata()))
+                .collect(toList());
+
+        assertThat(readEvents, contains(
+                event("B3"),
+                event("L1"),
+                event("L3")
+        ));
+    }
+
+    @Test
+    public void
+    can_continue_reading_from_position_of_category_in_live() {
+        Position startPosition = eventSource.readAll().readAllForwards().limit(4).collect(toList()).get(3).position();
+
+        List<NewEvent> readEvents = eventSource.readCategory().readCategoryForwards("category_1", startPosition)
+                .map(ResolvedEvent::eventRecord)
+                .map(p -> newEvent(p.eventType(), p.data(), p.metadata()))
+                .collect(toList());
+
+        assertThat(readEvents, contains(
+                event("L3")
+        ));
+    }
+
+    @Test
+    public void
+    can_continue_reading_from_position_at_end_of_category() {
+        @SuppressWarnings("OptionalGetWithoutIsPresent")
+        Position position = eventSource.readCategory().readCategoryForwards("category_2").reduce((a, b) -> b).get().position();
+
+        assertThat(eventSource.readCategory().readCategoryForwards("category_2", position).collect(toList()), empty());
     }
 
     private NewEvent event(String eventType) {

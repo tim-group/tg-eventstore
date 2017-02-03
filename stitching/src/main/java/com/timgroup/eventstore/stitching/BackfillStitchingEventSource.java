@@ -13,7 +13,7 @@ public final class BackfillStitchingEventSource implements EventSource {
     private final EventSource backfill;
     private final EventSource live;
     private final StitchedPositionCodec positionCodec;
-    private final EventReader eventReader;
+    private final BackfillStitchingEventReader eventReader;
 
     public BackfillStitchingEventSource(EventSource backfill, EventSource live, Position liveCutoffStartPosition) {
         this.backfill = backfill;
@@ -29,7 +29,7 @@ public final class BackfillStitchingEventSource implements EventSource {
 
     @Override
     public EventCategoryReader readCategory() {
-        throw new UnsupportedOperationException("stitched store does not support reading categories");
+        return this.eventReader;
     }
 
     @Override

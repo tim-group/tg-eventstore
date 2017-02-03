@@ -1,13 +1,10 @@
 package com.timgroup.eventstore.stitching;
 
-import com.timgroup.eventstore.api.EventReader;
-import com.timgroup.eventstore.api.EventSource;
-import com.timgroup.eventstore.api.Position;
-import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.api.*;
 
 import java.util.stream.Stream;
 
-public final class BackfillStitchingEventReader implements EventReader {
+public final class BackfillStitchingEventReader implements EventReader, EventCategoryReader {
 
     private final StitchedPosition emptyStorePosition;
     private final EventSource backfill;
@@ -40,5 +37,28 @@ public final class BackfillStitchingEventReader implements EventReader {
                     stitchedPosition
             );
         }
+    }
+
+    @Override
+    public Stream<ResolvedEvent> readCategoryForwards(String category, Position positionExclusive) {
+        StitchedPosition stitchedPosition = (StitchedPosition) positionExclusive;
+        if (stitchedPosition.isInBackfill(emptyStorePosition)) {
+            return BackfillStitchingEventForwardsSpliterator.stitchedStreamFrom(
+                    backfill.readCategory().readCategoryForwards(category, stitchedPosition.backfillPosition),
+                    live.readCategory().readCategoryForwards(category, stitchedPosition.livePosition),
+                    stitchedPosition
+            );
+        } else {
+            return BackfillStitchingEventForwardsSpliterator.stitchedStreamFrom(
+                    Stream.empty(),
+                    live.readCategory().readCategoryForwards(category, stitchedPosition.livePosition),
+                    stitchedPosition
+            );
+        }
+    }
+
+    @Override
+    public Position emptyCategoryPosition(String category) {
+        return emptyStorePosition;
     }
 }
