@@ -15,16 +15,21 @@ import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public final class EventShovel {
-    private static final int MAX_BATCH_SIZE = 100000;
+    private final int maxBatchSize;
     private final EventReader reader;
     private final PositionCodec readerPositionCodec;
     private final EventSource output;
     private final ObjectMapper json = new ObjectMapper();
 
-    public EventShovel(EventReader reader, PositionCodec readerPositionCodec, EventSource output) {
+    public EventShovel(int maxBatchSize, EventReader reader, PositionCodec readerPositionCodec, EventSource output) {
+        this.maxBatchSize = maxBatchSize;
         this.reader = reader;
         this.readerPositionCodec = readerPositionCodec;
         this.output = output;
+    }
+
+    public EventShovel(EventReader reader, PositionCodec readerPositionCodec, EventSource output) {
+        this(10000, reader, readerPositionCodec, output);
     }
 
     public void shovelAllNewlyAvailableEvents() {
@@ -87,8 +92,8 @@ public final class EventShovel {
                 expectedEventNumber = next.eventNumber - 1L;
                 batch.add(next.event);
             }
-            
-            if (batch.size() > MAX_BATCH_SIZE) {
+
+            if (batch.size() >= maxBatchSize) {
                 eventStreamWriter.write(currentStreamId, batch);
                 batch.clear();
                 currentStreamId = null;

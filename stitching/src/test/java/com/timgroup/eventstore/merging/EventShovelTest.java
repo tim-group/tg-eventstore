@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.merging;
 
+import com.google.common.collect.Lists;
 import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.NewEvent;
@@ -13,6 +14,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -160,8 +162,29 @@ public final class EventShovelTest {
         assertThat(expectedVersionsSeen, contains(-1L, -1L, 0L));
     }
 
-    private void inputEventArrived(StreamId streamId, NewEvent event) {
-        inputReader.write(streamId, singleton(event));
+    @Test public void
+    batching_works() throws Exception {
+        inputEventArrived(streamId("david", "tom"),
+                            newEvent("CoolenessAdded", new byte[0], new byte[0]),
+                            newEvent("CoolenessRemoved", new byte[0], new byte[0]),
+                            newEvent("CoolenessChanged", new byte[0], new byte[0]));
+
+        List<Integer> batchSizes = new ArrayList<>();
+        InMemoryEventSource rememberingBatchsizesEventStore = new InMemoryEventSource(new JavaInMemoryEventStore(clock) {
+            @Override
+            public void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
+                batchSizes.add(events.size());
+            }
+        });
+
+        new EventShovel(2, inputSource.readAll(), inputSource.positionCodec(), rememberingBatchsizesEventStore).shovelAllNewlyAvailableEvents();
+
+        assertThat(batchSizes, contains(2, 1));
+    }
+
+
+    private void inputEventArrived(StreamId streamId, NewEvent... events) {
+        inputReader.write(streamId, Lists.newArrayList(events));
     }
 
 }
