@@ -7,6 +7,7 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.time.Instant;
@@ -15,7 +16,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
+import static com.timgroup.eventstore.api.StreamId.streamId;
 import static com.timgroup.indicatorinputstreamwriter.EventRecordMatcher.anEventRecord;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.singleton;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -40,7 +43,7 @@ public class MergedEventReaderTest {
         assertThat(mergedEvents, contains(
                 anEventRecord(
                         clock.instant(),
-                        StreamId.streamId("input", "all"),
+                        streamId("input", "all"),
                         0L,
                         "CoolenessAdded",
                         new byte[0],
@@ -48,7 +51,7 @@ public class MergedEventReaderTest {
                 ),
                 anEventRecord(
                         clock.instant(),
-                        StreamId.streamId("input", "all"),
+                        streamId("input", "all"),
                         1L,
                         "CoolenessChanged",
                         new byte[0],
@@ -56,7 +59,7 @@ public class MergedEventReaderTest {
                 ),
                 anEventRecord(
                         clock.instant(),
-                        StreamId.streamId("input", "all"),
+                        streamId("input", "all"),
                         2L,
                         "CoolenessRemoved",
                         new byte[0],
@@ -80,7 +83,7 @@ public class MergedEventReaderTest {
         assertThat(mergedEvents, contains(
                 anEventRecord(
                         clock.instant(),
-                        StreamId.streamId("input", "all"),
+                        streamId("input", "all"),
                         1L,
                         "CoolenessChanged",
                         new byte[0],
@@ -104,7 +107,7 @@ public class MergedEventReaderTest {
         assertThat(mergedEvents, contains(
                 anEventRecord(
                         clock.instant(),
-                        StreamId.streamId("input", "all"),
+                        streamId("input", "all"),
                         0L,
                         "CoolenessAdded",
                         new byte[0],
@@ -112,7 +115,7 @@ public class MergedEventReaderTest {
                 ),
                 anEventRecord(
                         clock.instant(),
-                        StreamId.streamId("input", "all"),
+                        streamId("input", "all"),
                         1L,
                         "CoolenessChanged",
                         new byte[0],
@@ -120,7 +123,7 @@ public class MergedEventReaderTest {
                 ),
                 anEventRecord(
                         clock.instant(),
-                        StreamId.streamId("input", "all"),
+                        streamId("input", "all"),
                         2L,
                         "CoolenessRemoved",
                         new byte[0],
@@ -129,9 +132,49 @@ public class MergedEventReaderTest {
         ));
     }
 
+    @Ignore public void
+    supports_reading_all_forwards_from_multiple_input_streams_merging_by_effective_timestamp() throws Exception {
+        JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
+        JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
+        MergedEventReader outputReader = new MergedEventReader(input1, input2);
+
+        inputEventArrived(input1, streamId("foo", "bar"), newEvent("CoolenessRemoved", new byte[0], "{\"effective_timestamp\":\"2016-01-23T00:23:54Z\"}".getBytes(UTF_8)));
+        inputEventArrived(input1, streamId("baz", "bob"), newEvent("CoolenessAdded",   new byte[0], "{\"effective_timestamp\":\"2014-01-23T00:23:54Z\"}".getBytes(UTF_8)));
+        inputEventArrived(input2, streamId("arg", "erg"), newEvent("CoolenessChanged", new byte[0], "{\"effective_timestamp\":\"2015-01-23T00:23:54Z\"}".getBytes(UTF_8)));
+
+        List<EventRecord> mergedEvents = outputReader.readAllForwards().map(ResolvedEvent::eventRecord).collect(Collectors.toList());
+
+        assertThat(mergedEvents, contains(
+                anEventRecord(
+                        clock.instant(),
+                        streamId("input", "all"),
+                        0L,
+                        "CoolenessAdded",
+                        new byte[0],
+                        "{\"effective_timestamp\":\"2014-01-23T00:23:54Z\"}".getBytes(UTF_8)
+                ),
+                anEventRecord(
+                        clock.instant(),
+                        streamId("input", "all"),
+                        1L,
+                        "CoolenessChanged",
+                        new byte[0],
+                        "{\"effective_timestamp\":\"2015-01-23T00:23:54Z\"}".getBytes(UTF_8)
+                ),
+                anEventRecord(
+                        clock.instant(),
+                        streamId("input", "all"),
+                        2L,
+                        "CoolenessRemoved",
+                        new byte[0],
+                        "{\"effective_timestamp\":\"2016-01-23T00:23:54Z\"}".getBytes(UTF_8)
+                )
+        ));
+    }
+
 
     private static void inputEventArrived(JavaInMemoryEventStore input, String eventType) {
-        inputEventArrived(input, StreamId.streamId("all", "all"), eventType);
+        inputEventArrived(input, streamId("all", "all"), eventType);
     }
 
     private static void inputEventArrived(JavaInMemoryEventStore input, StreamId streamId, String eventType) {
@@ -141,5 +184,4 @@ public class MergedEventReaderTest {
     private static void inputEventArrived(JavaInMemoryEventStore input, StreamId streamId, NewEvent event) {
         input.write(streamId, singleton(event));
     }
-
 }
