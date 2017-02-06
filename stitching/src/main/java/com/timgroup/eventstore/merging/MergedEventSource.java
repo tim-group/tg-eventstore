@@ -24,7 +24,7 @@ public final class MergedEventSource<T extends Comparable<T>> implements EventSo
                 mergingStrategy,
                 Stream.of(namedReaders).map(NamedReaderWithCodec::toReader).toArray(EventReader[]::new)
         );
-        this.mergedEventReaderPositionCodec = new MergedEventReaderPositionCodec();
+        this.mergedEventReaderPositionCodec = new MergedEventReaderPositionCodec(namedReaders);
     }
 
     public static MergedEventSource<Instant> effectiveTimestampMergedEventSource(NamedReaderWithCodec... namedReaders) {

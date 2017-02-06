@@ -3,6 +3,7 @@ package com.timgroup.eventstore.merging;
 import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventRecord;
+import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
@@ -33,7 +34,7 @@ public final class MergedEventSourceTest {
     supports_reading_all_forwards_from_a_single_input_stream() throws Exception {
         JavaInMemoryEventStore input = new JavaInMemoryEventStore(clock);
 
-        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(new NamedReaderWithCodec("a", input, null)).readAll();
+        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(new NamedReaderWithCodec("a", input, input)).readAll();
 
         inputEventArrived(input, "CoolenessAdded");
         inputEventArrived(input, "CoolenessChanged");
@@ -73,7 +74,7 @@ public final class MergedEventSourceTest {
     supports_reading_from_given_position_from_a_single_input_stream() throws Exception {
         JavaInMemoryEventStore input = new JavaInMemoryEventStore(clock);
 
-        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(new NamedReaderWithCodec("a", input, null)).readAll();
+        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(new NamedReaderWithCodec("a", input, input)).readAll();
 
         inputEventArrived(input, "CoolenessAdded");
         inputEventArrived(input, "CoolenessChanged");
@@ -93,14 +94,14 @@ public final class MergedEventSourceTest {
         ));
     }
 
-    @Ignore("pending implementation")
+    @Ignore("pending serialisation of event number")
     @Test public void
     supports_reading_all_forwards_from_multiple_input_streams_with_serialisation_of_position() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
         MergedEventSource<Integer> eventSource = MergedEventSource.streamOrderMergedEventSource(
-                new NamedReaderWithCodec("a", input1, null),
-                new NamedReaderWithCodec("b", input2, null)
+                new NamedReaderWithCodec("a", input1, input1),
+                new NamedReaderWithCodec("b", input2, input2)
         );
         EventReader outputReader = eventSource.readAll();
 
@@ -140,8 +141,8 @@ public final class MergedEventSourceTest {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
         EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(
-                new NamedReaderWithCodec("a", input1, null),
-                new NamedReaderWithCodec("b", input2, null)
+                new NamedReaderWithCodec("a", input1, input1),
+                new NamedReaderWithCodec("b", input2, input2)
         ).readAll();
 
         inputEventArrived(input1, "CoolenessAdded");
@@ -184,8 +185,8 @@ public final class MergedEventSourceTest {
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
 
         EventReader outputReader = MergedEventSource.effectiveTimestampMergedEventSource(
-                new NamedReaderWithCodec("a", input1, null),
-                new NamedReaderWithCodec("b", input2, null)
+                new NamedReaderWithCodec("a", input1, input1),
+                new NamedReaderWithCodec("b", input2, input2)
         ).readAll();
 
         inputEventArrived(input1, streamId("baz", "bob"), newEvent("CoolenessAdded",   new byte[0], "{\"effective_timestamp\":\"2014-01-23T00:23:54Z\"}".getBytes(UTF_8)));
@@ -222,15 +223,15 @@ public final class MergedEventSourceTest {
         ));
     }
 
-    private static void inputEventArrived(JavaInMemoryEventStore input, String eventType) {
+    private static void inputEventArrived(EventStreamWriter input, String eventType) {
         inputEventArrived(input, streamId("all", "all"), eventType);
     }
 
-    private static void inputEventArrived(JavaInMemoryEventStore input, StreamId streamId, String eventType) {
+    private static void inputEventArrived(EventStreamWriter input, StreamId streamId, String eventType) {
         inputEventArrived(input, streamId, newEvent(eventType, new byte[0], new byte[0]));
     }
 
-    private static void inputEventArrived(JavaInMemoryEventStore input, StreamId streamId, NewEvent event) {
+    private static void inputEventArrived(EventStreamWriter input, StreamId streamId, NewEvent event) {
         input.write(streamId, singleton(event));
     }
 }
