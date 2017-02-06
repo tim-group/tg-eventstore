@@ -7,17 +7,23 @@ import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.Spliterator;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static java.lang.Long.MAX_VALUE;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
 
 public final class MergedEventReader implements EventReader {
+    private static final Pattern EFFECTIVE_TIMESTAMP_PATTERN = Pattern.compile("\"effective_timestamp\"\\s*:\\s*\"([^\"]+)\"");
+
     private EventReader[] readers;
 
     public MergedEventReader(EventReader... readers) {
@@ -42,28 +48,48 @@ public final class MergedEventReader implements EventReader {
 
         @Override
         public boolean tryAdvance(Consumer<? super ResolvedEvent> consumer) {
-            for (int readerIndex = 0; readerIndex < readers.length; readerIndex ++) {
-                EventReader reader = readers[readerIndex];
-                Optional<ResolvedEvent> maybeEvent = reader.readAllForwards(currentPosition.inputPositions[readerIndex]).findFirst();
-                if (maybeEvent.isPresent()) {
-                    ResolvedEvent re = maybeEvent.get();
-                    EventRecord record = re.eventRecord();
-                    currentPosition = currentPosition.withNextPosition(readerIndex, re.position());
-                    consumer.accept(new ResolvedEvent(
-                            currentPosition,
-                            eventRecord(
+            Optional<ResolvedEvent> maybeNextInputEvent = advanceToNextEvent();
+            if (maybeNextInputEvent.isPresent()) {
+                ResolvedEvent re = maybeNextInputEvent.get();
+                EventRecord record = re.eventRecord();
+                consumer.accept(new ResolvedEvent(
+                        currentPosition,
+                        eventRecord(
                                 record.timestamp(),
                                 StreamId.streamId("input", "all"),
                                 currentPosition.outputEventNumber,
                                 record.eventType(),
                                 record.data(),
                                 record.metadata()
-                            )
-                    ));
-                    return true;
-                }
+                        )
+                ));
+                return true;
             }
             return false;
+        }
+
+        private Optional<ResolvedEvent> advanceToNextEvent() {
+            Instant minimumEffectiveTimestamp = Instant.MAX;
+            Optional<ResolvedEvent> candidate = Optional.empty();
+            int candidateIndex = -1;
+
+            for (int readerIndex = 0; readerIndex < readers.length; readerIndex++) {
+                EventReader reader = readers[readerIndex];
+                Optional<ResolvedEvent> maybeEvent = reader.readAllForwards(currentPosition.inputPositions[readerIndex]).findFirst();
+                if (maybeEvent.isPresent()) {
+                    Instant effectiveTimestamp = effectiveTimestampFrom(maybeEvent.get().eventRecord());
+                    if (effectiveTimestamp.isBefore(minimumEffectiveTimestamp)) {
+                        minimumEffectiveTimestamp = effectiveTimestamp;
+                        candidate = maybeEvent;
+                        candidateIndex = readerIndex;
+                    }
+                }
+            }
+
+            if (candidate.isPresent()) {
+                currentPosition = currentPosition.withNextPosition(candidateIndex, candidate.get().position());
+            }
+            return candidate;
         }
 
         @Override
@@ -79,6 +105,16 @@ public final class MergedEventReader implements EventReader {
         @Override
         public int characteristics() {
             return ORDERED | NONNULL | DISTINCT;
+        }
+
+        private static Instant effectiveTimestampFrom(EventRecord event) {
+            String metadata = new String(event.metadata(), UTF_8);
+            Matcher matcher = EFFECTIVE_TIMESTAMP_PATTERN.matcher(metadata);
+            if (matcher.find()) {
+                return Instant.parse(matcher.group(1));
+            }
+            return Instant.MIN;
+//            throw new IllegalStateException("no timestamp in metadata of " + event);
         }
     }
 

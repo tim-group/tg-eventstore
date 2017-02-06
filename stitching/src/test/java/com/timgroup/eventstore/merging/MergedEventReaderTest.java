@@ -7,7 +7,6 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.time.Instant;
@@ -132,14 +131,14 @@ public class MergedEventReaderTest {
         ));
     }
 
-    @Ignore public void
+    @Test public void
     supports_reading_all_forwards_from_multiple_input_streams_merging_by_effective_timestamp() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
         MergedEventReader outputReader = new MergedEventReader(input1, input2);
 
-        inputEventArrived(input1, streamId("foo", "bar"), newEvent("CoolenessRemoved", new byte[0], "{\"effective_timestamp\":\"2016-01-23T00:23:54Z\"}".getBytes(UTF_8)));
         inputEventArrived(input1, streamId("baz", "bob"), newEvent("CoolenessAdded",   new byte[0], "{\"effective_timestamp\":\"2014-01-23T00:23:54Z\"}".getBytes(UTF_8)));
+        inputEventArrived(input1, streamId("foo", "bar"), newEvent("CoolenessRemoved", new byte[0], "{\"effective_timestamp\":\"2016-01-23T00:23:54Z\"}".getBytes(UTF_8)));
         inputEventArrived(input2, streamId("arg", "erg"), newEvent("CoolenessChanged", new byte[0], "{\"effective_timestamp\":\"2015-01-23T00:23:54Z\"}".getBytes(UTF_8)));
 
         List<EventRecord> mergedEvents = outputReader.readAllForwards().map(ResolvedEvent::eventRecord).collect(Collectors.toList());
