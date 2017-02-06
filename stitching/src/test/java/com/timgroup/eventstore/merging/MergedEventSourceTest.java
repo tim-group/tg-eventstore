@@ -1,6 +1,7 @@
 package com.timgroup.eventstore.merging;
 
 import com.timgroup.clocks.testing.ManualClock;
+import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.Position;
@@ -22,7 +23,7 @@ import static java.util.Collections.singleton;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 
-public class MergedEventReaderTest {
+public final class MergedEventSourceTest {
 
     private final ManualClock clock = new ManualClock(Instant.parse("2009-04-12T22:12:32Z"), ZoneId.of("UTC"));
 
@@ -31,7 +32,7 @@ public class MergedEventReaderTest {
     supports_reading_all_forwards_from_a_single_input_stream() throws Exception {
         JavaInMemoryEventStore input = new JavaInMemoryEventStore(clock);
 
-        MergedEventReader outputReader = MergedEventReader.streamOrderMergedEventReader(input);
+        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(input).readAll();
 
         inputEventArrived(input, "CoolenessAdded");
         inputEventArrived(input, "CoolenessChanged");
@@ -71,7 +72,7 @@ public class MergedEventReaderTest {
     supports_reading_from_given_position_from_a_single_input_stream() throws Exception {
         JavaInMemoryEventStore input = new JavaInMemoryEventStore(clock);
 
-        MergedEventReader<?> outputReader = MergedEventReader.streamOrderMergedEventReader(input);
+        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(input).readAll();
 
         inputEventArrived(input, "CoolenessAdded");
         inputEventArrived(input, "CoolenessChanged");
@@ -95,7 +96,7 @@ public class MergedEventReaderTest {
     supports_reading_all_forwards_from_multiple_input_streams() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
-        MergedEventReader outputReader = MergedEventReader.streamOrderMergedEventReader(input1, input2);
+        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(input1, input2).readAll();
 
         inputEventArrived(input1, "CoolenessAdded");
         inputEventArrived(input2, "CoolenessRemoved");
@@ -135,7 +136,8 @@ public class MergedEventReaderTest {
     supports_reading_all_forwards_from_multiple_input_streams_merging_by_effective_timestamp() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
-        MergedEventReader outputReader = MergedEventReader.effectiveTimestampMergedEventReader(input1, input2);
+
+        EventReader outputReader = MergedEventSource.effectiveTimestampMergedEventSource(input1, input2).readAll();
 
         inputEventArrived(input1, streamId("baz", "bob"), newEvent("CoolenessAdded",   new byte[0], "{\"effective_timestamp\":\"2014-01-23T00:23:54Z\"}".getBytes(UTF_8)));
         inputEventArrived(input1, streamId("foo", "bar"), newEvent("CoolenessRemoved", new byte[0], "{\"effective_timestamp\":\"2016-01-23T00:23:54Z\"}".getBytes(UTF_8)));
