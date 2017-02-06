@@ -44,17 +44,17 @@ public final class MergedEventReader implements EventReader {
         public boolean tryAdvance(Consumer<? super ResolvedEvent> consumer) {
             for (int readerIndex = 0; readerIndex < readers.length; readerIndex ++) {
                 EventReader reader = readers[readerIndex];
-                Optional<ResolvedEvent> maybeEvent = reader.readAllForwards(currentPosition.positions[readerIndex]).findFirst();
+                Optional<ResolvedEvent> maybeEvent = reader.readAllForwards(currentPosition.inputPositions[readerIndex]).findFirst();
                 if (maybeEvent.isPresent()) {
                     ResolvedEvent re = maybeEvent.get();
                     EventRecord record = re.eventRecord();
-                    currentPosition = currentPosition.withPosition(readerIndex, re.position());
+                    currentPosition = currentPosition.withNextPosition(readerIndex, re.position());
                     consumer.accept(new ResolvedEvent(
                             currentPosition,
                             eventRecord(
                                 record.timestamp(),
                                 StreamId.streamId("input", "all"),
-                                record.eventNumber(),
+                                currentPosition.outputEventNumber,
                                 record.eventType(),
                                 record.data(),
                                 record.metadata()
@@ -86,27 +86,29 @@ public final class MergedEventReader implements EventReader {
     @Override
     public Position emptyStorePosition() {
         Position[] positions = Stream.of(readers).map(EventReader::emptyStorePosition).collect(toList()).toArray(new Position[0]);
-        return new MergedEventReaderPosition(positions);
+        return new MergedEventReaderPosition(-1L, positions);
     }
 
     private static class MergedEventReaderPosition implements Position {
-        final private Position[] positions;
+        private final long outputEventNumber;
+        private final Position[] inputPositions;
 
-        MergedEventReaderPosition(Position... positions) {
-            this.positions = positions;
+        MergedEventReaderPosition(long outputEventNumber, Position... inputPositions) {
+            this.outputEventNumber = outputEventNumber;
+            this.inputPositions = inputPositions;
         }
 
-        public MergedEventReaderPosition withPosition(int readerIndex, Position position) {
-            Position[] newPositions = positions.clone();
+        public MergedEventReaderPosition withNextPosition(int readerIndex, Position position) {
+            Position[] newPositions = inputPositions.clone();
             newPositions[readerIndex] = position;
-            return new MergedEventReaderPosition(newPositions);
+            return new MergedEventReaderPosition(outputEventNumber + 1L, newPositions);
         }
     }
 
     public static class MergedEventReaderPositionCodec implements PositionCodec {
         @Override
         public Position deserializePosition(String string) {
-            return new MergedEventReaderPosition();
+            return new MergedEventReaderPosition(-1L);
         }
 
         @Override

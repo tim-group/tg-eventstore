@@ -24,6 +24,7 @@ public class MergedEventReaderTest {
 
     private final ManualClock clock = new ManualClock(Instant.parse("2009-04-12T22:12:32Z"), ZoneId.of("UTC"));
 
+
     @Test public void
     supports_reading_all_forwards_from_a_single_input_stream() throws Exception {
         JavaInMemoryEventStore input = new JavaInMemoryEventStore(clock);
@@ -64,7 +65,6 @@ public class MergedEventReaderTest {
         ));
     }
 
-
     @Test public void
     supports_reading_from_given_position_from_a_single_input_stream() throws Exception {
         JavaInMemoryEventStore input = new JavaInMemoryEventStore(clock);
@@ -83,6 +83,46 @@ public class MergedEventReaderTest {
                         StreamId.streamId("input", "all"),
                         1L,
                         "CoolenessChanged",
+                        new byte[0],
+                        new byte[0]
+                )
+        ));
+    }
+
+    @Test public void
+    supports_reading_all_forwards_from_multiple_input_streams() throws Exception {
+        JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
+        JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
+        MergedEventReader outputReader = new MergedEventReader(input1, input2);
+
+        inputEventArrived(input1, "CoolenessAdded");
+        inputEventArrived(input2, "CoolenessRemoved");
+        inputEventArrived(input1, "CoolenessChanged");
+
+        List<EventRecord> mergedEvents = outputReader.readAllForwards().map(ResolvedEvent::eventRecord).collect(Collectors.toList());
+
+        assertThat(mergedEvents, contains(
+                anEventRecord(
+                        clock.instant(),
+                        StreamId.streamId("input", "all"),
+                        0L,
+                        "CoolenessAdded",
+                        new byte[0],
+                        new byte[0]
+                ),
+                anEventRecord(
+                        clock.instant(),
+                        StreamId.streamId("input", "all"),
+                        1L,
+                        "CoolenessChanged",
+                        new byte[0],
+                        new byte[0]
+                ),
+                anEventRecord(
+                        clock.instant(),
+                        StreamId.streamId("input", "all"),
+                        2L,
+                        "CoolenessRemoved",
                         new byte[0],
                         new byte[0]
                 )
