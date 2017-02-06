@@ -24,7 +24,6 @@ final class MergedEventReaderPosition implements Position {
         private static final String SEPARATOR = "###";
         private static final Pattern SEPARATOR_REGEX = Pattern.compile(Pattern.quote(SEPARATOR));
 
-
         private final NamedReaderWithCodec[] namedReaders;
 
         MergedEventReaderPositionCodec(NamedReaderWithCodec... namedReaders) {
@@ -32,27 +31,31 @@ final class MergedEventReaderPosition implements Position {
         }
 
         @Override
-        public Position deserializePosition(String serializePosition) {
-            String[] serialisedPositions = SEPARATOR_REGEX.split(serializePosition);
+        public String serializePosition(Position position) {
+            MergedEventReaderPosition mergedPosition = (MergedEventReaderPosition)position;
+            StringBuilder serialisedPositionData = new StringBuilder();
 
-            Position[] deserialisedPositions = new Position[namedReaders.length];
+            serialisedPositionData
+                    .append(mergedPosition.outputEventNumber)
+                    .append(SEPARATOR);
+
             for (int index = 0; index < namedReaders.length; index++) {
-                deserialisedPositions[index] = namedReaders[index].codec.deserializePosition(serialisedPositions[index]);
+                serialisedPositionData
+                        .append(namedReaders[index].codec.serializePosition(mergedPosition.inputPositions[index]))
+                        .append(SEPARATOR);
             }
-
-            return new MergedEventReaderPosition(-1L, deserialisedPositions);
+            return serialisedPositionData.toString();
         }
 
         @Override
-        public String serializePosition(Position position) {
-            MergedEventReaderPosition mergedPosition = (MergedEventReaderPosition)position;
+        public Position deserializePosition(String serialisedPosition) {
+            String[] serialisedPositionData = SEPARATOR_REGEX.split(serialisedPosition);
 
-            StringBuilder serialisedPosition = new StringBuilder();
+            Position[] deserialisedPositions = new Position[namedReaders.length];
             for (int index = 0; index < namedReaders.length; index++) {
-                serialisedPosition.append(namedReaders[index].codec.serializePosition(mergedPosition.inputPositions[index]));
-                serialisedPosition.append(SEPARATOR);
+                deserialisedPositions[index] = namedReaders[index].codec.deserializePosition(serialisedPositionData[index + 1]);
             }
-            return serialisedPosition.toString();
+            return new MergedEventReaderPosition(Long.parseLong(serialisedPositionData[0]), deserialisedPositions);
         }
     }
 

@@ -9,7 +9,6 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.time.Instant;
@@ -94,7 +93,6 @@ public final class MergedEventSourceTest {
         ));
     }
 
-    @Ignore("pending serialisation of event number")
     @Test public void
     supports_reading_all_forwards_from_multiple_input_streams_with_serialisation_of_position() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
