@@ -154,14 +154,14 @@ public final class MergedEventReader<T extends Comparable<T>> implements EventRe
     }
 
     private static final class EffectiveTimestampMergingStrategy implements MergingStrategy<Instant> {
-        private final Pattern EFFECTIVE_TIMESTAMP_PATTERN = Pattern.compile("\"effective_timestamp\"\\s*:\\s*\"([^\"]+)\"");
+        private static final Pattern EFFECTIVE_TIMESTAMP_PATTERN = Pattern.compile("\"effective_timestamp\"\\s*:\\s*\"([^\"]+)\"");
 
         @Override
         public Instant toComparable(ResolvedEvent event) {
             return effectiveTimestampFrom(event);
         }
 
-        private Instant effectiveTimestampFrom(ResolvedEvent event) {
+        private static Instant effectiveTimestampFrom(ResolvedEvent event) {
             String metadata = new String(event.eventRecord().metadata(), UTF_8);
             Matcher matcher = EFFECTIVE_TIMESTAMP_PATTERN.matcher(metadata);
             if (matcher.find()) {
@@ -172,7 +172,7 @@ public final class MergedEventReader<T extends Comparable<T>> implements EventRe
         }
     }
 
-    public static class MergedEventReaderPositionCodec implements PositionCodec {
+    public static final class MergedEventReaderPositionCodec implements PositionCodec {
         @Override
         public Position deserializePosition(String string) {
             return new MergedEventReaderPosition(-1L);
