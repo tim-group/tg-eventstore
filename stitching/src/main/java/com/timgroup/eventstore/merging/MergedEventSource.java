@@ -11,6 +11,7 @@ import com.timgroup.tucker.info.Component;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.stream.Stream;
 
 public final class MergedEventSource<T extends Comparable<T>> implements EventSource {
 
@@ -18,17 +19,20 @@ public final class MergedEventSource<T extends Comparable<T>> implements EventSo
     private final MergedEventReaderPositionCodec mergedEventReaderPositionCodec;
 
     @SuppressWarnings("WeakerAccess")
-    public MergedEventSource(MergingStrategy<T> mergingStrategy, EventReader... readers) {
-        this.eventReader = new MergedEventReader<>(mergingStrategy, readers);
+    public MergedEventSource(MergingStrategy<T> mergingStrategy, NamedReaderWithCodec... namedReaders) {
+        this.eventReader = new MergedEventReader<>(
+                mergingStrategy,
+                Stream.of(namedReaders).map(NamedReaderWithCodec::toReader).toArray(EventReader[]::new)
+        );
         this.mergedEventReaderPositionCodec = new MergedEventReaderPositionCodec();
     }
 
-    public static MergedEventSource<Instant> effectiveTimestampMergedEventSource(EventReader... readers) {
-        return new MergedEventSource<>(new MergingStrategy.EffectiveTimestampMergingStrategy(), readers);
+    public static MergedEventSource<Instant> effectiveTimestampMergedEventSource(NamedReaderWithCodec... namedReaders) {
+        return new MergedEventSource<>(new MergingStrategy.EffectiveTimestampMergingStrategy(), namedReaders);
     }
 
-    public static MergedEventSource<Integer> streamOrderMergedEventSource(EventReader... readers) {
-        return new MergedEventSource<>(new MergingStrategy.StreamIndexMergingStrategy(), readers);
+    public static MergedEventSource<Integer> streamOrderMergedEventSource(NamedReaderWithCodec... namedReaders) {
+        return new MergedEventSource<>(new MergingStrategy.StreamIndexMergingStrategy(), namedReaders);
     }
 
     @Override

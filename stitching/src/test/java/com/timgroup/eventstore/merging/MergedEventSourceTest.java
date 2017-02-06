@@ -8,6 +8,7 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.time.Instant;
@@ -32,7 +33,7 @@ public final class MergedEventSourceTest {
     supports_reading_all_forwards_from_a_single_input_stream() throws Exception {
         JavaInMemoryEventStore input = new JavaInMemoryEventStore(clock);
 
-        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(input).readAll();
+        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(new NamedReaderWithCodec("a", input, null)).readAll();
 
         inputEventArrived(input, "CoolenessAdded");
         inputEventArrived(input, "CoolenessChanged");
@@ -72,7 +73,7 @@ public final class MergedEventSourceTest {
     supports_reading_from_given_position_from_a_single_input_stream() throws Exception {
         JavaInMemoryEventStore input = new JavaInMemoryEventStore(clock);
 
-        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(input).readAll();
+        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(new NamedReaderWithCodec("a", input, null)).readAll();
 
         inputEventArrived(input, "CoolenessAdded");
         inputEventArrived(input, "CoolenessChanged");
@@ -92,11 +93,56 @@ public final class MergedEventSourceTest {
         ));
     }
 
+    @Ignore("pending implementation")
     @Test public void
-    supports_reading_all_forwards_from_multiple_input_streams() throws Exception {
+    supports_reading_all_forwards_from_multiple_input_streams_with_serialisation_of_position() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
-        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(input1, input2).readAll();
+        MergedEventSource<Integer> eventSource = MergedEventSource.streamOrderMergedEventSource(
+                new NamedReaderWithCodec("a", input1, null),
+                new NamedReaderWithCodec("b", input2, null)
+        );
+        EventReader outputReader = eventSource.readAll();
+
+        inputEventArrived(input1, "CoolenessAdded");
+        inputEventArrived(input2, "CoolenessRemoved");
+        inputEventArrived(input2, "CoolenessChanged");
+
+        @SuppressWarnings("OptionalGetWithoutIsPresent") Position startPosition = outputReader.readAllForwards().skip(1).findFirst().get().position();
+        Position deserialisedStartPosition = eventSource.positionCodec().deserializePosition(eventSource.positionCodec().serializePosition(startPosition));
+
+        inputEventArrived(input1, "CoolenessDestroyed");
+
+        List<EventRecord> mergedEvents = outputReader.readAllForwards(deserialisedStartPosition).map(ResolvedEvent::eventRecord).collect(Collectors.toList());
+
+        assertThat(mergedEvents, contains(
+                anEventRecord(
+                        clock.instant(),
+                        streamId("input", "all"),
+                        2L,
+                        "CoolenessDestroyed",
+                        new byte[0],
+                        new byte[0]
+                ),
+                anEventRecord(
+                        clock.instant(),
+                        streamId("input", "all"),
+                        3L,
+                        "CoolenessChanged",
+                        new byte[0],
+                        new byte[0]
+                )
+        ));
+    }
+
+    @Test public void
+    supports_reading_from_a_given_position_forwards_from_multiple_input_streams() throws Exception {
+        JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
+        JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
+        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(
+                new NamedReaderWithCodec("a", input1, null),
+                new NamedReaderWithCodec("b", input2, null)
+        ).readAll();
 
         inputEventArrived(input1, "CoolenessAdded");
         inputEventArrived(input2, "CoolenessRemoved");
@@ -137,7 +183,10 @@ public final class MergedEventSourceTest {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
 
-        EventReader outputReader = MergedEventSource.effectiveTimestampMergedEventSource(input1, input2).readAll();
+        EventReader outputReader = MergedEventSource.effectiveTimestampMergedEventSource(
+                new NamedReaderWithCodec("a", input1, null),
+                new NamedReaderWithCodec("b", input2, null)
+        ).readAll();
 
         inputEventArrived(input1, streamId("baz", "bob"), newEvent("CoolenessAdded",   new byte[0], "{\"effective_timestamp\":\"2014-01-23T00:23:54Z\"}".getBytes(UTF_8)));
         inputEventArrived(input1, streamId("foo", "bar"), newEvent("CoolenessRemoved", new byte[0], "{\"effective_timestamp\":\"2016-01-23T00:23:54Z\"}".getBytes(UTF_8)));
@@ -172,7 +221,6 @@ public final class MergedEventSourceTest {
                 )
         ));
     }
-
 
     private static void inputEventArrived(JavaInMemoryEventStore input, String eventType) {
         inputEventArrived(input, streamId("all", "all"), eventType);
