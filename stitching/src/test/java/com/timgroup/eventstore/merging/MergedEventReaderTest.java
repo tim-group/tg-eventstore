@@ -3,6 +3,7 @@ package com.timgroup.eventstore.merging;
 import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.NewEvent;
+import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
@@ -62,6 +63,32 @@ public class MergedEventReaderTest {
                 )
         ));
     }
+
+
+    @Test public void
+    supports_reading_from_given_position_from_a_single_input_stream() throws Exception {
+        JavaInMemoryEventStore input = new JavaInMemoryEventStore(clock);
+
+        MergedEventReader outputReader = new MergedEventReader(input);
+
+        inputEventArrived(input, "CoolenessAdded");
+        inputEventArrived(input, "CoolenessChanged");
+
+        @SuppressWarnings("OptionalGetWithoutIsPresent") Position startPosition = outputReader.readAllForwards().findFirst().get().position();
+        List<EventRecord> mergedEvents = outputReader.readAllForwards(startPosition).map(ResolvedEvent::eventRecord).collect(Collectors.toList());
+
+        assertThat(mergedEvents, contains(
+                anEventRecord(
+                        clock.instant(),
+                        StreamId.streamId("input", "all"),
+                        1L,
+                        "CoolenessChanged",
+                        new byte[0],
+                        new byte[0]
+                )
+        ));
+    }
+
 
     private static void inputEventArrived(JavaInMemoryEventStore input, String eventType) {
         inputEventArrived(input, StreamId.streamId("all", "all"), eventType);
