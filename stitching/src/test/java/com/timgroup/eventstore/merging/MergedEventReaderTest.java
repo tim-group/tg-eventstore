@@ -31,7 +31,7 @@ public class MergedEventReaderTest {
     supports_reading_all_forwards_from_a_single_input_stream() throws Exception {
         JavaInMemoryEventStore input = new JavaInMemoryEventStore(clock);
 
-        MergedEventReader outputReader = new MergedEventReader(input);
+        MergedEventReader outputReader = MergedEventReader.streamOrderMergedEventReader(input);
 
         inputEventArrived(input, "CoolenessAdded");
         inputEventArrived(input, "CoolenessChanged");
@@ -71,7 +71,7 @@ public class MergedEventReaderTest {
     supports_reading_from_given_position_from_a_single_input_stream() throws Exception {
         JavaInMemoryEventStore input = new JavaInMemoryEventStore(clock);
 
-        MergedEventReader outputReader = new MergedEventReader(input);
+        MergedEventReader<?> outputReader = MergedEventReader.streamOrderMergedEventReader(input);
 
         inputEventArrived(input, "CoolenessAdded");
         inputEventArrived(input, "CoolenessChanged");
@@ -95,7 +95,7 @@ public class MergedEventReaderTest {
     supports_reading_all_forwards_from_multiple_input_streams() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
-        MergedEventReader outputReader = new MergedEventReader(input1, input2);
+        MergedEventReader outputReader = MergedEventReader.streamOrderMergedEventReader(input1, input2);
 
         inputEventArrived(input1, "CoolenessAdded");
         inputEventArrived(input2, "CoolenessRemoved");
@@ -135,7 +135,7 @@ public class MergedEventReaderTest {
     supports_reading_all_forwards_from_multiple_input_streams_merging_by_effective_timestamp() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
-        MergedEventReader outputReader = new MergedEventReader(input1, input2);
+        MergedEventReader outputReader = MergedEventReader.effectiveTimestampMergedEventReader(input1, input2);
 
         inputEventArrived(input1, streamId("baz", "bob"), newEvent("CoolenessAdded",   new byte[0], "{\"effective_timestamp\":\"2014-01-23T00:23:54Z\"}".getBytes(UTF_8)));
         inputEventArrived(input1, streamId("foo", "bar"), newEvent("CoolenessRemoved", new byte[0], "{\"effective_timestamp\":\"2016-01-23T00:23:54Z\"}".getBytes(UTF_8)));

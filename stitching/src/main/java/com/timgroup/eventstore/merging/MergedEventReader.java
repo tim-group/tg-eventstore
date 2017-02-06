@@ -21,37 +21,48 @@ import static java.lang.Long.MAX_VALUE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
 
-public final class MergedEventReader implements EventReader {
-    private static final Pattern EFFECTIVE_TIMESTAMP_PATTERN = Pattern.compile("\"effective_timestamp\"\\s*:\\s*\"([^\"]+)\"");
+public final class MergedEventReader<T extends Comparable<T>> implements EventReader {
 
-    private EventReader[] readers;
+    private final MergingStrategy<T> mergingStrategy;
+    private final EventReader[] readers;
 
-    public MergedEventReader(EventReader... readers) {
+    @SuppressWarnings("WeakerAccess")
+    public MergedEventReader(MergingStrategy<T> mergingStrategy, EventReader... readers) {
+        this.mergingStrategy = mergingStrategy;
         this.readers = readers;
+    }
+
+    public static MergedEventReader<Instant> effectiveTimestampMergedEventReader(EventReader... readers) {
+        return new MergedEventReader<>(new EffectiveTimestampMergingStrategy(), readers);
+    }
+
+    public static MergedEventReader<Integer> streamOrderMergedEventReader(EventReader... readers) {
+        return new MergedEventReader<>(new StreamIndexMergingStrategy(), readers);
     }
 
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-        return StreamSupport.stream(new MergingSpliterator((MergedEventReaderPosition) positionExclusive, readers), false);
+        return StreamSupport.stream(new MergingSpliterator<>(mergingStrategy, (MergedEventReaderPosition) positionExclusive, readers), false);
     }
 
-    private static final class MergingSpliterator implements Spliterator<ResolvedEvent> {
+    private static final class MergingSpliterator<T extends Comparable<T>> implements Spliterator<ResolvedEvent> {
 
+        private final MergingStrategy<T> mergingStrategy;
         private final EventReader[] readers;
 
         private MergedEventReaderPosition currentPosition;
 
-        private MergingSpliterator(MergedEventReaderPosition startPosition, EventReader... readers) {
+        private MergingSpliterator(MergingStrategy<T> mergingStrategy, MergedEventReaderPosition startPosition, EventReader... readers) {
+            this.mergingStrategy = mergingStrategy;
             this.readers = readers;
-            currentPosition = startPosition;
+            this.currentPosition = startPosition;
         }
 
         @Override
         public boolean tryAdvance(Consumer<? super ResolvedEvent> consumer) {
             Optional<ResolvedEvent> maybeNextInputEvent = advanceToNextEvent();
             if (maybeNextInputEvent.isPresent()) {
-                ResolvedEvent re = maybeNextInputEvent.get();
-                EventRecord record = re.eventRecord();
+                EventRecord record = maybeNextInputEvent.get().eventRecord();
                 consumer.accept(new ResolvedEvent(
                         currentPosition,
                         eventRecord(
@@ -69,7 +80,7 @@ public final class MergedEventReader implements EventReader {
         }
 
         private Optional<ResolvedEvent> advanceToNextEvent() {
-            Instant minimumEffectiveTimestamp = Instant.MAX;
+            Optional<T> candidateOrderingValue = Optional.empty();
             Optional<ResolvedEvent> candidate = Optional.empty();
             int candidateIndex = -1;
 
@@ -77,9 +88,9 @@ public final class MergedEventReader implements EventReader {
                 EventReader reader = readers[readerIndex];
                 Optional<ResolvedEvent> maybeEvent = reader.readAllForwards(currentPosition.inputPositions[readerIndex]).findFirst();
                 if (maybeEvent.isPresent()) {
-                    Instant effectiveTimestamp = effectiveTimestampFrom(maybeEvent.get().eventRecord());
-                    if (effectiveTimestamp.isBefore(minimumEffectiveTimestamp)) {
-                        minimumEffectiveTimestamp = effectiveTimestamp;
+                    T orderingValue = mergingStrategy.toComparable(maybeEvent.get());
+                    if (!candidateOrderingValue.isPresent() || orderingValue.compareTo(candidateOrderingValue.get()) < 0) {
+                        candidateOrderingValue = Optional.of(orderingValue);
                         candidate = maybeEvent;
                         candidateIndex = readerIndex;
                     }
@@ -106,16 +117,6 @@ public final class MergedEventReader implements EventReader {
         public int characteristics() {
             return ORDERED | NONNULL | DISTINCT;
         }
-
-        private static Instant effectiveTimestampFrom(EventRecord event) {
-            String metadata = new String(event.metadata(), UTF_8);
-            Matcher matcher = EFFECTIVE_TIMESTAMP_PATTERN.matcher(metadata);
-            if (matcher.find()) {
-                return Instant.parse(matcher.group(1));
-            }
-            return Instant.MIN;
-//            throw new IllegalStateException("no timestamp in metadata of " + event);
-        }
     }
 
 
@@ -138,6 +139,36 @@ public final class MergedEventReader implements EventReader {
             Position[] newPositions = inputPositions.clone();
             newPositions[readerIndex] = position;
             return new MergedEventReaderPosition(outputEventNumber + 1L, newPositions);
+        }
+    }
+
+    interface MergingStrategy<T extends Comparable<T>> {
+        T toComparable(ResolvedEvent event);
+    }
+
+    private static final class StreamIndexMergingStrategy implements MergingStrategy<Integer> {
+        @Override
+        public Integer toComparable(ResolvedEvent event) {
+            return 0;
+        }
+    }
+
+    private static final class EffectiveTimestampMergingStrategy implements MergingStrategy<Instant> {
+        private final Pattern EFFECTIVE_TIMESTAMP_PATTERN = Pattern.compile("\"effective_timestamp\"\\s*:\\s*\"([^\"]+)\"");
+
+        @Override
+        public Instant toComparable(ResolvedEvent event) {
+            return effectiveTimestampFrom(event);
+        }
+
+        private Instant effectiveTimestampFrom(ResolvedEvent event) {
+            String metadata = new String(event.eventRecord().metadata(), UTF_8);
+            Matcher matcher = EFFECTIVE_TIMESTAMP_PATTERN.matcher(metadata);
+            if (matcher.find()) {
+                return Instant.parse(matcher.group(1));
+            }
+            return Instant.MIN;
+//            throw new IllegalStateException("no timestamp in metadata of " + event);
         }
     }
 
