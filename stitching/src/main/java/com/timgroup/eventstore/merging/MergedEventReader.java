@@ -36,7 +36,7 @@ public final class MergedEventReader implements EventReader {
 
     @Override
     public Position emptyStorePosition() {
-        Position[] positions = Stream.of(readers).map(r -> r.emptyStorePosition()).collect(toList()).toArray(new Position[0]);
+        Position[] positions = Stream.of(readers).map(EventReader::emptyStorePosition).collect(toList()).toArray(new Position[0]);
         return new MergedEventReaderPosition(positions);
     }
 
