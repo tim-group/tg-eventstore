@@ -1,4 +1,4 @@
-package com.timgroup.eventstore.merging;
+package com.timgroup.eventstore.shovelling;
 
 import com.google.common.collect.Lists;
 import com.timgroup.clocks.testing.ManualClock;
@@ -8,13 +8,13 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.InMemoryEventSource;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
+import com.timgroup.eventstore.shovelling.EventShovel;
 import org.junit.Test;
 
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,7 +22,6 @@ import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.eventstore.api.StreamId.streamId;
 import static com.timgroup.indicatorinputstreamwriter.EventRecordMatcher.anEventRecord;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Collections.singleton;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 

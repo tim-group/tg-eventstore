@@ -1,4 +1,4 @@
-package com.timgroup.eventstore.merging;
+package com.timgroup.eventstore.shovelling;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
