@@ -1,19 +1,26 @@
 package com.timgroup.eventstore.merging;
 
+import com.google.common.collect.Iterators;
+import com.google.common.collect.PeekingIterator;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static com.google.common.collect.Iterators.peekingIterator;
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static java.lang.Long.MAX_VALUE;
+import static java.util.Arrays.fill;
+import static java.util.Collections.emptyIterator;
 import static java.util.stream.Collectors.toList;
 
 final class MergedEventReader<T extends Comparable<T>> implements EventReader {
@@ -35,14 +42,20 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
 
         private final MergingStrategy<T> mergingStrategy;
         private final EventReader[] readers;
+        private final PeekingIterator<ResolvedEvent>[] currentBatch;
+
 
         private MergedEventReaderPosition currentPosition;
 
         private MergingSpliterator(MergingStrategy<T> mergingStrategy, MergedEventReaderPosition startPosition, EventReader... readers) {
             this.mergingStrategy = mergingStrategy;
             this.readers = readers;
+            this.currentBatch = new PeekingIterator[readers.length];
+            fill(this.currentBatch, peekingIterator(emptyIterator()));
+
             this.currentPosition = startPosition;
         }
+
 
         @Override
         public boolean tryAdvance(Consumer<? super ResolvedEvent> consumer) {
@@ -72,7 +85,7 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
 
             for (int readerIndex = 0; readerIndex < readers.length; readerIndex++) {
                 EventReader reader = readers[readerIndex];
-                Optional<ResolvedEvent> maybeEvent = reader.readAllForwards(currentPosition.inputPositions[readerIndex]).findFirst();
+                Optional<ResolvedEvent> maybeEvent = peekNextFor(readerIndex);
                 if (maybeEvent.isPresent()) {
                     T orderingValue = mergingStrategy.toComparable(maybeEvent.get());
                     if (!candidateOrderingValue.isPresent() || orderingValue.compareTo(candidateOrderingValue.get()) < 0) {
@@ -85,8 +98,20 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
 
             if (candidate.isPresent()) {
                 currentPosition = currentPosition.withNextPosition(candidateIndex, candidate.get().position());
+                currentBatch[candidateIndex].next();
             }
             return candidate;
+        }
+
+        private Optional<ResolvedEvent> peekNextFor(int readerIndex) {
+            Position pos = currentPosition.inputPositions[readerIndex];
+
+            if (currentBatch[readerIndex].hasNext()) {
+                return Optional.of(currentBatch[readerIndex].peek());
+            }
+
+            currentBatch[readerIndex] = peekingIterator(readers[readerIndex].readAllForwards(pos).iterator());
+            return currentBatch[readerIndex].hasNext() ? Optional.of(currentBatch[readerIndex].peek()) : Optional.empty();
         }
 
         @Override
