@@ -2,9 +2,7 @@ package com.timgroup.eventstore.mysql.legacy;
 
 import com.timgroup.eventstore.mysql.ConnectionProvider;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 
 public class LegacyMysqlEventStoreSetup {
     private final ConnectionProvider connectionProvider;
@@ -32,17 +30,31 @@ public class LegacyMysqlEventStoreSetup {
         create(true);
     }
 
-    private void create(boolean drop) {
-        try (Connection connection = connectionProvider.getConnection();
-             Statement statement = connection.createStatement()) {
-            statement.execute("create table " + (drop ? "if not exists" : "") + " " + tableName + "(" +
-                    "version bigint primary key, " +
-                    "effective_timestamp datetime not null, " +
-                    "eventType varchar(255) not null," +
-                    "body blob not null" +
-                    ")");
+    private void create(boolean ifNotExists) {
+        try (Connection connection = connectionProvider.getConnection()) {
+            if (ifNotExists) {
+                DatabaseMetaData meta = connection.getMetaData();
+                String searchStringEscape = meta.getSearchStringEscape();
+                String escapedTableName = tableName.replace("_", searchStringEscape + "_").replace("%", searchStringEscape + "%");
+                try(ResultSet res = meta.getTables(null, null, escapedTableName, new String[]{"TABLE"})) {
+                    if (res.first()) {
+                        return;
+                    }
+                }
+            }
+
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("create table " + tableName + "(" +
+                        "version bigint primary key, " +
+                        "effective_timestamp datetime not null, " +
+                        "eventType varchar(255) not null," +
+                        "body blob not null" +
+                        ")");
+            }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
+
+
 }
