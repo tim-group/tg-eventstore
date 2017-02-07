@@ -1,15 +1,8 @@
 package com.timgroup.eventstore.merging;
 
-import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
-import com.timgroup.eventstore.api.EventReader;
-import com.timgroup.eventstore.api.EventRecord;
-import com.timgroup.eventstore.api.Position;
-import com.timgroup.eventstore.api.ResolvedEvent;
-import com.timgroup.eventstore.api.StreamId;
+import com.timgroup.eventstore.api.*;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.Optional;
 import java.util.Spliterator;
 import java.util.function.Consumer;
@@ -84,7 +77,6 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
             int candidateIndex = -1;
 
             for (int readerIndex = 0; readerIndex < readers.length; readerIndex++) {
-                EventReader reader = readers[readerIndex];
                 Optional<ResolvedEvent> maybeEvent = peekNextFor(readerIndex);
                 if (maybeEvent.isPresent()) {
                     T orderingValue = mergingStrategy.toComparable(maybeEvent.get());
