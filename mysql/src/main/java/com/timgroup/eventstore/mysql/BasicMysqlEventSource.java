@@ -1,5 +1,9 @@
 package com.timgroup.eventstore.mysql;
 
+import java.util.Collection;
+import java.util.Optional;
+import java.util.Properties;
+
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventReader;
@@ -11,9 +15,6 @@ import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.component.DatabaseConnectionComponent;
 import com.typesafe.config.Config;
 import org.slf4j.LoggerFactory;
-
-import java.util.Collection;
-import java.util.Properties;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -70,7 +71,16 @@ public class BasicMysqlEventSource implements EventSource {
     public Collection<Component> monitoring() {
         String id = "EventStore-" + this.name;
         String label = "EventStore (" + this.name + ")";
-        return singletonList(new DatabaseConnectionComponent(id, label, connectionProvider::getConnection));
+        Component databaseConnection = new DatabaseConnectionComponent(id, label, connectionProvider::getConnection);
+        if (databaseConnectionInfo().isPresent()) {
+            String prefix = databaseConnectionInfo().get() + ": ";
+            databaseConnection = databaseConnection.mapValue(v -> prefix + v);
+        }
+        return singletonList(databaseConnection);
+    }
+
+    protected Optional<String> databaseConnectionInfo() {
+        return Optional.empty();
     }
 
     public static PooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name) {
@@ -124,15 +134,22 @@ public class BasicMysqlEventSource implements EventSource {
 
     public static final class PooledMysqlEventSource extends BasicMysqlEventSource implements AutoCloseable {
         private final ComboPooledDataSource dataSource;
+        private final String connectionInfo;
 
         public PooledMysqlEventSource(ComboPooledDataSource dataSource, String tableName, int defaultBatchSize, String name) {
             super(dataSource::getConnection, tableName, defaultBatchSize, name);
+            this.connectionInfo = dataSource.getUser() + " @ " + dataSource.getJdbcUrl();
             this.dataSource = dataSource;
         }
 
         @Override
         public void close() {
             dataSource.close();
+        }
+
+        @Override
+        protected Optional<String> databaseConnectionInfo() {
+            return Optional.of(connectionInfo);
         }
     }
 }
