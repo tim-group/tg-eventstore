@@ -62,6 +62,23 @@ public final class BackfillStitchingEventSourceTest  {
     }
 
     @Test public void
+    generates_stitched_positions() {
+        List<String> readEvents = eventSource.readAll().readAllForwards()
+                .map(ResolvedEvent::position)
+                .map(p -> eventSource.positionCodec().serializePosition(p))
+                .collect(toList());
+
+        assertThat(readEvents, contains(
+                "1~~~4",
+                "2~~~4",
+                "3~~~4",
+                "3~~~5",
+                "3~~~6",
+                "3~~~7"
+        ));
+    }
+
+    @Test public void
     it_returns_only_events_from_live_if_cutoff_is_before_fromVersion() {
         Position startPosition = eventSource.readAll().readAllForwards().limit(4).collect(toList()).get(3).position();
 

@@ -54,11 +54,17 @@ final class BackfillStitchingEventForwardsSpliterator implements Spliterator<Res
     }
 
     private Consumer<? super ResolvedEvent> backfillConsumer(Consumer<? super ResolvedEvent> consumer) {
-        return re -> consumer.accept(new ResolvedEvent(new StitchedPosition(re.position(), lastPosition.livePosition), re.eventRecord()));
+        return re -> {
+            lastPosition = new StitchedPosition(re.position(), lastPosition.livePosition);
+            consumer.accept(new ResolvedEvent(lastPosition, re.eventRecord()));
+        };
     }
 
     private Consumer<? super ResolvedEvent> liveConsumer(Consumer<? super ResolvedEvent> consumer) {
-        return re -> consumer.accept(new ResolvedEvent(new StitchedPosition(lastPosition.backfillPosition, re.position()), re.eventRecord()));
+        return re -> {
+            lastPosition = new StitchedPosition(lastPosition.backfillPosition, re.position());
+            consumer.accept(new ResolvedEvent(lastPosition, re.eventRecord()));
+        };
     }
 
     @Override
