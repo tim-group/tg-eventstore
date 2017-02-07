@@ -38,7 +38,7 @@ final class MergedEventReaderPosition implements Position {
             serialisedPositionData
                     .append(mergedPosition.outputEventNumber)
                     .append(SEPARATOR);
-
+            //TODO: serialize out the stream name rather than relying on its index
             for (int index = 0; index < namedReaders.length; index++) {
                 serialisedPositionData
                         .append(namedReaders[index].codec.serializePosition(mergedPosition.inputPositions[index]))

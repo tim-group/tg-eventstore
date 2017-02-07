@@ -59,7 +59,7 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
                         currentPosition,
                         eventRecord(
                                 record.timestamp(),
-                                StreamId.streamId("input", "all"),
+                                StreamId.streamId("input", "all"),  //TODO: make this configurable
                                 currentPosition.outputEventNumber,
                                 record.eventType(),
                                 record.data(),

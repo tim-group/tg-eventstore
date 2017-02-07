@@ -20,6 +20,7 @@ public final class MergedEventSource<T extends Comparable<T>> implements EventSo
 
     @SuppressWarnings("WeakerAccess")
     public MergedEventSource(MergingStrategy<T> mergingStrategy, NamedReaderWithCodec... namedReaders) {
+        //TODO: enforce named readers have unique names
         this.eventReader = new MergedEventReader<>(
                 mergingStrategy,
                 Stream.of(namedReaders).map(NamedReaderWithCodec::toReader).toArray(EventReader[]::new)

@@ -10,7 +10,7 @@ public final class NamedReaderWithCodec {
     final PositionCodec codec;
 
     public NamedReaderWithCodec(String name, EventReader reader, PositionCodec codec) {
-        this.name = name;
+        this.name = name;  //TODO: enforce name is not null or empty
         this.reader = reader;
         this.codec = codec;
     }
