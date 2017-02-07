@@ -138,7 +138,7 @@ public class BasicMysqlEventSource implements EventSource {
 
         public PooledMysqlEventSource(ComboPooledDataSource dataSource, String tableName, int defaultBatchSize, String name) {
             super(dataSource::getConnection, tableName, defaultBatchSize, name);
-            this.connectionInfo = dataSource.getUser() + " @ " + dataSource.getJdbcUrl();
+            this.connectionInfo = dataSource.getUser() == null ? dataSource.getJdbcUrl() : dataSource.getUser() + " @ " + dataSource.getJdbcUrl();
             this.dataSource = dataSource;
         }
 
