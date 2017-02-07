@@ -32,8 +32,7 @@ public interface MergingStrategy<T extends Comparable<T>> {
             if (matcher.find()) {
                 return Instant.parse(matcher.group(1));
             }
-            return Instant.MIN;
-//            throw new IllegalStateException("no timestamp in metadata of " + event);
+            throw new IllegalStateException("no timestamp in metadata of " + event);
         }
     }
 }

@@ -1,18 +1,14 @@
 package com.timgroup.eventstore.merging;
 
 import com.timgroup.clocks.testing.ManualClock;
-import com.timgroup.eventstore.api.EventReader;
-import com.timgroup.eventstore.api.EventRecord;
-import com.timgroup.eventstore.api.EventStreamWriter;
-import com.timgroup.eventstore.api.NewEvent;
-import com.timgroup.eventstore.api.Position;
-import com.timgroup.eventstore.api.ResolvedEvent;
-import com.timgroup.eventstore.api.StreamId;
+import com.timgroup.eventstore.api.*;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -219,6 +215,24 @@ public final class MergedEventSourceTest {
                         "{\"effective_timestamp\":\"2016-01-23T00:23:54Z\"}".getBytes(UTF_8)
                 )
         ));
+    }
+
+    @Test public void
+    blows_up_when_merging_by_effective_timestamp_on_encountering_an_event_without_an_effective_timestamp() throws Exception {
+        JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
+
+        EventReader outputReader = MergedEventSource.effectiveTimestampMergedEventSource(new NamedReaderWithCodec("a", input1, input1)).readAll();
+
+        inputEventArrived(input1, streamId("baz", "bob"), newEvent("CoolenessAdded",   new byte[0], "{\"cheese_date\":\"2014-01-23T00:23:54Z\"}".getBytes(UTF_8)));
+
+        Iterator<ResolvedEvent> iterator = outputReader.readAllForwards().iterator();
+
+        try {
+            iterator.next();
+            Assert.fail("expected IllegalStateException");
+        } catch (IllegalStateException e) {
+            //pass
+        }
     }
 
     private static void inputEventArrived(EventStreamWriter input, String eventType) {
