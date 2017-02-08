@@ -13,6 +13,7 @@ import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.indicatorinputstreamwriter.ResolvedEventMatcher.aResolvedEvent;
 import static java.time.ZoneId.systemDefault;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertThat;
@@ -30,7 +31,7 @@ public class BackdatingEventReaderTest {
 
     @Test
     public void it_backdates_events_with_time_before_the_live_cutoff() throws Exception {
-        underlying.write(aStream, asList(newEvent("AnEvent", data, metadata)));
+        underlying.write(aStream, singletonList(newEvent("AnEvent", data, metadata)));
 
         assertThat(reader.readAllForwards().collect(toList()),
                 contains(aResolvedEvent(position(0), eventRecord(
@@ -48,7 +49,7 @@ public class BackdatingEventReaderTest {
         byte[] metadata = "{\"another_field\":4,\"effective_timestamp\":\"2017-01-01T09:00:00Z\"}".getBytes();
         byte[] backdatedMetadata = "{\"another_field\":4,\"effective_timestamp\":\"1970-01-01T00:00:00Z\"}".getBytes();
 
-        underlying.write(aStream, asList(newEvent("AnEvent", data, metadata)));
+        underlying.write(aStream, singletonList(newEvent("AnEvent", data, metadata)));
 
         assertThat(reader.readAllForwards().collect(toList()),
                 contains(aResolvedEvent(position(0), eventRecord(
@@ -65,9 +66,9 @@ public class BackdatingEventReaderTest {
     public void it_throws_exception_if_no_effective_timestamp_field() throws Exception {
         byte[] metadata = "{\"another_field\":4}".getBytes();
 
-        underlying.write(aStream, asList(newEvent("AnEvent", data, metadata)));
+        underlying.write(aStream, singletonList(newEvent("AnEvent", data, metadata)));
 
-        reader.readAllForwards().collect(toList());
+        reader.readAllForwards().forEach(e -> {});
     }
 
     @Test
@@ -92,7 +93,7 @@ public class BackdatingEventReaderTest {
     public void it_does_not_backdate_events_with_time_at_the_live_cutoff() throws Exception {
         final byte[] metadata = "{\"effective_timestamp\":\"2017-01-01T13:00:00Z\"}".getBytes();
 
-        underlying.write(aStream, asList(newEvent("AnEvent", data, metadata)));
+        underlying.write(aStream, singletonList(newEvent("AnEvent", data, metadata)));
 
         assertThat(reader.readAllForwards().collect(toList()),
                 contains(aResolvedEvent(position(0), eventRecord(
@@ -109,7 +110,7 @@ public class BackdatingEventReaderTest {
     public void it_does_not_backdate_events_with_time_after_the_live_cutoff() throws Exception {
         final byte[] metadata = "{\"effective_timestamp\":\"2017-01-01T13:00:00.001Z\"}".getBytes();
 
-        underlying.write(aStream, asList(newEvent("AnEvent", data, metadata)));
+        underlying.write(aStream, singletonList(newEvent("AnEvent", data, metadata)));
 
         assertThat(reader.readAllForwards().collect(toList()),
                 contains(aResolvedEvent(position(0), eventRecord(
@@ -125,7 +126,7 @@ public class BackdatingEventReaderTest {
 
     @Test
     public void it_reads_backwards() throws Exception {
-        underlying.write(aStream, asList(newEvent("AnEvent", data, metadata)));
+        underlying.write(aStream, singletonList(newEvent("AnEvent", data, metadata)));
 
         assertThat(reader.readAllBackwards().collect(toList()),
                 contains(aResolvedEvent(position(0), eventRecord(
@@ -156,6 +157,7 @@ public class BackdatingEventReaderTest {
                 ))));
     }
 
+    @SuppressWarnings("OptionalGetWithoutIsPresent")
     private Position position(int position) {
         return underlying.readAllForwards().skip(position).findFirst().get().position();
     }
