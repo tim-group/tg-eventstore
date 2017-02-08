@@ -1,57 +1,57 @@
 package com.timgroup.eventstore.merging;
 
+import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import com.timgroup.eventstore.api.*;
 
-import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import static com.google.common.collect.Iterators.peekingIterator;
+import static com.google.common.collect.ImmutableList.copyOf;
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static java.lang.Long.MAX_VALUE;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.IntStream.range;
 
 final class MergedEventReader<T extends Comparable<T>> implements EventReader {
 
     private final MergingStrategy<T> mergingStrategy;
-    private final EventReader[] readers;
+    private final List<EventReader> readers;
 
     public MergedEventReader(MergingStrategy<T> mergingStrategy, EventReader... readers) {
         this.mergingStrategy = mergingStrategy;
-        this.readers = readers;
+        this.readers = copyOf(readers);
     }
 
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
         MergedEventReaderPosition mergedPosition = (MergedEventReaderPosition) positionExclusive;
 
-        Stream<ResolvedEvent>[] streams = new Stream[readers.length];
-        for (int i = 0; i < readers.length; i++) {
-            streams[i] = readers[i].readAllForwards(mergedPosition.inputPositions[i]);//.takeWhile(re -> re.timestamp.isbefore(snapNow.minus(delay)));
-        }
+        List<Stream<ResolvedEvent>> data = range(0, readers.size())
+                .mapToObj(i -> readers.get(i)
+                                      .readAllForwards(mergedPosition.inputPositions[i])
+                                    //.takeWhile(re -> re.timestamp.isbefore(snapNow.minus(delay)));
+                ).collect(toList());
 
-        return StreamSupport.stream(new MergingSpliterator<>(mergingStrategy, mergedPosition, streams), false)
-                .onClose(() -> Arrays.stream(streams).forEach(Stream::close));
+        return StreamSupport.stream(new MergingSpliterator<>(mergingStrategy, mergedPosition, data), false)
+                .onClose(() -> data.forEach(Stream::close));
     }
 
     private static final class MergingSpliterator<T extends Comparable<T>> implements Spliterator<ResolvedEvent> {
 
         private final MergingStrategy<T> mergingStrategy;
-        private final PeekingIterator<ResolvedEvent>[] underlying;
+        private final List<PeekingIterator<ResolvedEvent>> underlying;
 
         private MergedEventReaderPosition currentPosition;
 
-        private MergingSpliterator(MergingStrategy<T> mergingStrategy, MergedEventReaderPosition startPosition, Stream<ResolvedEvent>... streams) {
+        private MergingSpliterator(MergingStrategy<T> mergingStrategy, MergedEventReaderPosition startPosition, List<Stream<ResolvedEvent>> data) {
             this.mergingStrategy = mergingStrategy;
-            this.underlying = new PeekingIterator[streams.length];
-            for (int i = 0; i < streams.length; i++) {
-                this.underlying[i] = peekingIterator(streams[i].iterator());
-            }
             this.currentPosition = startPosition;
+            this.underlying = data.stream().map(Stream::iterator).map(Iterators::peekingIterator).collect(toList());
         }
 
         @Override
@@ -80,7 +80,7 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
             Optional<ResolvedEvent> candidate = Optional.empty();
             int candidateIndex = -1;
 
-            for (int readerIndex = 0; readerIndex < underlying.length; readerIndex++) {
+            for (int readerIndex = 0; readerIndex < underlying.size(); readerIndex++) {
                 Optional<ResolvedEvent> maybeEvent = peekNextFor(readerIndex);
                 if (maybeEvent.isPresent()) {
                     T orderingValue = mergingStrategy.toComparable(maybeEvent.get());
@@ -94,13 +94,13 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
 
             if (candidate.isPresent()) {
                 currentPosition = currentPosition.withNextPosition(candidateIndex, candidate.get().position());
-                underlying[candidateIndex].next();
+                underlying.get(candidateIndex).next();
             }
             return candidate;
         }
 
         private Optional<ResolvedEvent> peekNextFor(int readerIndex) {
-            return underlying[readerIndex].hasNext() ? Optional.of(underlying[readerIndex].peek()) : Optional.empty();
+            return underlying.get(readerIndex).hasNext() ? Optional.of(underlying.get(readerIndex).peek()) : Optional.empty();
         }
 
         @Override
@@ -121,7 +121,7 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
 
     @Override
     public Position emptyStorePosition() {
-        Position[] positions = Stream.of(readers).map(EventReader::emptyStorePosition).collect(toList()).toArray(new Position[0]);
+        Position[] positions = readers.stream().map(EventReader::emptyStorePosition).collect(toList()).toArray(new Position[0]);
         return new MergedEventReaderPosition(-1L, positions);
     }
 
