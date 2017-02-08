@@ -6,13 +6,10 @@ import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventstore.api.*;
 import com.timgroup.eventstore.memory.InMemoryEventSource;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
-import com.timgroup.eventstore.shovelling.EventShovel;
 import org.junit.Test;
 
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -20,11 +17,10 @@ import java.util.stream.Collectors;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.eventstore.api.StreamId.streamId;
 import static com.timgroup.indicatorinputstreamwriter.EventRecordMatcher.anEventRecord;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 
-public final class FilteringReaderTest {
+public final class FilteringEventReaderTest {
 
     private final ManualClock clock = new ManualClock(Instant.parse("2009-04-12T22:12:32Z"), ZoneId.of("UTC"));
     private final JavaInMemoryEventStore inputReader = new JavaInMemoryEventStore(clock);
@@ -38,7 +34,7 @@ public final class FilteringReaderTest {
 
         Predicate<? super ResolvedEvent> predicate = (e -> true);
 
-        FilteringReader underTest = new FilteringReader(inputSource.readAll(), predicate);
+        FilteringEventReader underTest = new FilteringEventReader(inputSource.readAll(), predicate);
 
         List<EventRecord> events = underTest.readAllForwards().map(ResolvedEvent::eventRecord).collect(Collectors.toList());
 
@@ -78,7 +74,7 @@ public final class FilteringReaderTest {
 
         Predicate<? super ResolvedEvent> predicate = (e -> "CoolenessRemoved".equals(e.eventRecord().eventType()));
 
-        FilteringReader underTest = new FilteringReader(inputSource.readAll(), predicate);
+        FilteringEventReader underTest = new FilteringEventReader(inputSource.readAll(), predicate);
 
         List<EventRecord> events = underTest.readAllForwards().map(ResolvedEvent::eventRecord).collect(Collectors.toList());
 
@@ -100,7 +96,7 @@ public final class FilteringReaderTest {
         inputEventArrived(streamId("david", "tom"), newEvent("CoolenessChanged", new byte[0], new byte[0]));
         inputEventArrived(streamId("foo", "bar"), newEvent("CoolenessRemoved", new byte[0], new byte[0]));
 
-        FilteringReader underTest = FilteringReader.containingEventTypes(inputSource.readAll(), Sets.newHashSet("CoolenessRemoved"));
+        FilteringEventReader underTest = FilteringEventReader.containingEventTypes(inputSource.readAll(), Sets.newHashSet("CoolenessRemoved"));
 
         List<ResolvedEvent> events = underTest.readAllForwards().collect(Collectors.toList());
 

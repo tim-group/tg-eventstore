@@ -8,12 +8,12 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-public class FilteringReader implements EventReader {
+public final class FilteringEventReader implements EventReader {
 
     private final EventReader underlying;
-    private Predicate<? super ResolvedEvent> predicate;
+    private final Predicate<? super ResolvedEvent> predicate;
 
-    public FilteringReader(EventReader underlying, Predicate<? super ResolvedEvent> predicate) {
+    public FilteringEventReader(EventReader underlying, Predicate<? super ResolvedEvent> predicate) {
         this.underlying = underlying;
         this.predicate = predicate;
     }
@@ -28,8 +28,8 @@ public class FilteringReader implements EventReader {
         return underlying.emptyStorePosition();
     }
 
-    public static FilteringReader containingEventTypes(EventReader underlying, Set<String> eventTypes) {
-        return new FilteringReader(underlying, (e) -> eventTypes.contains(e.eventRecord().eventType()));
+    public static FilteringEventReader containingEventTypes(EventReader underlying, Set<String> eventTypes) {
+        return new FilteringEventReader(underlying, e -> eventTypes.contains(e.eventRecord().eventType()));
     }
 
 }
