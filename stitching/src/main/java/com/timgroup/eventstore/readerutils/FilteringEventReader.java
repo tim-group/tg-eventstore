@@ -1,4 +1,4 @@
-package com.timgroup.eventstore;
+package com.timgroup.eventstore.readerutils;
 
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;

@@ -1,4 +1,4 @@
-package com.timgroup.eventstore;
+package com.timgroup.eventstore.readerutils;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
