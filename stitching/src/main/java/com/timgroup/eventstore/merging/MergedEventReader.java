@@ -1,9 +1,9 @@
 package com.timgroup.eventstore.merging;
 
-import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import com.timgroup.eventstore.api.*;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Spliterator;
@@ -12,6 +12,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static com.google.common.collect.ImmutableList.copyOf;
+import static com.google.common.collect.Iterators.peekingIterator;
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static java.lang.Long.MAX_VALUE;
 import static java.util.stream.Collectors.toList;
@@ -41,24 +42,36 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
                 .onClose(() -> data.forEach(Stream::close));
     }
 
+    @Override
+    public Position emptyStorePosition() {
+        Position[] positions = readers.stream().map(EventReader::emptyStorePosition).collect(toList()).toArray(new Position[0]);
+        return new MergedEventReaderPosition(-1L, positions);
+    }
+
+
+
     private static final class MergingSpliterator<T extends Comparable<T>> implements Spliterator<ResolvedEvent> {
 
         private final MergingStrategy<T> mergingStrategy;
-        private final List<PeekingIterator<ResolvedEvent>> underlying;
+        private final List<IdentifiedPeekingResolvedEventIterator> underlying;
 
         private MergedEventReaderPosition currentPosition;
 
         private MergingSpliterator(MergingStrategy<T> mergingStrategy, MergedEventReaderPosition startPosition, List<Stream<ResolvedEvent>> data) {
             this.mergingStrategy = mergingStrategy;
             this.currentPosition = startPosition;
-            this.underlying = data.stream().map(Stream::iterator).map(Iterators::peekingIterator).collect(toList());
+            this.underlying = IdentifiedPeekingResolvedEventIterator.from(data);
         }
 
         @Override
         public boolean tryAdvance(Consumer<? super ResolvedEvent> consumer) {
-            Optional<ResolvedEvent> maybeNextInputEvent = advanceToNextEvent();
-            if (maybeNextInputEvent.isPresent()) {
-                EventRecord record = maybeNextInputEvent.get().eventRecord();
+            Optional<IdentifiedPeekingResolvedEventIterator> iteratorWhoseHeadIsNext = getIteratorWhoseHeadIsNext();
+
+            iteratorWhoseHeadIsNext.ifPresent(iterator -> {
+                ResolvedEvent nextInputEvent = iterator.next();
+                currentPosition = currentPosition.withNextPosition(iteratorWhoseHeadIsNext.get().index, nextInputEvent.position());
+
+                EventRecord record = nextInputEvent.eventRecord();
                 consumer.accept(new ResolvedEvent(
                         currentPosition,
                         eventRecord(
@@ -70,37 +83,31 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
                                 record.metadata()
                         )
                 ));
-                return true;
-            }
-            return false;
+            });
+
+            return iteratorWhoseHeadIsNext.isPresent();
         }
 
-        private Optional<ResolvedEvent> advanceToNextEvent() {
-            Optional<T> candidateOrderingValue = Optional.empty();
-            Optional<ResolvedEvent> candidate = Optional.empty();
-            int candidateIndex = -1;
+        private Optional<IdentifiedPeekingResolvedEventIterator> getIteratorWhoseHeadIsNext() {
+            Optional<IdentifiedPeekingResolvedEventIterator> iteratorWhoseHeadIsNext = Optional.empty();
+            Optional<T> iteratorWhoseHeadIsNextOrderingValue = Optional.empty();
 
-            for (int readerIndex = 0; readerIndex < underlying.size(); readerIndex++) {
-                Optional<ResolvedEvent> maybeEvent = peekNextFor(readerIndex);
-                if (maybeEvent.isPresent()) {
-                    T orderingValue = mergingStrategy.toComparable(maybeEvent.get());
-                    if (!candidateOrderingValue.isPresent() || orderingValue.compareTo(candidateOrderingValue.get()) < 0) {
-                        candidateOrderingValue = Optional.of(orderingValue);
-                        candidate = maybeEvent;
-                        candidateIndex = readerIndex;
+            Iterator<IdentifiedPeekingResolvedEventIterator> streams = underlying.iterator();
+            while (streams.hasNext()) {
+                IdentifiedPeekingResolvedEventIterator candidate = streams.next();
+
+                if (candidate.hasNext()) {
+                    T candidateOrderingValue = mergingStrategy.toComparable(candidate.peek());
+                    if (!iteratorWhoseHeadIsNext.isPresent() || candidateOrderingValue.compareTo(iteratorWhoseHeadIsNextOrderingValue.get()) < 0) {
+                        iteratorWhoseHeadIsNext = Optional.of(candidate);
+                        iteratorWhoseHeadIsNextOrderingValue = Optional.of(candidateOrderingValue);
                     }
+                } else {
+                    streams.remove();
                 }
             }
 
-            if (candidate.isPresent()) {
-                currentPosition = currentPosition.withNextPosition(candidateIndex, candidate.get().position());
-                underlying.get(candidateIndex).next();
-            }
-            return candidate;
-        }
-
-        private Optional<ResolvedEvent> peekNextFor(int readerIndex) {
-            return underlying.get(readerIndex).hasNext() ? Optional.of(underlying.get(readerIndex).peek()) : Optional.empty();
+            return iteratorWhoseHeadIsNext;
         }
 
         @Override
@@ -117,12 +124,34 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
         public int characteristics() {
             return ORDERED | NONNULL | DISTINCT;
         }
-    }
 
-    @Override
-    public Position emptyStorePosition() {
-        Position[] positions = readers.stream().map(EventReader::emptyStorePosition).collect(toList()).toArray(new Position[0]);
-        return new MergedEventReaderPosition(-1L, positions);
+        private static final class IdentifiedPeekingResolvedEventIterator {
+            private final int index;
+            private final PeekingIterator<ResolvedEvent> delegate;
+
+            private IdentifiedPeekingResolvedEventIterator(int index, PeekingIterator<ResolvedEvent> delegate) {
+                this.index = index;
+                this.delegate = delegate;
+            }
+
+            private static List<IdentifiedPeekingResolvedEventIterator> from(List<Stream<ResolvedEvent>> data) {
+                return range(0, data.size())
+                        .mapToObj(i -> new IdentifiedPeekingResolvedEventIterator(i, peekingIterator(data.get(i).iterator())))
+                        .collect(toList());
+            }
+
+            public boolean hasNext() {
+                return delegate.hasNext();
+            }
+
+            public ResolvedEvent peek() {
+                return delegate.peek();
+            }
+
+            public ResolvedEvent next() {
+                return delegate.next();
+            }
+        }
     }
 
 }
