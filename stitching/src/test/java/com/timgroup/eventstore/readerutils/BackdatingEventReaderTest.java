@@ -18,14 +18,15 @@ import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertThat;
 
 public class BackdatingEventReaderTest {
-    private ManualClock clock = new ManualClock(Instant.parse("2017-01-01T12:00:00Z"), systemDefault());
+    private ManualClock clock = new ManualClock(Instant.parse("2017-01-02T12:00:00Z"), systemDefault());
     private JavaInMemoryEventStore underlying = new JavaInMemoryEventStore(clock);
     private Instant liveCutoffDate = Instant.parse("2017-01-01T13:00:00Z");
     private BackdatingEventReader reader = new BackdatingEventReader(underlying, liveCutoffDate);
     private StreamId aStream = StreamId.streamId("all", "all");
     private byte[] data = "data".getBytes();
     private byte[] data2 = "data2".getBytes();
-    private byte[] metadata = "{metadata:1}".getBytes();
+    private byte[] metadata = "{\"effective_timestamp\":\"2017-01-01T09:00:00Z\"}".getBytes();
+    private byte[] backdatedMetadata = "{\"effective_timestamp\":\"1970-01-01T00:00:00Z\"}".getBytes();
 
     @Test
     public void it_backdates_events_with_time_before_the_live_cutoff() throws Exception {
@@ -33,12 +34,12 @@ public class BackdatingEventReaderTest {
 
         assertThat(reader.readAllForwards().collect(toList()),
                 contains(aResolvedEvent(position(0), eventRecord(
-                        Instant.EPOCH,
+                        clock.instant(),
                         aStream,
                         0,
                         "AnEvent",
                         data,
-                        metadata
+                        backdatedMetadata
                 ))));
     }
 
@@ -51,23 +52,24 @@ public class BackdatingEventReaderTest {
 
         assertThat(reader.readAllForwards(position(0)).collect(toList()),
                 contains(aResolvedEvent(position(1), eventRecord(
-                        Instant.EPOCH,
+                        clock.instant(),
                         aStream,
                         1,
                         "AnEvent",
                         data2,
-                        metadata
+                        backdatedMetadata
                 ))));
     }
 
     @Test
     public void it_does_not_backdate_events_with_time_at_the_live_cutoff() throws Exception {
-        clock.advanceTo(liveCutoffDate);
+        final byte[] metadata = "{\"effective_timestamp\":\"2017-01-01T13:00:00Z\"}".getBytes();
+
         underlying.write(aStream, asList(newEvent("AnEvent", data, metadata)));
 
         assertThat(reader.readAllForwards().collect(toList()),
                 contains(aResolvedEvent(position(0), eventRecord(
-                        liveCutoffDate,
+                        clock.instant(),
                         aStream,
                         0,
                         "AnEvent",
@@ -78,12 +80,13 @@ public class BackdatingEventReaderTest {
 
     @Test
     public void it_does_not_backdate_events_with_time_after_the_live_cutoff() throws Exception {
-        clock.advanceTo(liveCutoffDate.plusMillis(1));
+        final byte[] metadata = "{\"effective_timestamp\":\"2017-01-01T13:00:00.001Z\"}".getBytes();
+
         underlying.write(aStream, asList(newEvent("AnEvent", data, metadata)));
 
         assertThat(reader.readAllForwards().collect(toList()),
                 contains(aResolvedEvent(position(0), eventRecord(
-                        liveCutoffDate.plusMillis(1),
+                        clock.instant(),
                         aStream,
                         0,
                         "AnEvent",
@@ -99,12 +102,12 @@ public class BackdatingEventReaderTest {
 
         assertThat(reader.readAllBackwards().collect(toList()),
                 contains(aResolvedEvent(position(0), eventRecord(
-                        Instant.EPOCH,
+                        clock.instant(),
                         aStream,
                         0,
                         "AnEvent",
                         data,
-                        metadata
+                        backdatedMetadata
                 ))));
     }
 
@@ -117,12 +120,12 @@ public class BackdatingEventReaderTest {
 
         assertThat(reader.readAllBackwards(position(1)).collect(toList()),
                 contains(aResolvedEvent(position(0), eventRecord(
-                        Instant.EPOCH,
+                        clock.instant(),
                         aStream,
                         0,
                         "AnEvent",
                         data,
-                        metadata
+                        backdatedMetadata
                 ))));
     }
 
