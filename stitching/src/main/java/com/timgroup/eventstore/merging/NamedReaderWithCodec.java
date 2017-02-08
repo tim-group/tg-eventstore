@@ -1,9 +1,11 @@
 package com.timgroup.eventstore.merging;
 
-import com.google.common.base.Preconditions;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.PositionCodec;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 public final class NamedReaderWithCodec {
     final String name;
@@ -11,10 +13,12 @@ public final class NamedReaderWithCodec {
     final PositionCodec codec;
 
     public NamedReaderWithCodec(String name, EventReader reader, PositionCodec codec) {
-        Preconditions.checkNotNull(name, "name cannot be null");
-        Preconditions.checkArgument(!name.isEmpty(), "name cannot be empty");
+        checkNotNull(name, "name cannot be null");
 
-        this.name = name;
+        final String candidateName = name.trim();
+        checkArgument(!candidateName.isEmpty(), "name cannot be empty");
+
+        this.name = candidateName;
         this.reader = reader;
         this.codec = codec;
     }
