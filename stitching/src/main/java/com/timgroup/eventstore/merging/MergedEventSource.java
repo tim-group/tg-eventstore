@@ -1,17 +1,14 @@
 package com.timgroup.eventstore.merging;
 
-import com.timgroup.eventstore.api.EventCategoryReader;
-import com.timgroup.eventstore.api.EventReader;
-import com.timgroup.eventstore.api.EventSource;
-import com.timgroup.eventstore.api.EventStreamReader;
-import com.timgroup.eventstore.api.EventStreamWriter;
-import com.timgroup.eventstore.api.PositionCodec;
+import com.timgroup.eventstore.api.*;
 import com.timgroup.eventstore.merging.MergedEventReaderPosition.MergedEventReaderPositionCodec;
 import com.timgroup.tucker.info.Component;
 
 import java.time.Instant;
 import java.util.Collection;
 import java.util.stream.Stream;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 public final class MergedEventSource<T extends Comparable<T>> implements EventSource {
 
@@ -20,7 +17,11 @@ public final class MergedEventSource<T extends Comparable<T>> implements EventSo
 
     @SuppressWarnings("WeakerAccess")
     public MergedEventSource(MergingStrategy<T> mergingStrategy, NamedReaderWithCodec... namedReaders) {
-        //TODO: enforce named readers have unique names
+        checkArgument(
+            Stream.of(namedReaders).map(nr -> nr.name).distinct().count() == namedReaders.length,
+            "reader names must be unique"
+        );
+
         this.eventReader = new MergedEventReader<>(
                 mergingStrategy,
                 Stream.of(namedReaders).map(NamedReaderWithCodec::toReader).toArray(EventReader[]::new)
