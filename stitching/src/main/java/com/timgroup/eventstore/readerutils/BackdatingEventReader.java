@@ -31,18 +31,22 @@ public class BackdatingEventReader implements EventReader {
     }
 
     private ResolvedEvent possiblyBackdate(ResolvedEvent resolvedEvent) {
-        if (effectiveTimestampOf(resolvedEvent.eventRecord()).isBefore(liveCutoverInclusive)) {
-            EventRecord eventRecord = resolvedEvent.eventRecord();
-            return new ResolvedEvent(resolvedEvent.position(),
-                    eventRecord(eventRecord.timestamp(),
-                            eventRecord.streamId(),
-                            eventRecord.eventNumber(),
-                            eventRecord.eventType(),
-                            eventRecord.data(),
-                            backdateEffectiveTimestamp(eventRecord.metadata())));
+        final EventRecord event = resolvedEvent.eventRecord();
+
+        if (effectiveTimestampOf(event).isBefore(liveCutoverInclusive)) {
+            return new ResolvedEvent(resolvedEvent.position(), backdated(event));
         } else {
             return resolvedEvent;
         }
+    }
+
+    private EventRecord backdated(EventRecord eventRecord) {
+        return eventRecord(eventRecord.timestamp(),
+                eventRecord.streamId(),
+                eventRecord.eventNumber(),
+                eventRecord.eventType(),
+                eventRecord.data(),
+                backdateEffectiveTimestamp(eventRecord.metadata()));
     }
 
     private Instant effectiveTimestampOf(EventRecord eventRecord) {
