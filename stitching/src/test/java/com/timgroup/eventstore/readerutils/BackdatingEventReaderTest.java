@@ -44,6 +44,33 @@ public class BackdatingEventReaderTest {
     }
 
     @Test
+    public void it_backdates_events_with_time_before_the_live_cutoff_and_doesnt_touch_other_metadata_fields() throws Exception {
+        byte[] metadata = "{\"another_field\":4,\"effective_timestamp\":\"2017-01-01T09:00:00Z\"}".getBytes();
+        byte[] backdatedMetadata = "{\"another_field\":4,\"effective_timestamp\":\"1970-01-01T00:00:00Z\"}".getBytes();
+
+        underlying.write(aStream, asList(newEvent("AnEvent", data, metadata)));
+
+        assertThat(reader.readAllForwards().collect(toList()),
+                contains(aResolvedEvent(position(0), eventRecord(
+                        clock.instant(),
+                        aStream,
+                        0,
+                        "AnEvent",
+                        data,
+                        backdatedMetadata
+                ))));
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void it_throws_exception_if_no_effective_timestamp_field() throws Exception {
+        byte[] metadata = "{\"another_field\":4}".getBytes();
+
+        underlying.write(aStream, asList(newEvent("AnEvent", data, metadata)));
+
+        reader.readAllForwards().collect(toList());
+    }
+
+    @Test
     public void it_reads_by_position() throws Exception {
         underlying.write(aStream, asList(
                 newEvent("AnEvent", data, metadata),

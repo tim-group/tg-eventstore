@@ -48,8 +48,8 @@ public class BackdatingEventReader implements EventReader {
     private Instant effectiveTimestampOf(EventRecord eventRecord) {
         try {
             return Instant.parse(json.readTree(eventRecord.metadata()).get(EFFECTIVE_TIMESTAMP).asText());
-        } catch (IOException e) {
-            return null;
+        } catch (IOException|NullPointerException e) {
+            throw new IllegalStateException("no effective_timestamp in metadata", e);
         }
     }
 
@@ -59,7 +59,7 @@ public class BackdatingEventReader implements EventReader {
             jsonNode.put(EFFECTIVE_TIMESTAMP, Instant.EPOCH.toString());
             return json.writeValueAsBytes(jsonNode);
         } catch (IOException e) {
-            return null;
+            throw new IllegalStateException("the code should never end up here", e);
         }
     }
 
