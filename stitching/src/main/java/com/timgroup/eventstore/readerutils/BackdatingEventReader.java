@@ -13,11 +13,12 @@ import java.util.stream.Stream;
 
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 
-public class BackdatingEventReader implements EventReader {
+public final class BackdatingEventReader implements EventReader {
+    private static final String EFFECTIVE_TIMESTAMP = "effective_timestamp";
+
     private final EventReader underlying;
     private final Instant liveCutoverInclusive;
     private final ObjectMapper json = new ObjectMapper();
-    private String EFFECTIVE_TIMESTAMP = "effective_timestamp";
 
 
     public BackdatingEventReader(EventReader underlying, Instant liveCutoverInclusive) {

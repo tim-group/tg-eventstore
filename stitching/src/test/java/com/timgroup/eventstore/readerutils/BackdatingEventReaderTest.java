@@ -18,16 +18,17 @@ import static java.util.stream.Collectors.toList;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertThat;
 
-public class BackdatingEventReaderTest {
-    private ManualClock clock = new ManualClock(Instant.parse("2017-01-02T12:00:00Z"), systemDefault());
-    private JavaInMemoryEventStore underlying = new JavaInMemoryEventStore(clock);
-    private Instant liveCutoffDate = Instant.parse("2017-01-01T13:00:00Z");
-    private BackdatingEventReader reader = new BackdatingEventReader(underlying, liveCutoffDate);
-    private StreamId aStream = StreamId.streamId("all", "all");
-    private byte[] data = "data".getBytes();
-    private byte[] data2 = "data2".getBytes();
-    private byte[] metadata = "{\"effective_timestamp\":\"2017-01-01T09:00:00Z\"}".getBytes();
-    private byte[] backdatedMetadata = "{\"effective_timestamp\":\"1970-01-01T00:00:00Z\"}".getBytes();
+@SuppressWarnings({"OptionalGetWithoutIsPresent", "ArraysAsListWithZeroOrOneArgument"})
+public final class BackdatingEventReaderTest {
+    private final ManualClock clock = new ManualClock(Instant.parse("2017-01-02T12:00:00Z"), systemDefault());
+    private final JavaInMemoryEventStore underlying = new JavaInMemoryEventStore(clock);
+    private final Instant liveCutoffDate = Instant.parse("2017-01-01T13:00:00Z");
+    private final BackdatingEventReader reader = new BackdatingEventReader(underlying, liveCutoffDate);
+    private final StreamId aStream = StreamId.streamId("all", "all");
+    private final byte[] data = "data".getBytes();
+    private final byte[] data2 = "data2".getBytes();
+    private final byte[] metadata = "{\"effective_timestamp\":\"2017-01-01T09:00:00Z\"}".getBytes();
+    private final byte[] backdatedMetadata = "{\"effective_timestamp\":\"1970-01-01T00:00:00Z\"}".getBytes();
 
     @Test
     public void it_backdates_events_with_time_before_the_live_cutoff() throws Exception {

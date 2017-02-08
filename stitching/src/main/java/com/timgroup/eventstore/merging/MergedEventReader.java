@@ -1,13 +1,14 @@
 package com.timgroup.eventstore.merging;
 
-import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.EventReader;
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.ResolvedEvent;
 
 import java.util.List;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static com.google.common.collect.ImmutableList.copyOf;
-import static com.google.common.collect.Iterators.peekingIterator;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
