@@ -34,7 +34,7 @@ public class BackdatingEventReaderTest {
         underlying.write(aStream, singletonList(newEvent("AnEvent", data, metadata)));
 
         assertThat(reader.readAllForwards().collect(toList()),
-                contains(aResolvedEvent(position(0), eventRecord(
+                contains(aResolvedEvent(position(1), eventRecord(
                         clock.instant(),
                         aStream,
                         0,
@@ -52,7 +52,7 @@ public class BackdatingEventReaderTest {
         underlying.write(aStream, singletonList(newEvent("AnEvent", data, metadata)));
 
         assertThat(reader.readAllForwards().collect(toList()),
-                contains(aResolvedEvent(position(0), eventRecord(
+                contains(aResolvedEvent(position(1), eventRecord(
                         clock.instant(),
                         aStream,
                         0,
@@ -78,8 +78,8 @@ public class BackdatingEventReaderTest {
                 newEvent("AnEvent", data2, metadata)
         ));
 
-        assertThat(reader.readAllForwards(position(0)).collect(toList()),
-                contains(aResolvedEvent(position(1), eventRecord(
+        assertThat(reader.readAllForwards(position(1)).collect(toList()),
+                contains(aResolvedEvent(position(2), eventRecord(
                         clock.instant(),
                         aStream,
                         1,
@@ -96,7 +96,7 @@ public class BackdatingEventReaderTest {
         underlying.write(aStream, singletonList(newEvent("AnEvent", data, metadata)));
 
         assertThat(reader.readAllForwards().collect(toList()),
-                contains(aResolvedEvent(position(0), eventRecord(
+                contains(aResolvedEvent(position(1), eventRecord(
                         clock.instant(),
                         aStream,
                         0,
@@ -113,7 +113,7 @@ public class BackdatingEventReaderTest {
         underlying.write(aStream, singletonList(newEvent("AnEvent", data, metadata)));
 
         assertThat(reader.readAllForwards().collect(toList()),
-                contains(aResolvedEvent(position(0), eventRecord(
+                contains(aResolvedEvent(position(1), eventRecord(
                         clock.instant(),
                         aStream,
                         0,
@@ -129,7 +129,7 @@ public class BackdatingEventReaderTest {
         underlying.write(aStream, singletonList(newEvent("AnEvent", data, metadata)));
 
         assertThat(reader.readAllBackwards().collect(toList()),
-                contains(aResolvedEvent(position(0), eventRecord(
+                contains(aResolvedEvent(position(1), eventRecord(
                         clock.instant(),
                         aStream,
                         0,
@@ -146,8 +146,8 @@ public class BackdatingEventReaderTest {
                 newEvent("AnEvent", data2, metadata)
         ));
 
-        assertThat(reader.readAllBackwards(position(1)).collect(toList()),
-                contains(aResolvedEvent(position(0), eventRecord(
+        assertThat(reader.readAllBackwards(position(2)).collect(toList()),
+                contains(aResolvedEvent(position(1), eventRecord(
                         clock.instant(),
                         aStream,
                         0,
@@ -157,8 +157,7 @@ public class BackdatingEventReaderTest {
                 ))));
     }
 
-    @SuppressWarnings("OptionalGetWithoutIsPresent")
     private Position position(int position) {
-        return underlying.readAllForwards().skip(position).findFirst().get().position();
+        return underlying.deserializePosition(String.valueOf(position));
     }
 }
