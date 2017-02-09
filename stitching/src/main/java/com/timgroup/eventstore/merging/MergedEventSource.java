@@ -4,6 +4,7 @@ import com.timgroup.eventstore.api.*;
 import com.timgroup.eventstore.merging.MergedEventReaderPosition.MergedEventReaderPositionCodec;
 import com.timgroup.tucker.info.Component;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.stream.Stream;
@@ -16,33 +17,34 @@ public final class MergedEventSource<T extends Comparable<T>> implements EventSo
     private final MergedEventReaderPositionCodec mergedEventReaderPositionCodec;
 
     @SuppressWarnings("WeakerAccess")
-    public MergedEventSource(MergingStrategy<T> mergingStrategy, NamedReaderWithCodec... namedReaders) {
+    public MergedEventSource(Clock clock, MergingStrategy<T> mergingStrategy, NamedReaderWithCodec... namedReaders) {
         checkArgument(
             Stream.of(namedReaders).map(nr -> nr.name).distinct().count() == namedReaders.length,
             "reader names must be unique"
         );
 
         this.eventReader = new MergedEventReader<>(
+                clock,
                 mergingStrategy,
                 Stream.of(namedReaders).map(NamedReaderWithCodec::toReader).toArray(EventReader[]::new)
         );
         this.mergedEventReaderPositionCodec = new MergedEventReaderPositionCodec(namedReaders);
     }
 
-    public static MergedEventSource<Instant> effectiveTimestampMergedEventSource(NamedReaderWithCodec... namedReaders) {
-        return new MergedEventSource<>(new MergingStrategy.EffectiveTimestampMergingStrategy(), namedReaders);
+    public static MergedEventSource<Instant> effectiveTimestampMergedEventSource(Clock clock, NamedReaderWithCodec... namedReaders) {
+        return new MergedEventSource<>(clock, new MergingStrategy.EffectiveTimestampMergingStrategy(), namedReaders);
     }
 
-    public static MergedEventSource<Instant> effectiveTimestampMergedEventSource(StreamId mergedStreamId, NamedReaderWithCodec... namedReaders) {
-        return new MergedEventSource<>(new MergingStrategy.EffectiveTimestampMergingStrategy().withStreamId(mergedStreamId), namedReaders);
+    public static MergedEventSource<Instant> effectiveTimestampMergedEventSource(Clock clock, StreamId mergedStreamId, NamedReaderWithCodec... namedReaders) {
+        return new MergedEventSource<>(clock, new MergingStrategy.EffectiveTimestampMergingStrategy().withStreamId(mergedStreamId), namedReaders);
     }
 
-    public static MergedEventSource<Integer> streamOrderMergedEventSource(NamedReaderWithCodec... namedReaders) {
-        return new MergedEventSource<>(new MergingStrategy.StreamIndexMergingStrategy(), namedReaders);
+    public static MergedEventSource<Integer> streamOrderMergedEventSource(Clock clock, NamedReaderWithCodec... namedReaders) {
+        return new MergedEventSource<>(clock, new MergingStrategy.StreamIndexMergingStrategy(), namedReaders);
     }
 
-    public static MergedEventSource<Integer> streamOrderMergedEventSource(StreamId mergedStreamId, NamedReaderWithCodec... namedReaders) {
-        return new MergedEventSource<>(new MergingStrategy.StreamIndexMergingStrategy().withStreamId(mergedStreamId), namedReaders);
+    public static MergedEventSource<Integer> streamOrderMergedEventSource(Clock clock, StreamId mergedStreamId, NamedReaderWithCodec... namedReaders) {
+        return new MergedEventSource<>(clock, new MergingStrategy.StreamIndexMergingStrategy().withStreamId(mergedStreamId), namedReaders);
     }
 
     @Override

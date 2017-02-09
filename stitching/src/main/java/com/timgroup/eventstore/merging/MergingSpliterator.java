@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Spliterator;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
 
 import static com.google.common.collect.Iterators.peekingIterator;
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
@@ -24,7 +23,7 @@ final class MergingSpliterator<T extends Comparable<T>> implements Spliterator<R
 
     private MergedEventReaderPosition currentPosition;
 
-    MergingSpliterator(MergingStrategy<T> mergingStrategy, MergedEventReaderPosition currentPosition, List<Stream<ResolvedEvent>> data) {
+    MergingSpliterator(MergingStrategy<T> mergingStrategy, MergedEventReaderPosition currentPosition, List<Iterator<ResolvedEvent>> data) {
         this.mergingStrategy = mergingStrategy;
         this.currentPosition = currentPosition;
         this.underlying = IdentifiedPeekingResolvedEventIterator.from(data);
@@ -102,9 +101,9 @@ final class MergingSpliterator<T extends Comparable<T>> implements Spliterator<R
             this.delegate = delegate;
         }
 
-        private static List<IdentifiedPeekingResolvedEventIterator> from(List<Stream<ResolvedEvent>> data) {
+        private static List<IdentifiedPeekingResolvedEventIterator> from(List<Iterator<ResolvedEvent>> data) {
             return range(0, data.size())
-                    .mapToObj(i -> new IdentifiedPeekingResolvedEventIterator(i, peekingIterator(data.get(i).iterator())))
+                    .mapToObj(i -> new IdentifiedPeekingResolvedEventIterator(i, peekingIterator(data.get(i))))
                     .collect(toList());
         }
 

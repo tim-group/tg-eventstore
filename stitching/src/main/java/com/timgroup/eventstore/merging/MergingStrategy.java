@@ -3,6 +3,7 @@ package com.timgroup.eventstore.merging;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -21,6 +22,8 @@ public interface MergingStrategy<T extends Comparable<T>> {
     default MergingStrategy<T> withStreamId(StreamId streamId) {
         return new FixedStreamIdMergingStrategy<T>(streamId, this);
     }
+
+    default Duration delay() { return Duration.ZERO; }
 
     final class StreamIndexMergingStrategy implements MergingStrategy<Integer> {
         @Override

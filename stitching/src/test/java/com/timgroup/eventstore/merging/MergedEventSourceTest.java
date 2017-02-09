@@ -28,17 +28,19 @@ public final class MergedEventSourceTest {
     supports_reading_all_forwards_from_a_single_input_stream() throws Exception {
         JavaInMemoryEventStore input = new JavaInMemoryEventStore(clock);
 
-        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(new NamedReaderWithCodec("a", input, input)).readAll();
+        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(clock, new NamedReaderWithCodec("a", input, input)).readAll();
 
+        Instant instant = clock.instant();
         inputEventArrived(input, "CoolenessAdded");
         inputEventArrived(input, "CoolenessChanged");
         inputEventArrived(input, "CoolenessRemoved");
 
+        clock.advanceTo(instant.plusSeconds(1));
         List<EventRecord> mergedEvents = outputReader.readAllForwards().map(ResolvedEvent::eventRecord).collect(Collectors.toList());
 
         assertThat(mergedEvents, contains(
                 anEventRecord(
-                        clock.instant(),
+                        instant,
                         streamId("all", "all"),
                         0L,
                         "CoolenessAdded",
@@ -46,7 +48,7 @@ public final class MergedEventSourceTest {
                         new byte[0]
                 ),
                 anEventRecord(
-                        clock.instant(),
+                        instant,
                         streamId("all", "all"),
                         1L,
                         "CoolenessChanged",
@@ -54,7 +56,7 @@ public final class MergedEventSourceTest {
                         new byte[0]
                 ),
                 anEventRecord(
-                        clock.instant(),
+                        instant,
                         streamId("all", "all"),
                         2L,
                         "CoolenessRemoved",
@@ -68,17 +70,19 @@ public final class MergedEventSourceTest {
     supports_reading_from_given_position_from_a_single_input_stream() throws Exception {
         JavaInMemoryEventStore input = new JavaInMemoryEventStore(clock);
 
-        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(new NamedReaderWithCodec("a", input, input)).readAll();
+        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(clock, new NamedReaderWithCodec("a", input, input)).readAll();
 
+        Instant instant = clock.instant();
         inputEventArrived(input, "CoolenessAdded");
         inputEventArrived(input, "CoolenessChanged");
 
+        clock.advanceTo(instant.plusSeconds(1));
         @SuppressWarnings("OptionalGetWithoutIsPresent") Position startPosition = outputReader.readAllForwards().findFirst().get().position();
         List<EventRecord> mergedEvents = outputReader.readAllForwards(startPosition).map(ResolvedEvent::eventRecord).collect(Collectors.toList());
 
         assertThat(mergedEvents, contains(
                 anEventRecord(
-                        clock.instant(),
+                        instant,
                         streamId("all", "all"),
                         1L,
                         "CoolenessChanged",
@@ -93,25 +97,30 @@ public final class MergedEventSourceTest {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
         MergedEventSource<Integer> eventSource = MergedEventSource.streamOrderMergedEventSource(
+                clock,
                 new NamedReaderWithCodec("a", input1, input1),
                 new NamedReaderWithCodec("b", input2, input2)
         );
         EventReader outputReader = eventSource.readAll();
 
+        Instant instant1 = clock.instant();
         inputEventArrived(input1, "CoolenessAdded");
         inputEventArrived(input2, "CoolenessRemoved");
         inputEventArrived(input2, "CoolenessChanged");
 
+        clock.advanceTo(instant1.plusSeconds(1));
         @SuppressWarnings("OptionalGetWithoutIsPresent") Position startPosition = outputReader.readAllForwards().skip(1).findFirst().get().position();
         Position deserialisedStartPosition = eventSource.positionCodec().deserializePosition(eventSource.positionCodec().serializePosition(startPosition));
 
+        Instant instant2 = clock.instant();
         inputEventArrived(input1, "CoolenessDestroyed");
 
+        clock.advanceTo(instant2.plusSeconds(1));
         List<EventRecord> mergedEvents = outputReader.readAllForwards(deserialisedStartPosition).map(ResolvedEvent::eventRecord).collect(Collectors.toList());
 
         assertThat(mergedEvents, contains(
                 anEventRecord(
-                        clock.instant(),
+                        instant2,
                         streamId("all", "all"),
                         2L,
                         "CoolenessDestroyed",
@@ -119,7 +128,7 @@ public final class MergedEventSourceTest {
                         new byte[0]
                 ),
                 anEventRecord(
-                        clock.instant(),
+                        instant1,
                         streamId("all", "all"),
                         3L,
                         "CoolenessChanged",
@@ -134,19 +143,22 @@ public final class MergedEventSourceTest {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
         EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(
+                clock,
                 new NamedReaderWithCodec("a", input1, input1),
                 new NamedReaderWithCodec("b", input2, input2)
         ).readAll();
 
+        Instant instant = clock.instant();
         inputEventArrived(input1, "CoolenessAdded");
         inputEventArrived(input2, "CoolenessRemoved");
         inputEventArrived(input1, "CoolenessChanged");
 
+        clock.advanceTo(instant.plusSeconds(1));
         List<EventRecord> mergedEvents = outputReader.readAllForwards().map(ResolvedEvent::eventRecord).collect(Collectors.toList());
 
         assertThat(mergedEvents, contains(
                 anEventRecord(
-                        clock.instant(),
+                        instant,
                         streamId("all", "all"),
                         0L,
                         "CoolenessAdded",
@@ -154,7 +166,7 @@ public final class MergedEventSourceTest {
                         new byte[0]
                 ),
                 anEventRecord(
-                        clock.instant(),
+                        instant,
                         streamId("all", "all"),
                         1L,
                         "CoolenessChanged",
@@ -162,7 +174,7 @@ public final class MergedEventSourceTest {
                         new byte[0]
                 ),
                 anEventRecord(
-                        clock.instant(),
+                        instant,
                         streamId("all", "all"),
                         2L,
                         "CoolenessRemoved",
@@ -178,20 +190,23 @@ public final class MergedEventSourceTest {
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
 
         EventReader outputReader = MergedEventSource.effectiveTimestampMergedEventSource(
+                clock,
                 streamId("input", "all"),
                 new NamedReaderWithCodec("a", input1, input1),
                 new NamedReaderWithCodec("b", input2, input2)
         ).readAll();
 
+        Instant instant = clock.instant();
         inputEventArrived(input1, streamId("baz", "bob"), newEvent("CoolenessAdded",   new byte[0], "{\"effective_timestamp\":\"2014-01-23T00:23:54Z\"}".getBytes(UTF_8)));
         inputEventArrived(input1, streamId("foo", "bar"), newEvent("CoolenessRemoved", new byte[0], "{\"effective_timestamp\":\"2016-01-23T00:23:54Z\"}".getBytes(UTF_8)));
         inputEventArrived(input2, streamId("arg", "erg"), newEvent("CoolenessChanged", new byte[0], "{\"effective_timestamp\":\"2015-01-23T00:23:54Z\"}".getBytes(UTF_8)));
 
+        clock.advanceTo(instant.plusSeconds(1));
         List<EventRecord> mergedEvents = outputReader.readAllForwards().map(ResolvedEvent::eventRecord).collect(Collectors.toList());
 
         assertThat(mergedEvents, contains(
                 anEventRecord(
-                        clock.instant(),
+                        instant,
                         streamId("input", "all"),
                         0L,
                         "CoolenessAdded",
@@ -199,7 +214,7 @@ public final class MergedEventSourceTest {
                         "{\"effective_timestamp\":\"2014-01-23T00:23:54Z\"}".getBytes(UTF_8)
                 ),
                 anEventRecord(
-                        clock.instant(),
+                        instant,
                         streamId("input", "all"),
                         1L,
                         "CoolenessChanged",
@@ -207,7 +222,7 @@ public final class MergedEventSourceTest {
                         "{\"effective_timestamp\":\"2015-01-23T00:23:54Z\"}".getBytes(UTF_8)
                 ),
                 anEventRecord(
-                        clock.instant(),
+                        instant,
                         streamId("input", "all"),
                         2L,
                         "CoolenessRemoved",
@@ -221,10 +236,11 @@ public final class MergedEventSourceTest {
     blows_up_when_merging_by_effective_timestamp_on_encountering_an_event_without_an_effective_timestamp() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
 
-        EventReader outputReader = MergedEventSource.effectiveTimestampMergedEventSource(new NamedReaderWithCodec("a", input1, input1)).readAll();
+        EventReader outputReader = MergedEventSource.effectiveTimestampMergedEventSource(clock, new NamedReaderWithCodec("a", input1, input1)).readAll();
 
-        inputEventArrived(input1, streamId("baz", "bob"), newEvent("CoolenessAdded",   new byte[0], "{\"cheese_date\":\"2014-01-23T00:23:54Z\"}".getBytes(UTF_8)));
+        inputEventArrived(input1, streamId("baz", "bob"), newEvent("CoolenessAdded", new byte[0], "{\"cheese_date\":\"2014-01-23T00:23:54Z\"}".getBytes(UTF_8)));
 
+        clock.advanceTo(clock.instant().plusSeconds(1));
         Iterator<ResolvedEvent> iterator = outputReader.readAllForwards().iterator();
 
         try {
