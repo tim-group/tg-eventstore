@@ -27,4 +27,14 @@ public final class SingleEventCategoryEventReader implements EventReader {
     public Position emptyStorePosition() {
         return underlying.emptyCategoryPosition(this.category);
     }
+
+    @Override
+    public Stream<ResolvedEvent> readAllBackwards() {
+        return underlying.readCategoryBackwards(this.category);
+    }
+
+    @Override
+    public Stream<ResolvedEvent> readAllBackwards(Position positionExclusive) {
+        return underlying.readCategoryBackwards(this.category, positionExclusive);
+    }
 }
