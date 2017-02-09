@@ -24,7 +24,6 @@ public final class MergedEventSourceTest {
 
     private final ManualClock clock = new ManualClock(Instant.parse("2009-04-12T22:12:32Z"), ZoneId.of("UTC"));
 
-
     @Test public void
     supports_reading_all_forwards_from_a_single_input_stream() throws Exception {
         JavaInMemoryEventStore input = new JavaInMemoryEventStore(clock);
@@ -40,7 +39,7 @@ public final class MergedEventSourceTest {
         assertThat(mergedEvents, contains(
                 anEventRecord(
                         clock.instant(),
-                        streamId("input", "all"),
+                        streamId("all", "all"),
                         0L,
                         "CoolenessAdded",
                         new byte[0],
@@ -48,7 +47,7 @@ public final class MergedEventSourceTest {
                 ),
                 anEventRecord(
                         clock.instant(),
-                        streamId("input", "all"),
+                        streamId("all", "all"),
                         1L,
                         "CoolenessChanged",
                         new byte[0],
@@ -56,7 +55,7 @@ public final class MergedEventSourceTest {
                 ),
                 anEventRecord(
                         clock.instant(),
-                        streamId("input", "all"),
+                        streamId("all", "all"),
                         2L,
                         "CoolenessRemoved",
                         new byte[0],
@@ -80,7 +79,7 @@ public final class MergedEventSourceTest {
         assertThat(mergedEvents, contains(
                 anEventRecord(
                         clock.instant(),
-                        streamId("input", "all"),
+                        streamId("all", "all"),
                         1L,
                         "CoolenessChanged",
                         new byte[0],
@@ -113,7 +112,7 @@ public final class MergedEventSourceTest {
         assertThat(mergedEvents, contains(
                 anEventRecord(
                         clock.instant(),
-                        streamId("input", "all"),
+                        streamId("all", "all"),
                         2L,
                         "CoolenessDestroyed",
                         new byte[0],
@@ -121,7 +120,7 @@ public final class MergedEventSourceTest {
                 ),
                 anEventRecord(
                         clock.instant(),
-                        streamId("input", "all"),
+                        streamId("all", "all"),
                         3L,
                         "CoolenessChanged",
                         new byte[0],
@@ -148,7 +147,7 @@ public final class MergedEventSourceTest {
         assertThat(mergedEvents, contains(
                 anEventRecord(
                         clock.instant(),
-                        streamId("input", "all"),
+                        streamId("all", "all"),
                         0L,
                         "CoolenessAdded",
                         new byte[0],
@@ -156,7 +155,7 @@ public final class MergedEventSourceTest {
                 ),
                 anEventRecord(
                         clock.instant(),
-                        streamId("input", "all"),
+                        streamId("all", "all"),
                         1L,
                         "CoolenessChanged",
                         new byte[0],
@@ -164,7 +163,7 @@ public final class MergedEventSourceTest {
                 ),
                 anEventRecord(
                         clock.instant(),
-                        streamId("input", "all"),
+                        streamId("all", "all"),
                         2L,
                         "CoolenessRemoved",
                         new byte[0],
@@ -179,6 +178,7 @@ public final class MergedEventSourceTest {
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
 
         EventReader outputReader = MergedEventSource.effectiveTimestampMergedEventSource(
+                streamId("input", "all"),
                 new NamedReaderWithCodec("a", input1, input1),
                 new NamedReaderWithCodec("b", input2, input2)
         ).readAll();

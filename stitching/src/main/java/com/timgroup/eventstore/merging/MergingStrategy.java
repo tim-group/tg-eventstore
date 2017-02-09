@@ -1,6 +1,7 @@
 package com.timgroup.eventstore.merging;
 
 import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.api.StreamId;
 
 import java.time.Instant;
 import java.util.regex.Matcher;
@@ -9,7 +10,17 @@ import java.util.regex.Pattern;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public interface MergingStrategy<T extends Comparable<T>> {
+    StreamId DEFAULT_MERGED_STREAM_ID = StreamId.streamId("all", "all");
+
     T toComparable(ResolvedEvent event);
+
+    default StreamId mergedStreamId() {
+        return DEFAULT_MERGED_STREAM_ID;
+    }
+
+    default MergingStrategy<T> withStreamId(StreamId streamId) {
+        return new FixedStreamIdMergingStrategy<T>(streamId, this);
+    }
 
     final class StreamIndexMergingStrategy implements MergingStrategy<Integer> {
         @Override
@@ -33,6 +44,26 @@ public interface MergingStrategy<T extends Comparable<T>> {
                 return Instant.parse(matcher.group(1));
             }
             throw new IllegalStateException("no timestamp in metadata of " + event);
+        }
+    }
+
+    final class FixedStreamIdMergingStrategy<T extends Comparable<T>> implements MergingStrategy<T> {
+        private final StreamId streamId;
+        private final MergingStrategy<T> delegate;
+
+        private FixedStreamIdMergingStrategy(StreamId streamId, MergingStrategy<T> delegate) {
+            this.streamId = streamId;
+            this.delegate = delegate;
+        }
+
+        @Override
+        public T toComparable(ResolvedEvent event) {
+            return delegate.toComparable(event);
+        }
+
+        @Override
+        public StreamId mergedStreamId() {
+            return streamId;
         }
     }
 }

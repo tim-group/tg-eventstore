@@ -33,8 +33,16 @@ public final class MergedEventSource<T extends Comparable<T>> implements EventSo
         return new MergedEventSource<>(new MergingStrategy.EffectiveTimestampMergingStrategy(), namedReaders);
     }
 
+    public static MergedEventSource<Instant> effectiveTimestampMergedEventSource(StreamId mergedStreamId, NamedReaderWithCodec... namedReaders) {
+        return new MergedEventSource<>(new MergingStrategy.EffectiveTimestampMergingStrategy().withStreamId(mergedStreamId), namedReaders);
+    }
+
     public static MergedEventSource<Integer> streamOrderMergedEventSource(NamedReaderWithCodec... namedReaders) {
         return new MergedEventSource<>(new MergingStrategy.StreamIndexMergingStrategy(), namedReaders);
+    }
+
+    public static MergedEventSource<Integer> streamOrderMergedEventSource(StreamId mergedStreamId, NamedReaderWithCodec... namedReaders) {
+        return new MergedEventSource<>(new MergingStrategy.StreamIndexMergingStrategy().withStreamId(mergedStreamId), namedReaders);
     }
 
     @Override

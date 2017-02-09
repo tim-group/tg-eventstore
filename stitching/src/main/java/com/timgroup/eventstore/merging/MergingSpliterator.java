@@ -3,7 +3,6 @@ package com.timgroup.eventstore.merging;
 import com.google.common.collect.PeekingIterator;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.ResolvedEvent;
-import com.timgroup.eventstore.api.StreamId;
 
 import java.util.Iterator;
 import java.util.List;
@@ -44,7 +43,7 @@ final class MergingSpliterator<T extends Comparable<T>> implements Spliterator<R
                     currentPosition,
                     eventRecord(
                             record.timestamp(),
-                            StreamId.streamId("input", "all"),  //TODO: make this configurable, perhaps from the mergingstrategy
+                            mergingStrategy.mergedStreamId(),
                             currentPosition.outputEventNumber,
                             record.eventType(),
                             record.data(),
