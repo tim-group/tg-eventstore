@@ -5,6 +5,7 @@ import com.timgroup.eventstore.merging.MergedEventReaderPosition.MergedEventRead
 import com.timgroup.tucker.info.Component;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.stream.Stream;
@@ -35,16 +36,16 @@ public final class MergedEventSource<T extends Comparable<T>> implements EventSo
         return new MergedEventSource<>(clock, new MergingStrategy.EffectiveTimestampMergingStrategy(), namedReaders);
     }
 
-    public static MergedEventSource<Instant> effectiveTimestampMergedEventSource(Clock clock, StreamId mergedStreamId, NamedReaderWithCodec... namedReaders) {
-        return new MergedEventSource<>(clock, new MergingStrategy.EffectiveTimestampMergingStrategy().withStreamId(mergedStreamId), namedReaders);
+    public static MergedEventSource<Instant> effectiveTimestampMergedEventSource(Clock clock, Duration delay, StreamId mergedStreamId, NamedReaderWithCodec... namedReaders) {
+        return new MergedEventSource<>(clock, new MergingStrategy.EffectiveTimestampMergingStrategy().withStreamId(mergedStreamId).withDelay(delay), namedReaders);
     }
 
     public static MergedEventSource<Integer> streamOrderMergedEventSource(Clock clock, NamedReaderWithCodec... namedReaders) {
         return new MergedEventSource<>(clock, new MergingStrategy.StreamIndexMergingStrategy(), namedReaders);
     }
 
-    public static MergedEventSource<Integer> streamOrderMergedEventSource(Clock clock, StreamId mergedStreamId, NamedReaderWithCodec... namedReaders) {
-        return new MergedEventSource<>(clock, new MergingStrategy.StreamIndexMergingStrategy().withStreamId(mergedStreamId), namedReaders);
+    public static MergedEventSource<Integer> streamOrderMergedEventSource(Clock clock, Duration delay, StreamId mergedStreamId, NamedReaderWithCodec... namedReaders) {
+        return new MergedEventSource<>(clock, new MergingStrategy.StreamIndexMergingStrategy().withStreamId(mergedStreamId).withDelay(delay), namedReaders);
     }
 
     @Override

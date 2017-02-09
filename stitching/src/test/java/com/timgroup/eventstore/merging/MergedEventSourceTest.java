@@ -6,6 +6,7 @@ import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Iterator;
@@ -191,6 +192,7 @@ public final class MergedEventSourceTest {
 
         EventReader outputReader = MergedEventSource.effectiveTimestampMergedEventSource(
                 clock,
+                Duration.ZERO,
                 streamId("input", "all"),
                 new NamedReaderWithCodec("a", input1, input1),
                 new NamedReaderWithCodec("b", input2, input2)

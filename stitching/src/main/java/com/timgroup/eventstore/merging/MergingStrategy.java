@@ -19,11 +19,19 @@ public interface MergingStrategy<T extends Comparable<T>> {
         return DEFAULT_MERGED_STREAM_ID;
     }
 
+    default Duration delay() { return Duration.ZERO; }
+
+
+
     default MergingStrategy<T> withStreamId(StreamId streamId) {
         return new FixedStreamIdMergingStrategy<T>(streamId, this);
     }
 
-    default Duration delay() { return Duration.ZERO; }
+    default MergingStrategy<T> withDelay(Duration delay) {
+        return new DelayedMergingStrategy<T>(delay, this);
+    }
+
+
 
     final class StreamIndexMergingStrategy implements MergingStrategy<Integer> {
         @Override
@@ -67,6 +75,36 @@ public interface MergingStrategy<T extends Comparable<T>> {
         @Override
         public StreamId mergedStreamId() {
             return streamId;
+        }
+
+        @Override
+        public Duration delay() {
+            return delegate.delay();
+        }
+    }
+
+    final class DelayedMergingStrategy<T extends Comparable<T>> implements MergingStrategy<T> {
+        private final Duration delay;
+        private final MergingStrategy<T> delegate;
+
+        private DelayedMergingStrategy(Duration delay, MergingStrategy<T> delegate) {
+            this.delay = delay;
+            this.delegate = delegate;
+        }
+
+        @Override
+        public T toComparable(ResolvedEvent event) {
+            return delegate.toComparable(event);
+        }
+
+        @Override
+        public StreamId mergedStreamId() {
+            return delegate.mergedStreamId();
+        }
+
+        @Override
+        public Duration delay() {
+            return this.delay;
         }
     }
 }
