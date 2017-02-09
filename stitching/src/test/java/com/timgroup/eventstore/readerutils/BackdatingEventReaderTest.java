@@ -158,6 +158,23 @@ public final class BackdatingEventReaderTest {
                 ))));
     }
 
+    @Test
+    public void it_backdates_to_a_specified_date() throws Exception {
+        BackdatingEventReader reader = new BackdatingEventReader(underlying, liveCutoffDate, Instant.parse("2012-06-22T15:14:13Z"));
+
+        underlying.write(aStream, singletonList(newEvent("anEvent", data, metadata)));
+
+        assertThat(reader.readAllForwards().collect(toList()),
+                contains(aResolvedEvent(position(1), eventRecord(
+                        clock.instant(),
+                        aStream,
+                        0,
+                        "anEvent",
+                        data,
+                        "{\"effective_timestamp\":\"2012-06-22T15:14:13Z\"}".getBytes()
+                ))));
+    }
+
     private Position position(int position) {
         return underlying.deserializePosition(String.valueOf(position));
     }

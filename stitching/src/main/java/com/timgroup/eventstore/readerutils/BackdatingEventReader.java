@@ -18,12 +18,18 @@ public final class BackdatingEventReader implements EventReader {
 
     private final EventReader underlying;
     private final Instant liveCutoverInclusive;
+    private final Instant destination;
     private final ObjectMapper json = new ObjectMapper();
 
 
     public BackdatingEventReader(EventReader underlying, Instant liveCutoverInclusive) {
+        this(underlying, liveCutoverInclusive, Instant.EPOCH);
+    }
+
+    public BackdatingEventReader(EventReader underlying, Instant liveCutoverInclusive, Instant destination) {
         this.underlying = underlying;
         this.liveCutoverInclusive = liveCutoverInclusive;
+        this.destination = destination;
     }
 
     @Override
@@ -61,7 +67,7 @@ public final class BackdatingEventReader implements EventReader {
     private byte[] backdateEffectiveTimestamp(byte[] upstreamMetadata) {
         try {
             ObjectNode jsonNode = (ObjectNode) json.readTree(upstreamMetadata);
-            jsonNode.put(EFFECTIVE_TIMESTAMP, Instant.EPOCH.toString());
+            jsonNode.put(EFFECTIVE_TIMESTAMP, destination.toString());
             return json.writeValueAsBytes(jsonNode);
         } catch (IOException e) {
             throw new IllegalStateException("the code should never end up here", e);
