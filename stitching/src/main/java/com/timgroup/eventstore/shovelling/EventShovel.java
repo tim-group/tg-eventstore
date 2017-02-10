@@ -6,13 +6,15 @@ import com.google.common.collect.PeekingIterator;
 import com.timgroup.eventstore.api.*;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import static com.google.common.collect.Collections2.transform;
+import static com.google.common.collect.Iterators.partition;
 import static com.google.common.collect.Iterators.peekingIterator;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -77,29 +79,21 @@ public final class EventShovel {
     private void writeEvents(Stream<NewEventWithStreamId> eventsToWrite) {
         EventStreamWriter eventStreamWriter = output.writeStream();
 
-        Iterator<Iterator<NewEventWithStreamId>> batches = batchBy(
+        Iterator<Iterator<NewEventWithStreamId>> partitionedByStream = batchBy(
                 eventsToWrite.iterator(),
-                e -> e.streamId,
-                maxBatchSize);
+                e -> e.streamId);
 
-        while (batches.hasNext()) {
-            saveBatch(eventStreamWriter, batches.next());
+        while (partitionedByStream.hasNext()) {
+            Iterator<List<NewEventWithStreamId>> batches = partition(partitionedByStream.next(), maxBatchSize);
+            while (batches.hasNext()) {
+                List<NewEventWithStreamId> batch = batches.next();
+                NewEventWithStreamId first = batch.get(0);
+                eventStreamWriter.write(first.streamId, transform(batch, e -> e.event), first.eventNumber - 1);
+            }
         }
     }
 
-    private void saveBatch(EventStreamWriter eventStreamWriter, Iterator<NewEventWithStreamId> nonEmptyBatch) {
-        List<NewEvent> events = new ArrayList<>();
-        NewEventWithStreamId first = nonEmptyBatch.next();
-
-        events.add(first.event);
-        while (nonEmptyBatch.hasNext()) {
-            events.add(nonEmptyBatch.next().event);
-        }
-
-        eventStreamWriter.write(first.streamId, events, first.eventNumber - 1);
-    }
-
-    private static <T> Iterator<Iterator<T>> batchBy(Iterator<T> it, Function<T, Object> grouping, int maxBatchSize) {
+    private static <T> Iterator<Iterator<T>> batchBy(Iterator<T> it, Function<T, Object> grouping) {
         return new Iterator<Iterator<T>>() {
             PeekingIterator<T> peekingIterator = peekingIterator(it);
 
@@ -111,19 +105,22 @@ public final class EventShovel {
             @Override
             public Iterator<T> next() {
                 return new Iterator<T>() {
-                    private int count = 0;
                     private Object currentGroup = grouping.apply(peekingIterator.peek());
+
+                    private boolean isSameGroup() {
+                        return currentGroup.equals(grouping.apply(peekingIterator.peek()));
+                    }
 
                     @Override
                     public boolean hasNext() {
-                        return count < maxBatchSize &&
-                                peekingIterator.hasNext() &&
-                                currentGroup.equals(grouping.apply(peekingIterator.peek()));
+                        return peekingIterator.hasNext() && isSameGroup();
                     }
 
                     @Override
                     public T next() {
-                        count += 1;
+                        if (!isSameGroup()) {
+                            throw new NoSuchElementException();
+                        }
                         return peekingIterator.next();
                     }
                 };
