@@ -8,7 +8,6 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.InMemoryEventSource;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
-import com.timgroup.eventstore.shovelling.EventShovel;
 import org.junit.Test;
 
 import java.time.Instant;
@@ -99,22 +98,37 @@ public final class EventShovelTest {
 
     @Test public void
     a_new_shovel_shovels_only_events_that_it_has_not_previously_shovelled() throws Exception {
-        inputEventArrived(streamId("previous", "event"), newEvent("CoolenessRemoved", new byte[0], new byte[0]));
+        inputEventArrived(streamId("david", "tom"), newEvent("CoolenessRemoved", new byte[0], new byte[0]));
+        inputEventArrived(streamId("another", "stream"), newEvent("TooMuchCoolness", new byte[0], new byte[0]));
         underTest.shovelAllNewlyAvailableEvents();
 
         inputEventArrived(streamId("david", "tom"), newEvent("CoolenessAdded", new byte[0], new byte[0]));
         new EventShovel(inputSource.readAll(), inputSource.positionCodec(), outputSource).shovelAllNewlyAvailableEvents();
 
-        List<EventRecord> shovelledEvents = outputSource.readAll().readAllForwards().skip(1).map(ResolvedEvent::eventRecord).collect(Collectors.toList());
+        List<EventRecord> shovelledEvents = outputSource.readAll().readAllForwards().map(ResolvedEvent::eventRecord).collect(Collectors.toList());
 
         assertThat(shovelledEvents, contains(
                 anEventRecord(
                         clock.instant(),
                         StreamId.streamId("david", "tom"),
                         0L,
-                        "CoolenessAdded",
+                        "CoolenessRemoved",
+                        new byte[0],
+                        "{\"shovel_position\":\"1\"}".getBytes(UTF_8)
+                ), anEventRecord(
+                        clock.instant(),
+                        StreamId.streamId("another", "stream"),
+                        0L,
+                        "TooMuchCoolness",
                         new byte[0],
                         "{\"shovel_position\":\"2\"}".getBytes(UTF_8)
+                ), anEventRecord(
+                        clock.instant(),
+                        StreamId.streamId("david", "tom"),
+                        1L,
+                        "CoolenessAdded",
+                        new byte[0],
+                        "{\"shovel_position\":\"3\"}".getBytes(UTF_8)
                 )
         ));
     }
