@@ -1,15 +1,15 @@
 package com.timgroup.eventsubscription.healthcheck;
 
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Optional;
-
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Health;
 import com.timgroup.tucker.info.Report;
 import com.timgroup.tucker.info.Status;
+
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Optional;
 
 import static com.timgroup.tucker.info.Status.CRITICAL;
 import static com.timgroup.tucker.info.Status.OK;
@@ -33,6 +33,7 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
         this.clock = clock;
         this.maxInitialReplayDuration = maxInitialReplayDuration;
         this.startTime = Instant.now(clock);
+        this.staleSince = Instant.now(clock);
         criticalInitialReplayDuration = maxInitialReplayDuration.plus(maxInitialReplayDuration.dividedBy(4)); // 25% over max = critical
     }
 
@@ -56,7 +57,7 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
                         "this is longer than expected limit of " + maxInitialReplayDuration + ".");
             }
         } else {
-            return new Report(WARNING, "Awaiting events.");
+            throw new RuntimeException("Not stale and no replay completed");
         }
     }
 
@@ -103,7 +104,7 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
 
     public void reset() {
         startTime = Instant.now(clock);
-        staleSince = null;
+        staleSince = Instant.now(clock);
         currentPosition = null;
         initialReplayDuration = null;
         terminatedReport = null;

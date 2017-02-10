@@ -1,14 +1,14 @@
 package com.timgroup.eventstore.healthcheck;
 
-import java.time.Duration;
-import java.time.Instant;
-
 import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventsubscription.healthcheck.EventSubscriptionStatus;
 import com.timgroup.eventsubscription.healthcheck.SubscriptionListenerAdapter;
 import com.timgroup.tucker.info.Report;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.time.Duration;
+import java.time.Instant;
 
 import static com.timgroup.tucker.info.Health.State.healthy;
 import static com.timgroup.tucker.info.Health.State.ill;
@@ -33,9 +33,16 @@ public class EventSubscriptionStatusTest {
     }
 
     @Test public void
-    reports_ill_whilst_initial_replay_is_in_progress() {
+    reports_ok_before_initial_replay_starts() {
         assertThat(status.get(), is(ill));
-        assertThat(status.getReport(), is(new Report(WARNING, "Awaiting events.")));
+        assertThat(status.getReport(), is(new Report(OK, "Stale, catching up. No events processed yet. (Stale for PT0S)")));
+
+    }
+
+    @Test public void
+    warns_if_initial_replay_not_started_and_threshold_passed() {
+        clock.bumpSeconds(124);
+        assertThat(status.getReport(), is(new Report(WARNING, "Stale, catching up. No events processed yet. (Stale for PT2M4S)")));
     }
 
     @Test public void
