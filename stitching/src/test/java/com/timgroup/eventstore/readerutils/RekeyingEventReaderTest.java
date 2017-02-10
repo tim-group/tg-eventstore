@@ -1,0 +1,121 @@
+package com.timgroup.eventstore.readerutils;
+
+import com.timgroup.clocks.testing.ManualClock;
+import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
+import org.junit.Test;
+
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import static com.timgroup.eventstore.api.NewEvent.newEvent;
+import static com.timgroup.eventstore.api.StreamId.streamId;
+import static com.timgroup.indicatorinputstreamwriter.EventRecordMatcher.anEventRecord;
+import static java.util.Collections.singleton;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
+
+public final class RekeyingEventReaderTest {
+
+    private final ManualClock clock = new ManualClock(Instant.parse("2009-04-12T22:12:32Z"), ZoneId.of("UTC"));
+
+    @Test
+    public void
+    supports_reading_from_all_forwards_from_multiple_input_streams() throws Exception {
+        JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
+
+        EventReader reader = RekeyingEventReader.rekeying(input1, input1, streamId("food", "all"));
+
+        Instant instant = clock.instant();
+        inputEventArrived(input1, streamId("cheese", "brie"), "CoolenessAdded");
+        inputEventArrived(input1, streamId("cheese", "cheddar"), "CoolenessRemoved");
+        inputEventArrived(input1, streamId("meat", "ham"), "CoolenessChanged");
+        inputEventArrived(input1, streamId("cheese", "stilton"), "CoolenessExceeded");
+
+        List<EventRecord> mergedEvents = reader.readAllForwards().map(ResolvedEvent::eventRecord).collect(Collectors.toList());
+        assertThat(mergedEvents, contains(
+                anEventRecord(
+                        instant,
+                        streamId("food", "all"),
+                        0L,
+                        "CoolenessAdded",
+                        new byte[0],
+                        new byte[0]
+                ),
+                anEventRecord(
+                        instant,
+                        streamId("food", "all"),
+                        1L,
+                        "CoolenessRemoved",
+                        new byte[0],
+                        new byte[0]
+                ),
+                anEventRecord(
+                        instant,
+                        streamId("food", "all"),
+                        2L,
+                        "CoolenessChanged",
+                        new byte[0],
+                        new byte[0]
+                )
+                ,
+                anEventRecord(
+                        instant,
+                        streamId("food", "all"),
+                        3L,
+                        "CoolenessExceeded",
+                        new byte[0],
+                        new byte[0]
+                )
+        ));
+    }
+
+    @Test
+    public void
+    supports_reading_from_a_given_position_from_multiple_input_streams() throws Exception {
+        JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
+
+        EventReader reader = RekeyingEventReader.rekeying(input1, input1, streamId("food", "all"));
+
+        Instant instant = clock.instant();
+        inputEventArrived(input1, streamId("cheese", "brie"), "CoolenessAdded");
+        inputEventArrived(input1, streamId("cheese", "cheddar"), "CoolenessRemoved");
+        inputEventArrived(input1, streamId("meat", "ham"), "CoolenessChanged");
+        inputEventArrived(input1, streamId("cheese", "stilton"), "CoolenessExceeded");
+
+        @SuppressWarnings("OptionalGetWithoutIsPresent")
+        Position position = reader.readAllForwards().skip(1).findFirst().get().position();
+
+        List<EventRecord> mergedEvents = reader.readAllForwards(position).map(ResolvedEvent::eventRecord).collect(Collectors.toList());
+        assertThat(mergedEvents, contains(
+                anEventRecord(
+                        instant,
+                        streamId("food", "all"),
+                        2L,
+                        "CoolenessChanged",
+                        new byte[0],
+                        new byte[0]
+                )
+                ,
+                anEventRecord(
+                        instant,
+                        streamId("food", "all"),
+                        3L,
+                        "CoolenessExceeded",
+                        new byte[0],
+                        new byte[0]
+                )
+        ));
+    }
+
+    private static void inputEventArrived(EventStreamWriter input, StreamId streamId, String eventType) {
+        inputEventArrived(input, streamId, newEvent(eventType, new byte[0], new byte[0]));
+    }
+
+    private static void inputEventArrived(EventStreamWriter input, StreamId streamId, NewEvent event) {
+        input.write(streamId, singleton(event));
+    }
+
+}
