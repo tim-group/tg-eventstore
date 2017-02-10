@@ -1,9 +1,5 @@
 package com.timgroup.eventstore.mysql;
 
-import java.util.Collection;
-import java.util.Optional;
-import java.util.Properties;
-
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventReader;
@@ -15,6 +11,10 @@ import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.component.DatabaseConnectionComponent;
 import com.typesafe.config.Config;
 import org.slf4j.LoggerFactory;
+
+import java.util.Collection;
+import java.util.Optional;
+import java.util.Properties;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -84,14 +84,7 @@ public class BasicMysqlEventSource implements EventSource {
     }
 
     public static PooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name) {
-        ComboPooledDataSource dataSource = new ComboPooledDataSource();
-        dataSource.setJdbcUrl(format("jdbc:mysql://%s:%d/%s?rewriteBatchedStatements=true",
-                config.getString("hostname"),
-                config.getInt("port"),
-                config.getString("database")));
-        dataSource.setUser(config.getString("username"));
-        dataSource.setPassword(config.getString("password"));
-        dataSource.setIdleConnectionTestPeriod(60 * 5);
+        ComboPooledDataSource dataSource = StacksConfiguredDataSource.pooled(config);
 
         try {
             Class.forName(config.getString("driver"));
@@ -109,19 +102,7 @@ public class BasicMysqlEventSource implements EventSource {
     }
 
     public static PooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name) {
-        ComboPooledDataSource dataSource = new ComboPooledDataSource();
-        dataSource.setJdbcUrl(format("jdbc:mysql://%s:%d/%s?rewriteBatchedStatements=true",
-                properties.getProperty(configPrefix + "hostname"),
-                Integer.parseInt(properties.getProperty(configPrefix + "port")),
-                properties.get(configPrefix + "database")));
-        dataSource.setUser(properties.getProperty(configPrefix + "username"));
-        dataSource.setPassword(properties.getProperty(configPrefix + "password"));
-
-        try {
-            Class.forName(properties.getProperty(configPrefix + "driver"));
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
+        ComboPooledDataSource dataSource = StacksConfiguredDataSource.pooled(properties, configPrefix);
 
         try {
             new BasicMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
@@ -131,6 +112,7 @@ public class BasicMysqlEventSource implements EventSource {
 
         return new PooledMysqlEventSource(dataSource, tableName, DefaultBatchSize, name);
     }
+
 
     public static final class PooledMysqlEventSource extends BasicMysqlEventSource implements AutoCloseable {
         private final ComboPooledDataSource dataSource;

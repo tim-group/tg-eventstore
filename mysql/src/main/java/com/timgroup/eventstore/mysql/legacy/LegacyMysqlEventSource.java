@@ -1,8 +1,15 @@
 package com.timgroup.eventstore.mysql.legacy;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
-import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.EventCategoryReader;
+import com.timgroup.eventstore.api.EventReader;
+import com.timgroup.eventstore.api.EventSource;
+import com.timgroup.eventstore.api.EventStreamReader;
+import com.timgroup.eventstore.api.EventStreamWriter;
+import com.timgroup.eventstore.api.PositionCodec;
+import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
+import com.timgroup.eventstore.mysql.StacksConfiguredDataSource;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.component.DatabaseConnectionComponent;
 import com.typesafe.config.Config;
@@ -11,7 +18,6 @@ import org.slf4j.LoggerFactory;
 import java.util.Collection;
 import java.util.Properties;
 
-import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 
 public class LegacyMysqlEventSource implements EventSource {
@@ -78,14 +84,7 @@ public class LegacyMysqlEventSource implements EventSource {
     }
 
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, StreamId pretendStreamId, String name) {
-        ComboPooledDataSource dataSource = new ComboPooledDataSource();
-        dataSource.setJdbcUrl(format("jdbc:mysql://%s:%d/%s?rewriteBatchedStatements=true",
-                config.getString("hostname"),
-                config.getInt("port"),
-                config.getString("database")));
-        dataSource.setUser(config.getString("username"));
-        dataSource.setPassword(config.getString("password"));
-        dataSource.setIdleConnectionTestPeriod(60 * 5);
+        ComboPooledDataSource dataSource = StacksConfiguredDataSource.pooled(config);
 
         try {
             Class.forName(config.getString("driver"));
@@ -107,19 +106,7 @@ public class LegacyMysqlEventSource implements EventSource {
     }
 
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, StreamId pretendStreamId, String name) {
-        ComboPooledDataSource dataSource = new ComboPooledDataSource();
-        dataSource.setJdbcUrl(format("jdbc:mysql://%s:%d/%s?rewriteBatchedStatements=true",
-                properties.getProperty(configPrefix + "hostname"),
-                Integer.parseInt(properties.getProperty(configPrefix + "port")),
-                properties.get(configPrefix + "database")));
-        dataSource.setUser(properties.getProperty(configPrefix + "username"));
-        dataSource.setPassword(properties.getProperty(configPrefix + "password"));
-
-        try {
-            Class.forName(properties.getProperty(configPrefix + "driver"));
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
+        ComboPooledDataSource dataSource = StacksConfiguredDataSource.pooled(properties, configPrefix);
 
         try {
             new LegacyMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
