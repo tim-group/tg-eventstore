@@ -28,7 +28,7 @@ final class MergedEventReaderPosition implements Position {
     }
 
     static final class MergedEventReaderPositionCodec implements PositionCodec {
-        private static final String EVENT_NUMBER_FIELD = "eventnumber";
+        private static final String EVENT_NUMBER_FIELD = "merged_event_number";
 
         private final ObjectMapper objectMapper = new ObjectMapper();
 
