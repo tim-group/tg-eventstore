@@ -13,13 +13,22 @@ public class TransformingEventReader implements EventReader {
     private final EventReader underlying;
     private final Function<ResolvedEvent, ResolvedEvent> transformer;
 
-    public TransformingEventReader(EventReader underlying, Function<EventRecord, EventRecord> transformer) {
+    protected TransformingEventReader(EventReader underlying, Function<ResolvedEvent, ResolvedEvent> transformer) {
         this.underlying = underlying;
-        this.transformer = re -> new ResolvedEvent(re.position(), transformer.apply(re.eventRecord()));
+        this.transformer = transformer;
     }
 
-    public static TransformingEventReader transform(EventReader underlying, Function<EventRecord, EventRecord> transformer) {
+    public static TransformingEventReader transformEventRecords(EventReader underlying, Function<EventRecord, EventRecord> transformer) {
+        return transformResolvedEvents(underlying, toResolvedEventTransformer(transformer));
+    }
+
+    public static TransformingEventReader transformResolvedEvents(EventReader underlying, Function<ResolvedEvent, ResolvedEvent> transformer) {
         return new TransformingEventReader(underlying, transformer);
+    }
+
+
+    public static Function<ResolvedEvent, ResolvedEvent> toResolvedEventTransformer(Function<EventRecord, EventRecord> transformer) {
+        return re -> new ResolvedEvent(re.position(), transformer.apply(re.eventRecord()));
     }
 
     @Override

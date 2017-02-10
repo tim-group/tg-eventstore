@@ -18,7 +18,7 @@ public final class BackdatingEventReader extends TransformingEventReader {
     }
 
     public BackdatingEventReader(EventReader underlying, Instant liveCutoverInclusive, Instant destination) {
-        super(underlying, new BackdatingTransformer(liveCutoverInclusive, destination));
+        super(underlying, toResolvedEventTransformer(new BackdatingTransformer(liveCutoverInclusive, destination)));
     }
 
     private static final class BackdatingTransformer implements Function<EventRecord, EventRecord> {
