@@ -84,7 +84,7 @@ public final class EventShovel {
                 batch.add(next.event);
             } else {
                 if (!batch.isEmpty()) {
-                    eventStreamWriter.write(currentStreamId, batch);
+                    eventStreamWriter.write(currentStreamId, batch, expectedEventNumber);
                     batch.clear();
                 }
 
@@ -94,7 +94,8 @@ public final class EventShovel {
             }
 
             if (batch.size() >= maxBatchSize) {
-                eventStreamWriter.write(currentStreamId, batch);
+                eventStreamWriter.write(currentStreamId, batch, expectedEventNumber);
+                expectedEventNumber = next.eventNumber - 1L;
                 batch.clear();
                 currentStreamId = null;
             }
