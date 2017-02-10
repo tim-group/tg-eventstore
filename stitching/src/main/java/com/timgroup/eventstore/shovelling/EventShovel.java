@@ -13,6 +13,7 @@ import java.util.stream.Stream;
 
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.stream.Collectors.toList;
 
 public final class EventShovel {
     private final int maxBatchSize;
@@ -74,34 +75,34 @@ public final class EventShovel {
     private void writeEvents(Stream<NewEventWithStreamId> eventsToWrite) {
         EventStreamWriter eventStreamWriter = output.writeStream();
         StreamId currentStreamId = null;
-        long expectedEventNumber = 0L;
-        List<NewEvent> batch = new ArrayList<>();
+        List<NewEventWithStreamId> batch = new ArrayList<>();
 
         Iterator<NewEventWithStreamId> events = eventsToWrite.iterator();
         while (events.hasNext()) {
             NewEventWithStreamId next = events.next();
-            if (next.streamId.equals(currentStreamId)) {
-                batch.add(next.event);
-            } else {
-                if (!batch.isEmpty()) {
-                    eventStreamWriter.write(currentStreamId, batch, expectedEventNumber);
-                    batch.clear();
-                }
+            if (!next.streamId.equals(currentStreamId)) {
+                writeAndClearBatch(eventStreamWriter, batch);
 
                 currentStreamId = next.streamId;
-                expectedEventNumber = next.eventNumber - 1L;
-                batch.add(next.event);
             }
 
+            batch.add(next);
+
             if (batch.size() >= maxBatchSize) {
-                eventStreamWriter.write(currentStreamId, batch, expectedEventNumber);
-                expectedEventNumber = next.eventNumber - 1L;
-                batch.clear();
-                currentStreamId = null;
+                writeAndClearBatch(eventStreamWriter, batch);
             }
         }
 
-        eventStreamWriter.write(currentStreamId, batch, expectedEventNumber);
+        writeAndClearBatch(eventStreamWriter, batch);
+    }
+
+    private void writeAndClearBatch(EventStreamWriter eventStreamWriter, List<NewEventWithStreamId> batch) {
+        if (!batch.isEmpty()) {
+            NewEventWithStreamId first = batch.get(0);
+            List<NewEvent> events = batch.stream().map(e -> e.event).collect(toList());
+            eventStreamWriter.write(first.streamId, events, first.eventNumber - 1);
+        }
+        batch.clear();
     }
 
     private static final class NewEventWithStreamId {
