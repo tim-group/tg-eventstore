@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.PeekingIterator;
 import com.timgroup.eventstore.api.*;
+import com.timgroup.tucker.info.Component;
+import com.timgroup.tucker.info.component.SimpleValueComponent;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -17,7 +19,9 @@ import static com.google.common.collect.Collections2.transform;
 import static com.google.common.collect.Iterators.partition;
 import static com.google.common.collect.Iterators.peekingIterator;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
+import static com.timgroup.tucker.info.Status.INFO;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.singletonList;
 
 public final class EventShovel {
     private final int maxBatchSize;
@@ -25,12 +29,14 @@ public final class EventShovel {
     private final PositionCodec readerPositionCodec;
     private final EventSource output;
     private final ObjectMapper json = new ObjectMapper();
+    private final SimpleValueComponent lastProcessedEvent = new SimpleValueComponent("last-shovelled-event", "Last Shovelled Event");
 
     public EventShovel(int maxBatchSize, EventReader reader, PositionCodec readerPositionCodec, EventSource output) {
         this.maxBatchSize = maxBatchSize;
         this.reader = reader;
         this.readerPositionCodec = readerPositionCodec;
         this.output = output;
+        lastProcessedEvent.updateValue(INFO, "none");
     }
 
     public EventShovel(EventReader reader, PositionCodec readerPositionCodec, EventSource output) {
@@ -46,13 +52,20 @@ public final class EventShovel {
                     .orElse(reader.emptyStorePosition());
 
             try (Stream<ResolvedEvent> resolvedEventStream = reader.readAllForwards(currentPosition)) {
-                writeEvents(resolvedEventStream.map(evt -> new NewEventWithStreamId(
-                        evt.eventRecord().streamId(),
-                        evt.eventRecord().eventNumber(),
-                        newEvent(evt.eventRecord().eventType(),
-                                evt.eventRecord().data(),
-                                createMetadataWithShovelPosition(evt.position(), evt.eventRecord().metadata()))
-                )));
+                writeEvents(resolvedEventStream.map(evt -> {
+                    EventRecord record = evt.eventRecord();
+                    lastProcessedEvent.updateValue(INFO, record.streamId() + " eventNumber=" + record.eventNumber());
+
+                    return new NewEventWithStreamId(
+                            record.streamId(),
+                            record.eventNumber(),
+                            newEvent(
+                                    record.eventType(),
+                                    record.data(),
+                                    createMetadataWithShovelPosition(evt.position(), record.metadata())
+                            )
+                    );
+                }));
             }
         }
     }
@@ -126,6 +139,10 @@ public final class EventShovel {
                 };
             }
         };
+    }
+
+    public Iterable<Component> monitoring() {
+        return singletonList(lastProcessedEvent);
     }
 
     private static final class NewEventWithStreamId {
