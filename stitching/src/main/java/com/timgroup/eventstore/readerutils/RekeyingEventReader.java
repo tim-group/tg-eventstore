@@ -1,13 +1,10 @@
 package com.timgroup.eventstore.readerutils;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.timgroup.eventstore.api.*;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
@@ -19,12 +16,12 @@ public final class RekeyingEventReader implements EventReader {
 
     private final EventReader underlying;
     private final PositionCodec underlyingPositionCodec;
-    private final StreamId newKey;
+    private final StreamId newStreamId;
 
-    private RekeyingEventReader(EventReader underlying, PositionCodec underlyingPositionCodec, StreamId newKey) {
+    private RekeyingEventReader(EventReader underlying, PositionCodec underlyingPositionCodec, StreamId newStreamId) {
         this.underlying = underlying;
         this.underlyingPositionCodec = underlyingPositionCodec;
-        this.newKey = newKey;
+        this.newStreamId = newStreamId;
     }
 
     public static RekeyingEventReader rekeying(EventReader underlying, PositionCodec underlyingPositionCodec, StreamId newKey) {
@@ -36,7 +33,7 @@ public final class RekeyingEventReader implements EventReader {
         RekeyedStreamPosition rekeyedEventPosition = (RekeyedStreamPosition)positionExclusive;
 
         Stream<ResolvedEvent> events = underlying.readAllForwards(rekeyedEventPosition.underlyingPosition);
-        return stream(new RekeyingSpliterator(newKey, rekeyedEventPosition.eventNumber, events.iterator()), false)
+        return stream(new RekeyingSpliterator(newStreamId, rekeyedEventPosition.eventNumber, events.iterator()), false)
                 .onClose(events::close);
     }
 
@@ -50,13 +47,13 @@ public final class RekeyingEventReader implements EventReader {
     }
 
     private static final class RekeyingSpliterator implements Spliterator<ResolvedEvent> {
-        private final StreamId newKey;
+        private final StreamId newStreamId;
         private final Iterator<ResolvedEvent> events;
 
         private long eventNumber;
 
-        public RekeyingSpliterator(StreamId newKey, long lastEventNumber, Iterator<ResolvedEvent> events) {
-            this.newKey = newKey;
+        public RekeyingSpliterator(StreamId newStreamId, long lastEventNumber, Iterator<ResolvedEvent> events) {
+            this.newStreamId = newStreamId;
             this.eventNumber = lastEventNumber;
             this.events = events;
         }
@@ -70,7 +67,7 @@ public final class RekeyingEventReader implements EventReader {
                         new RekeyedStreamPosition(event.position(), eventNumber),
                         eventRecord(
                                 event.eventRecord().timestamp(),
-                                newKey,
+                                newStreamId,
                                 eventNumber,
                                 event.eventRecord().eventType(),
                                 event.eventRecord().data(),
@@ -131,10 +128,9 @@ public final class RekeyingEventReader implements EventReader {
     }
 
     private static final class RekeyedStreamPositionCodec implements PositionCodec {
-        private static final String EVENT_NUMBER_FIELD = "rekeyed_event_number";
-        private static final String UNDERLYING_POSITION_FIELD = "underlying_position";
+        private static final String REKEY_SEPARATOR = ":";
+        private static final Pattern REKEY_PATTERN = Pattern.compile(Pattern.quote(REKEY_SEPARATOR));
 
-        private final ObjectMapper objectMapper = new ObjectMapper();
         private final PositionCodec underlyingPositionCodec;
 
         public RekeyedStreamPositionCodec(PositionCodec underlyingPositionCodec) {
@@ -143,29 +139,19 @@ public final class RekeyingEventReader implements EventReader {
 
         @Override
         public String serializePosition(Position position) {
-            RekeyedStreamPosition rekeyedPosition = (RekeyedStreamPosition)position;
-
-            Map<String, String> positionMap = new HashMap<>();
-            positionMap.put(EVENT_NUMBER_FIELD, String.valueOf(rekeyedPosition.eventNumber));
-            positionMap.put(UNDERLYING_POSITION_FIELD, underlyingPositionCodec.serializePosition(rekeyedPosition.underlyingPosition));
-
-            try {
-                return objectMapper.writeValueAsString(positionMap);
-            } catch (JsonProcessingException e) {
-                throw new IllegalArgumentException("unable to serialise position", e);
-            }
+            RekeyedStreamPosition rekeyedPosition = (RekeyedStreamPosition) position;
+            return String.valueOf(rekeyedPosition.eventNumber)
+                    + REKEY_SEPARATOR
+                    + underlyingPositionCodec.serializePosition(rekeyedPosition.underlyingPosition);
         }
 
         @Override
-        public Position deserializePosition(String serialisedPosition) {
-            try {
-                JsonNode positionMap = objectMapper.readTree(serialisedPosition);
-                long eventNumber = parseLong(positionMap.get(EVENT_NUMBER_FIELD).asText());
-                Position deserialisedPosition = underlyingPositionCodec.deserializePosition(positionMap.get(UNDERLYING_POSITION_FIELD).asText());
-                return new RekeyedStreamPosition(deserialisedPosition, eventNumber);
-            } catch (IOException e) {
-                throw new IllegalArgumentException("unable to deserialise position", e);
-            }
+        public Position deserializePosition(String string) {
+            String[] data = REKEY_PATTERN.split(string, 2);
+            return new RekeyedStreamPosition(
+                    underlyingPositionCodec.deserializePosition(data[1]),
+                    parseLong(data[0])
+            );
         }
     }
 }

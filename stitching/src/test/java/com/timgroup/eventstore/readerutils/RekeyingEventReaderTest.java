@@ -16,6 +16,8 @@ import static com.timgroup.indicatorinputstreamwriter.EventRecordMatcher.anEvent
 import static java.util.Collections.singleton;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 
 public final class RekeyingEventReaderTest {
 
@@ -26,7 +28,7 @@ public final class RekeyingEventReaderTest {
     supports_reading_from_all_forwards_from_multiple_input_streams() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
 
-        EventReader reader = RekeyingEventReader.rekeying(input1, input1, streamId("food", "all"));
+        RekeyingEventReader reader = RekeyingEventReader.rekeying(input1, input1, streamId("food", "all"));
 
         Instant instant = clock.instant();
         inputEventArrived(input1, streamId("cheese", "brie"), "CoolenessAdded");
@@ -77,7 +79,7 @@ public final class RekeyingEventReaderTest {
     supports_reading_from_a_given_position_from_multiple_input_streams() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
 
-        EventReader reader = RekeyingEventReader.rekeying(input1, input1, streamId("food", "all"));
+        RekeyingEventReader reader = RekeyingEventReader.rekeying(input1, input1, streamId("food", "all"));
 
         Instant instant = clock.instant();
         inputEventArrived(input1, streamId("cheese", "brie"), "CoolenessAdded");
@@ -88,7 +90,13 @@ public final class RekeyingEventReaderTest {
         @SuppressWarnings("OptionalGetWithoutIsPresent")
         Position position = reader.readAllForwards().skip(1).findFirst().get().position();
 
-        List<EventRecord> mergedEvents = reader.readAllForwards(position).map(ResolvedEvent::eventRecord).collect(Collectors.toList());
+        String serializedPosition = reader.positionCodec().serializePosition(position);
+        assertThat(serializedPosition, is(equalTo("1:2")));
+
+        Position deserializedPosition = reader.positionCodec().deserializePosition(serializedPosition);
+        assertThat(deserializedPosition, is(equalTo(position)));
+
+        List<EventRecord> mergedEvents = reader.readAllForwards(deserializedPosition).map(ResolvedEvent::eventRecord).collect(Collectors.toList());
         assertThat(mergedEvents, contains(
                 anEventRecord(
                         instant,
