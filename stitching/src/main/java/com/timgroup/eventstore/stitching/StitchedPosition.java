@@ -32,7 +32,7 @@ final class StitchedPosition implements Position {
 
         @Override
         public Position deserializePosition(String string) {
-            String[] positions = STITCH_PATTERN.split(string);
+            String[] positions = STITCH_PATTERN.split(string, 2);
             return new StitchedPosition(
                     backfillPositionCodec.deserializePosition(positions[0]),
                     livePositionCodec.deserializePosition(positions[1])
