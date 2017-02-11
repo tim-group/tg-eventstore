@@ -105,16 +105,16 @@ public final class MergedEventSourceTest {
         EventReader outputReader = eventSource.readAll();
 
         Instant instant1 = clock.instant();
-        inputEventArrived(input1, "CoolenessAdded");
-        inputEventArrived(input2, "CoolenessRemoved");
-        inputEventArrived(input2, "CoolenessChanged");
+        inputEventArrived(input1, streamId("all", "all"), "CoolenessAdded");
+        inputEventArrived(input2, streamId("oh", "fook"), "CoolenessRemoved");
+        inputEventArrived(input2, streamId("oh", "fook"), "CoolenessChanged");
 
         clock.advanceTo(instant1.plusSeconds(1));
         @SuppressWarnings("OptionalGetWithoutIsPresent") Position startPosition = outputReader.readAllForwards().skip(1).findFirst().get().position();
         Position deserialisedStartPosition = eventSource.positionCodec().deserializePosition(eventSource.positionCodec().serializePosition(startPosition));
 
         Instant instant2 = clock.instant();
-        inputEventArrived(input1, "CoolenessDestroyed");
+        inputEventArrived(input1, streamId("all", "all"), "CoolenessDestroyed");
 
         clock.advanceTo(instant2.plusSeconds(1));
         List<EventRecord> mergedEvents = outputReader.readAllForwards(deserialisedStartPosition).map(ResolvedEvent::eventRecord).collect(Collectors.toList());
@@ -123,15 +123,15 @@ public final class MergedEventSourceTest {
                 anEventRecord(
                         instant2,
                         streamId("all", "all"),
-                        2L,
+                        1L,
                         "CoolenessDestroyed",
                         new byte[0],
                         new byte[0]
                 ),
                 anEventRecord(
                         instant1,
-                        streamId("all", "all"),
-                        3L,
+                        streamId("oh", "fook"),
+                        1L,
                         "CoolenessChanged",
                         new byte[0],
                         new byte[0]
@@ -150,9 +150,9 @@ public final class MergedEventSourceTest {
         ).readAll();
 
         Instant instant = clock.instant();
-        inputEventArrived(input1, "CoolenessAdded");
-        inputEventArrived(input2, "CoolenessRemoved");
-        inputEventArrived(input1, "CoolenessChanged");
+        inputEventArrived(input1, streamId("all", "all"), "CoolenessAdded");
+        inputEventArrived(input2, streamId("oh", "fook"), "CoolenessRemoved");
+        inputEventArrived(input1, streamId("all", "all"), "CoolenessChanged");
 
         clock.advanceTo(instant.plusSeconds(1));
         List<EventRecord> mergedEvents = outputReader.readAllForwards().map(ResolvedEvent::eventRecord).collect(Collectors.toList());
@@ -176,8 +176,8 @@ public final class MergedEventSourceTest {
                 ),
                 anEventRecord(
                         instant,
-                        streamId("all", "all"),
-                        2L,
+                        streamId("oh", "fook"),
+                        0L,
                         "CoolenessRemoved",
                         new byte[0],
                         new byte[0]
@@ -193,7 +193,6 @@ public final class MergedEventSourceTest {
         EventReader outputReader = MergedEventSource.effectiveTimestampMergedEventSource(
                 clock,
                 Duration.ZERO,
-                streamId("input", "all"),
                 new NamedReaderWithCodec("a", input1, input1),
                 new NamedReaderWithCodec("b", input2, input2)
         ).readAll();
@@ -209,7 +208,7 @@ public final class MergedEventSourceTest {
         assertThat(mergedEvents, contains(
                 anEventRecord(
                         instant,
-                        streamId("input", "all"),
+                        streamId("baz", "bob"),
                         0L,
                         "CoolenessAdded",
                         new byte[0],
@@ -217,16 +216,16 @@ public final class MergedEventSourceTest {
                 ),
                 anEventRecord(
                         instant,
-                        streamId("input", "all"),
-                        1L,
+                        streamId("arg", "erg"),
+                        0L,
                         "CoolenessChanged",
                         new byte[0],
                         "{\"effective_timestamp\":\"2015-01-23T00:23:54Z\"}".getBytes(UTF_8)
                 ),
                 anEventRecord(
                         instant,
-                        streamId("input", "all"),
-                        2L,
+                        streamId("foo", "bar"),
+                        0L,
                         "CoolenessRemoved",
                         new byte[0],
                         "{\"effective_timestamp\":\"2016-01-23T00:23:54Z\"}".getBytes(UTF_8)

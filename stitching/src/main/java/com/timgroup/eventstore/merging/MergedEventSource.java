@@ -36,16 +36,16 @@ public final class MergedEventSource<T extends Comparable<T>> implements EventSo
         return new MergedEventSource<>(clock, new MergingStrategy.EffectiveTimestampMergingStrategy(), namedReaders);
     }
 
-    public static MergedEventSource<Instant> effectiveTimestampMergedEventSource(Clock clock, Duration delay, StreamId mergedStreamId, NamedReaderWithCodec... namedReaders) {
-        return new MergedEventSource<>(clock, new MergingStrategy.EffectiveTimestampMergingStrategy().withStreamId(mergedStreamId).withDelay(delay), namedReaders);
+    public static MergedEventSource<Instant> effectiveTimestampMergedEventSource(Clock clock, Duration delay, NamedReaderWithCodec... namedReaders) {
+        return new MergedEventSource<>(clock, new MergingStrategy.EffectiveTimestampMergingStrategy().withDelay(delay), namedReaders);
     }
 
     public static MergedEventSource<Integer> streamOrderMergedEventSource(Clock clock, NamedReaderWithCodec... namedReaders) {
         return new MergedEventSource<>(clock, new MergingStrategy.StreamIndexMergingStrategy(), namedReaders);
     }
 
-    public static MergedEventSource<Integer> streamOrderMergedEventSource(Clock clock, Duration delay, StreamId mergedStreamId, NamedReaderWithCodec... namedReaders) {
-        return new MergedEventSource<>(clock, new MergingStrategy.StreamIndexMergingStrategy().withStreamId(mergedStreamId).withDelay(delay), namedReaders);
+    public static MergedEventSource<Integer> streamOrderMergedEventSource(Clock clock, Duration delay, NamedReaderWithCodec... namedReaders) {
+        return new MergedEventSource<>(clock, new MergingStrategy.StreamIndexMergingStrategy().withDelay(delay), namedReaders);
     }
 
     @Override

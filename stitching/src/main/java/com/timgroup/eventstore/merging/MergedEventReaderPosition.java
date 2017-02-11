@@ -10,26 +10,20 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import static java.lang.Long.parseLong;
-
 final class MergedEventReaderPosition implements Position {
-    final long outputEventNumber;
     final Position[] inputPositions;
 
-    MergedEventReaderPosition(long outputEventNumber, Position... inputPositions) {
-        this.outputEventNumber = outputEventNumber;
+    MergedEventReaderPosition(Position... inputPositions) {
         this.inputPositions = inputPositions;
     }
 
     MergedEventReaderPosition withNextPosition(int readerIndex, Position position) {
         Position[] newPositions = inputPositions.clone();
         newPositions[readerIndex] = position;
-        return new MergedEventReaderPosition(outputEventNumber + 1L, newPositions);
+        return new MergedEventReaderPosition(newPositions);
     }
 
     static final class MergedEventReaderPositionCodec implements PositionCodec {
-        private static final String EVENT_NUMBER_FIELD = "merged_event_number";
-
         private final ObjectMapper objectMapper = new ObjectMapper();
 
         private final NamedReaderWithCodec[] namedReaders;
@@ -44,7 +38,6 @@ final class MergedEventReaderPosition implements Position {
 
             Map<String, String> positionMap = new HashMap<>();
 
-            positionMap.put(EVENT_NUMBER_FIELD, String.valueOf(mergedPosition.outputEventNumber));
             for (int index = 0; index < namedReaders.length; index++) {
                 positionMap.put(namedReaders[index].name, namedReaders[index].codec.serializePosition(mergedPosition.inputPositions[index]));
             }
@@ -66,7 +59,7 @@ final class MergedEventReaderPosition implements Position {
                     deserialisedPositions[index] = namedReaders[index].codec.deserializePosition(positionMap.get(namedReaders[index].name).asText());
                 }
 
-                return new MergedEventReaderPosition(parseLong(positionMap.get(EVENT_NUMBER_FIELD).asText()), deserialisedPositions);
+                return new MergedEventReaderPosition(deserialisedPositions);
 
             } catch (IOException e) {
                 throw new IllegalArgumentException("unable to deserialise position", e);

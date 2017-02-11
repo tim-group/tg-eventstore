@@ -42,8 +42,8 @@ final class MergingSpliterator<T extends Comparable<T>> implements Spliterator<R
                     currentPosition,
                     eventRecord(
                             record.timestamp(),
-                            mergingStrategy.mergedStreamId(),
-                            currentPosition.outputEventNumber,
+                            record.streamId(),
+                            record.eventNumber(),
                             record.eventType(),
                             record.data(),
                             record.metadata()

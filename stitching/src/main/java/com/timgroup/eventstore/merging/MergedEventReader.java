@@ -47,7 +47,7 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
     @Override
     public Position emptyStorePosition() {
         Position[] positions = readers.stream().map(EventReader::emptyStorePosition).collect(toList()).toArray(new Position[0]);
-        return new MergedEventReaderPosition(-1L, positions);
+        return new MergedEventReaderPosition(positions);
     }
 
 
