@@ -3,6 +3,7 @@ package com.timgroup.eventstore.stitching;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 final class StitchedPosition implements Position {
@@ -16,6 +17,28 @@ final class StitchedPosition implements Position {
 
     public boolean isInBackfill(StitchedPosition emptyStorePosition) {
         return this.livePosition.equals(emptyStorePosition.livePosition);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        StitchedPosition that = (StitchedPosition) o;
+        return Objects.equals(backfillPosition, that.backfillPosition) &&
+                Objects.equals(livePosition, that.livePosition);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(backfillPosition, livePosition);
+    }
+
+    @Override
+    public String toString() {
+        return "StitchedPosition{" +
+                "backfillPosition=" + backfillPosition +
+                ", livePosition=" + livePosition +
+                '}';
     }
 
     static final class StitchedPositionCodec implements PositionCodec {
