@@ -2,7 +2,6 @@ package com.timgroup.eventstore.shovelling;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.collect.PeekingIterator;
 import com.timgroup.eventstore.api.*;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.component.SimpleValueComponent;
@@ -10,15 +9,13 @@ import com.timgroup.tucker.info.component.SimpleValueComponent;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static com.google.common.collect.Collections2.transform;
 import static com.google.common.collect.Iterators.partition;
-import static com.google.common.collect.Iterators.peekingIterator;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
+import static com.timgroup.indicatorinputstreamwriter.util.IteratorGroupBy.groupBy;
 import static com.timgroup.tucker.info.Status.INFO;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.singletonList;
@@ -92,7 +89,7 @@ public final class EventShovel {
     private void writeEvents(Stream<NewEventWithStreamId> eventsToWrite) {
         EventStreamWriter eventStreamWriter = output.writeStream();
 
-        Iterator<Iterator<NewEventWithStreamId>> partitionedByStream = batchBy(
+        Iterator<Iterator<NewEventWithStreamId>> partitionedByStream = groupBy(
                 eventsToWrite.iterator(),
                 e -> e.streamId);
 
@@ -104,41 +101,6 @@ public final class EventShovel {
                 eventStreamWriter.write(first.streamId, transform(batch, e -> e.event), first.eventNumber - 1);
             }
         }
-    }
-
-    private static <T> Iterator<Iterator<T>> batchBy(Iterator<T> it, Function<T, Object> grouping) {
-        return new Iterator<Iterator<T>>() {
-            PeekingIterator<T> peekingIterator = peekingIterator(it);
-
-            @Override
-            public boolean hasNext() {
-                return peekingIterator.hasNext();
-            }
-
-            @Override
-            public Iterator<T> next() {
-                return new Iterator<T>() {
-                    private Object currentGroup = grouping.apply(peekingIterator.peek());
-
-                    private boolean isSameGroup() {
-                        return currentGroup.equals(grouping.apply(peekingIterator.peek()));
-                    }
-
-                    @Override
-                    public boolean hasNext() {
-                        return peekingIterator.hasNext() && isSameGroup();
-                    }
-
-                    @Override
-                    public T next() {
-                        if (!isSameGroup()) {
-                            throw new NoSuchElementException();
-                        }
-                        return peekingIterator.next();
-                    }
-                };
-            }
-        };
     }
 
     public Iterable<Component> monitoring() {
