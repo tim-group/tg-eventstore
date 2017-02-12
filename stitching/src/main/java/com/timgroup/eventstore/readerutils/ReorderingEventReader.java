@@ -37,49 +37,52 @@ public final class ReorderingEventReader<T extends Comparable<T>> implements Eve
 
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-        Stream<ResolvedEvent> allForwards = underlying.readAllForwards(positionExclusive);
-        PeekingIterator<ResolvedEvent> allForwardsIterator = Iterators.peekingIterator(allForwards.iterator());
+        try(Stream<ResolvedEvent> allForwards = underlying.readAllForwards(positionExclusive)) {
+            PeekingIterator<ResolvedEvent> allForwardsIterator = Iterators.peekingIterator(allForwards.iterator());
 
-        if (sortKeyExtractor.apply(allForwardsIterator.peek()).compareTo(cutoffSortKey) < 0) {
-            return bufferedAndSortedReadAllForwards(positionExclusive);
+            if (allForwardsIterator.hasNext() && sortKeyExtractor.apply(allForwardsIterator.peek()).compareTo(cutoffSortKey) < 0) {
+                allForwards.close();
+                return bufferedAndSortedReadAllForwards(positionExclusive);
+            }
+
+            return stream(spliteratorUnknownSize(allForwardsIterator, ORDERED), false).onClose(allForwards::close);
         }
-
-        return stream(spliteratorUnknownSize(allForwardsIterator, ORDERED), false).onClose(allForwards::close);
     }
 
     private Stream<ResolvedEvent> bufferedAndSortedReadAllForwards(Position positionExclusive) {
-        Stream<ResolvedEvent> allForwards = underlying.readAllForwards();
+        try(Stream<ResolvedEvent> allForwards = underlying.readAllForwards()) {
 
-        Iterator<ResolvedEvent> remainder = allForwards.iterator();
-        PeekingIterator<EventWithSortKey<T>> sortCandidates = Iterators.peekingIterator(
-                Iterators.transform(remainder, re -> new EventWithSortKey<>(re, sortKeyExtractor.apply(re)))
-        );
+            Iterator<ResolvedEvent> remainder = allForwards.iterator();
+            PeekingIterator<EventWithSortKey<T>> sortCandidates = Iterators.peekingIterator(
+                    Iterators.transform(remainder, re -> new EventWithSortKey<>(re, sortKeyExtractor.apply(re)))
+            );
 
-        final LinkedList<EventWithSortKey<T>> buffer = new LinkedList<>();
+            final LinkedList<EventWithSortKey<T>> buffer = new LinkedList<>();
 
-        while (sortCandidates.hasNext() && sortCandidates.peek().sortKey.compareTo(cutoffSortKey) < 0) {
-            buffer.add(sortCandidates.next());
-        }
+            while (sortCandidates.hasNext() && sortCandidates.peek().sortKey.compareTo(cutoffSortKey) < 0) {
+                buffer.add(sortCandidates.next());
+            }
 
-        if (!sortCandidates.hasNext()) {
-            return Stream.empty();
-        }
+            if (!sortCandidates.hasNext()) {
+                return Stream.empty();
+            }
 
-        buffer.sort(Comparator.naturalOrder());
+            buffer.sort(Comparator.naturalOrder());
 
-        if (!positionExclusive.equals(underlying.emptyStorePosition())) {
-            Iterator<EventWithSortKey<T>> bufferIterator = buffer.iterator();
-            while (!bufferIterator.next().event.position().equals(positionExclusive)) {
+            if (!positionExclusive.equals(underlying.emptyStorePosition())) {
+                Iterator<EventWithSortKey<T>> bufferIterator = buffer.iterator();
+                while (!bufferIterator.next().event.position().equals(positionExclusive)) {
+                    bufferIterator.remove();
+                }
                 bufferIterator.remove();
             }
-            bufferIterator.remove();
+
+            Stream<EventWithSortKey<T>> reorderedEvents = buffer.stream().onClose(buffer::clear);
+            Stream<EventWithSortKey<T>> eventInTheGap = Stream.of(sortCandidates.peek());
+            Stream<ResolvedEvent> remainingEvents = stream(spliteratorUnknownSize(remainder, ORDERED), false);
+
+            return concat(concat(reorderedEvents, eventInTheGap).map(EventWithSortKey::toResolvedEvent), remainingEvents).onClose(allForwards::close);
         }
-
-        Stream<EventWithSortKey<T>> reorderedEvents = buffer.stream().onClose(buffer::clear);
-        Stream<EventWithSortKey<T>> eventInTheGap = Stream.of(sortCandidates.peek());
-        Stream<ResolvedEvent> remainingEvents = stream(spliteratorUnknownSize(remainder, ORDERED), false);
-
-        return concat(concat(reorderedEvents, eventInTheGap).map(EventWithSortKey::toResolvedEvent), remainingEvents);
     }
 
     private static final class EventWithSortKey<T extends Comparable<T>> implements Comparable<EventWithSortKey<T>> {
