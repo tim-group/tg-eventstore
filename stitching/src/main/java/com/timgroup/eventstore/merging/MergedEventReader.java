@@ -33,11 +33,11 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
         MergedEventReaderPosition mergedPosition = (MergedEventReaderPosition) positionExclusive;
         Instant snapTimestamp = clock.instant().minus(mergingStrategy.delay());
 
-        Stream<Stream<ResolvedEvent>> data = range(0, readers.size())
-                .mapToObj(i -> readers.get(i).readAllForwards(mergedPosition.inputPositions[i]));
+        List<Stream<ResolvedEvent>> data = range(0, readers.size())
+                .mapToObj(i -> readers.get(i).readAllForwards(mergedPosition.inputPositions[i])).collect(toList());
 
         @SuppressWarnings("ConstantConditions")
-        List<Iterator<ResolvedEvent>> snappedData = data.map(eventStream ->
+        List<Iterator<ResolvedEvent>> snappedData = data.stream().map(eventStream ->
                 filter(eventStream.iterator(), er -> er.eventRecord().timestamp().isBefore(snapTimestamp))).collect(toList());
 
         return StreamSupport.stream(new MergingSpliterator<>(mergingStrategy, mergedPosition, snappedData), false)
