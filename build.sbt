@@ -62,6 +62,7 @@ val eventstore_mysql = Project(id = "eventstore-mysql", base = file("mysql"))
 
 val eventstore_stitching = Project(id = "eventstore-stitching", base = file("stitching"))
   .dependsOn(eventstore_api % "compile->compile; test->test", eventstore_memory % "test")
+  .settings(libraryDependencies += "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.2")
   .settings(compatibleScalaTestDependency)
   .settings(overridePublishSettings)
   .settings(
