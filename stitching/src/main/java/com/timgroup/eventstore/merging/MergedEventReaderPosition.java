@@ -7,6 +7,7 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,6 +24,11 @@ final class MergedEventReaderPosition implements Position {
         return new MergedEventReaderPosition(newPositions);
     }
 
+    @Override
+    public String toString() {
+        return "(" + Arrays.toString(inputPositions) + ")";
+    }
+
     static final class MergedEventReaderPositionCodec implements PositionCodec {
         private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -34,7 +40,7 @@ final class MergedEventReaderPosition implements Position {
 
         @Override
         public String serializePosition(Position position) {
-            MergedEventReaderPosition mergedPosition = (MergedEventReaderPosition)position;
+            MergedEventReaderPosition mergedPosition = (MergedEventReaderPosition) position;
 
             Map<String, String> positionMap = new HashMap<>();
 
