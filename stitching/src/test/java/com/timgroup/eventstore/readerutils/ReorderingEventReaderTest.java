@@ -13,7 +13,7 @@ import java.util.List;
 
 import static com.google.common.collect.Iterables.getLast;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
-import static com.timgroup.indicatorinputstreamwriter.EventRecordMatcher.anEventRecord;
+import static com.timgroup.eventstore.api.EventRecordMatcher.anEventRecord;
 import static java.time.ZoneId.systemDefault;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;

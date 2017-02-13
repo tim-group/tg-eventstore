@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.eventstore.api.StreamId.streamId;
-import static com.timgroup.indicatorinputstreamwriter.EventRecordMatcher.anEventRecord;
+import static com.timgroup.eventstore.api.EventRecordMatcher.anEventRecord;
 import static java.util.Collections.singleton;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;

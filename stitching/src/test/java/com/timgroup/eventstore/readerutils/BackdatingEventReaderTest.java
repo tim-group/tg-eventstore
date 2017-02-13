@@ -10,7 +10,7 @@ import java.time.Instant;
 
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
-import static com.timgroup.indicatorinputstreamwriter.ResolvedEventMatcher.aResolvedEvent;
+import static com.timgroup.eventstore.api.ResolvedEventMatcher.aResolvedEvent;
 import static java.time.ZoneId.systemDefault;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
