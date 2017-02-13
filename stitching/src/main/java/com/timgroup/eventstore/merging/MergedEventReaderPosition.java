@@ -26,7 +26,7 @@ final class MergedEventReaderPosition implements Position {
 
     @Override
     public String toString() {
-        return "(" + Arrays.toString(inputPositions) + ")";
+        return Arrays.toString(inputPositions);
     }
 
     static final class MergedEventReaderPositionCodec implements PositionCodec {
