@@ -3,7 +3,17 @@ package com.timgroup.eventstore.shovelling;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.PeekingIterator;
-import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.EventReader;
+import com.timgroup.eventstore.api.EventRecord;
+import com.timgroup.eventstore.api.EventSource;
+import com.timgroup.eventstore.api.EventStreamWriter;
+import com.timgroup.eventstore.api.NewEvent;
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
+import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.api.StreamId;
+import com.timgroup.eventstore.common.IdempotentEventStreamWriter;
+import com.timgroup.eventstore.common.IdempotentEventStreamWriter.IncompatibleNewEventException;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.component.SimpleValueComponent;
 
@@ -19,23 +29,44 @@ import static com.google.common.collect.Collections2.transform;
 import static com.google.common.collect.Iterators.partition;
 import static com.google.common.collect.Iterators.peekingIterator;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
+import static com.timgroup.eventstore.common.IdempotentEventStreamWriter.BASIC_COMPATIBILITY_CHECK;
+import static com.timgroup.eventstore.common.IdempotentEventStreamWriter.METADATA_COMPATIBILITY_CHECK;
 import static com.timgroup.tucker.info.Status.INFO;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.singletonList;
 
 public final class EventShovel {
+    private static final String SHOVEL_POSITION_METADATA_FIELD = "shovel_position";
+
     private final int maxBatchSize;
     private final EventReader reader;
     private final PositionCodec readerPositionCodec;
-    private final EventSource output;
     private final ObjectMapper json = new ObjectMapper();
     private final SimpleValueComponent lastProcessedEvent = new SimpleValueComponent("last-shovelled-event", "Last Shovelled Event");
+    private final EventReader outputReader;
+    private final EventStreamWriter outputWriter;
 
     public EventShovel(int maxBatchSize, EventReader reader, PositionCodec readerPositionCodec, EventSource output) {
         this.maxBatchSize = maxBatchSize;
         this.reader = reader;
         this.readerPositionCodec = readerPositionCodec;
-        this.output = output;
+        this.outputReader = output.readAll();
+        this.outputWriter = IdempotentEventStreamWriter.idempotent(output.writeStream(), output.readStream(), (a, b) -> {
+                BASIC_COMPATIBILITY_CHECK.throwIfIncompatible(a, b);
+                if (a.eventRecord().metadata() != b.metadata()) {
+                    try {
+                        ObjectNode aJson = (ObjectNode) json.readTree(a.eventRecord().metadata());
+                        ObjectNode bJson = (ObjectNode) json.readTree(b.metadata());
+                        aJson.remove(SHOVEL_POSITION_METADATA_FIELD);
+                        bJson.remove(SHOVEL_POSITION_METADATA_FIELD);
+                        if (!aJson.equals(bJson)) {
+                            METADATA_COMPATIBILITY_CHECK.throwIfIncompatible(a, b);
+                        }
+                    } catch (IOException e) {
+                        throw new IncompatibleNewEventException("unable to compare metadata", a, b);
+                    }
+                }
+        });
         lastProcessedEvent.updateValue(INFO, "none");
     }
 
@@ -44,7 +75,7 @@ public final class EventShovel {
     }
 
     public void shovelAllNewlyAvailableEvents() {
-        try (Stream<ResolvedEvent> backwardsWrittenOutputEvents = output.readAll().readAllBackwards()) {
+        try (Stream<ResolvedEvent> backwardsWrittenOutputEvents = outputReader.readAllBackwards()) {
             Optional<ResolvedEvent> maybeLastWrittenEvent = backwardsWrittenOutputEvents.findFirst();
 
             Position currentPosition = maybeLastWrittenEvent
@@ -73,7 +104,7 @@ public final class EventShovel {
     private Position extractShovelPositionFromMetadata(byte[] metadata) {
         try {
             ObjectNode jsonNode = (ObjectNode) json.readTree(new String(metadata, UTF_8));
-            return readerPositionCodec.deserializePosition(jsonNode.get("shovel_position").textValue());
+            return readerPositionCodec.deserializePosition(jsonNode.get(SHOVEL_POSITION_METADATA_FIELD).textValue());
         } catch (Exception e) {
             throw new IllegalStateException("unable to determine current position", e);
         }
@@ -82,16 +113,14 @@ public final class EventShovel {
     private byte[] createMetadataWithShovelPosition(Position shovelPosition, byte[] upstreamMetadata) {
         try {
             ObjectNode jsonNode = (ObjectNode) json.readTree(upstreamMetadata);
-            jsonNode.put("shovel_position", readerPositionCodec.serializePosition(shovelPosition));
+            jsonNode.put(SHOVEL_POSITION_METADATA_FIELD, readerPositionCodec.serializePosition(shovelPosition));
             return json.writeValueAsBytes(jsonNode);
         } catch (IOException e) {
-            return ("{\"shovel_position\":\"" + readerPositionCodec.serializePosition(shovelPosition) + "\"}").getBytes(UTF_8);
+            return ("{\"" + SHOVEL_POSITION_METADATA_FIELD + "\":\"" + readerPositionCodec.serializePosition(shovelPosition) + "\"}").getBytes(UTF_8);
         }
     }
 
     private void writeEvents(Stream<NewEventWithStreamId> eventsToWrite) {
-        EventStreamWriter eventStreamWriter = output.writeStream();
-
         Iterator<Iterator<NewEventWithStreamId>> partitionedByStream = batchBy(
                 eventsToWrite.iterator(),
                 e -> e.streamId);
@@ -101,7 +130,7 @@ public final class EventShovel {
             while (batches.hasNext()) {
                 List<NewEventWithStreamId> batch = batches.next();
                 NewEventWithStreamId first = batch.get(0);
-                eventStreamWriter.write(first.streamId, transform(batch, e -> e.event), first.eventNumber - 1);
+                outputWriter.write(first.streamId, transform(batch, e -> e.event), first.eventNumber - 1);
             }
         }
     }
