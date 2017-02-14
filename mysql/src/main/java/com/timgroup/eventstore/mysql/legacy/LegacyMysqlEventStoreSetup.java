@@ -4,7 +4,7 @@ import com.timgroup.eventstore.mysql.ConnectionProvider;
 
 import java.sql.*;
 
-public class LegacyMysqlEventStoreSetup {
+public final class LegacyMysqlEventStoreSetup {
     private final ConnectionProvider connectionProvider;
     private final String tableName;
 

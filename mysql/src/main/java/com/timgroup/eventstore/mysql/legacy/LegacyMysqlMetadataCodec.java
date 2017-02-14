@@ -9,12 +9,14 @@ import java.util.regex.Pattern;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-public final class LegacyMysqlMetadataCodec {
+final class LegacyMysqlMetadataCodec {
+
+    private LegacyMysqlMetadataCodec() { /* prevent instantiation */ }
 
     private static final Pattern EFFECTIVE_TIMESTAMP_PATTERN = Pattern.compile("\"effective_timestamp\"\\s*:\\s*\"([^\"]+)\"");
     private static final String EFFECTIVE_TIMESTAMP_FORMAT = "{\"effective_timestamp\":\"%s\"}";
 
-    public static Timestamp effectiveTimestampFrom(NewEvent event) {
+    static Timestamp effectiveTimestampFrom(NewEvent event) {
         if (event.metadata().length > 0) {
             String metadata = new String(event.metadata(), UTF_8);
             Matcher matcher = EFFECTIVE_TIMESTAMP_PATTERN.matcher(metadata);
@@ -25,7 +27,7 @@ public final class LegacyMysqlMetadataCodec {
         return new Timestamp(Instant.now().toEpochMilli());
     }
 
-    public static byte[] metadataFrom(Timestamp effectiveTimestamp) {
+    static byte[] metadataFrom(Timestamp effectiveTimestamp) {
         return String.format(EFFECTIVE_TIMESTAMP_FORMAT, effectiveTimestamp.toInstant()).getBytes(UTF_8);
     }
 }

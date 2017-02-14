@@ -5,23 +5,23 @@ import com.timgroup.eventstore.api.PositionCodec;
 
 import java.util.Objects;
 
-public final class LegacyMysqlEventPosition implements Position {
-    public final long legacyVersion;
+final class LegacyMysqlEventPosition implements Position {
+    final long legacyVersion;
 
     private LegacyMysqlEventPosition(long legacyVersion) {
         this.legacyVersion = legacyVersion;
     }
 
-    public static LegacyMysqlEventPosition fromLegacyVersion(long legacyVersion) {
+    static LegacyMysqlEventPosition fromLegacyVersion(long legacyVersion) {
         return new LegacyMysqlEventPosition(legacyVersion);
     }
 
-    public static LegacyMysqlEventPosition fromEventNumber(long eventNumber) {
-        return new LegacyMysqlEventPosition(eventNumber + 1);
+    static LegacyMysqlEventPosition fromEventNumber(long eventNumber) {
+        return new LegacyMysqlEventPosition(eventNumber + 1L);
     }
 
-    public long toEventNumber() {
-        return legacyVersion - 1;
+    long toEventNumber() {
+        return legacyVersion - 1L;
     }
 
     @Override
@@ -44,7 +44,9 @@ public final class LegacyMysqlEventPosition implements Position {
                 '}';
     }
 
-    public static final class LegacyPositionCodec implements PositionCodec {
+    static final class LegacyPositionCodec implements PositionCodec {
+        LegacyPositionCodec() { /* reduce visibility */ }
+
         @Override
         public Position deserializePosition(String serialisedPosition) {
             return fromLegacyVersion(Long.parseLong(serialisedPosition));
