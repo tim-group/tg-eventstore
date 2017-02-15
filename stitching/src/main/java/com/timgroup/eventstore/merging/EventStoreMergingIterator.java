@@ -13,6 +13,10 @@ import java.util.NoSuchElementException;
 
 import static java.util.stream.Collectors.toList;
 
+/**
+ * @deprecated uaw MergedEventSource instead
+ */
+@Deprecated
 public final class EventStoreMergingIterator implements Iterator<EventInIdentifiedStream> {
     private final Clock clock;
     private final Duration delay;
