@@ -39,9 +39,7 @@ final class LegacyMysqlEventPosition implements Position {
 
     @Override
     public String toString() {
-        return "LegacyMysqlEventPosition{" +
-                "legacyVersion=" + legacyVersion +
-                '}';
+        return String.valueOf(legacyVersion);
     }
 
     static final class LegacyPositionCodec implements PositionCodec {
