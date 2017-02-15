@@ -38,7 +38,9 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
 
         @SuppressWarnings("ConstantConditions")
         List<Iterator<ResolvedEvent>> snappedData = data.stream().map(eventStream ->
-                filter(eventStream.iterator(), er -> er.eventRecord().timestamp().isBefore(snapTimestamp))).collect(toList());
+                filter(eventStream.iterator(), er ->
+                        !er.eventRecord().timestamp().isAfter(snapTimestamp)
+                )).collect(toList());
 
         return StreamSupport.stream(new MergingSpliterator<>(mergingStrategy, mergedPosition, snappedData), false)
                 .onClose(() -> data.forEach(Stream::close));

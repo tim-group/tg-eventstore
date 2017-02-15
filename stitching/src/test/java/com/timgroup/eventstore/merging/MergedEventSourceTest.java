@@ -1,7 +1,13 @@
 package com.timgroup.eventstore.merging;
 
 import com.timgroup.clocks.testing.ManualClock;
-import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.EventReader;
+import com.timgroup.eventstore.api.EventRecord;
+import com.timgroup.eventstore.api.EventStreamWriter;
+import com.timgroup.eventstore.api.NewEvent;
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Assert;
 import org.junit.Test;
@@ -13,13 +19,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.timgroup.eventstore.api.EventRecordMatcher.anEventRecord;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.eventstore.api.StreamId.streamId;
-import static com.timgroup.eventstore.api.EventRecordMatcher.anEventRecord;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.singleton;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.is;
 
 public final class MergedEventSourceTest {
 
@@ -231,6 +238,21 @@ public final class MergedEventSourceTest {
                         "{\"effective_timestamp\":\"2016-01-23T00:23:54Z\"}".getBytes(UTF_8)
                 )
         ));
+    }
+
+    @Test public void
+    when_delay_is_set_to_zero_and_no_time_passes_still_allows_events_through() throws Exception {
+        JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
+
+        EventReader outputReader = MergedEventSource.effectiveTimestampMergedEventSource(
+                clock,
+                Duration.ZERO,
+                new NamedReaderWithCodec("a", input1, input1)
+        ).readAll();
+
+        inputEventArrived(input1, streamId("baz", "bob"), newEvent("CoolenessAdded",   new byte[0], "{\"effective_timestamp\":\"2014-01-23T00:23:54Z\"}".getBytes(UTF_8)));
+
+        assertThat(outputReader.readAllForwards().count(), is(1L));
     }
 
     @Test public void
