@@ -1,6 +1,18 @@
 package com.timgroup.eventstore.memory;
 
-import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.EventCategoryReader;
+import com.timgroup.eventstore.api.EventReader;
+import com.timgroup.eventstore.api.EventRecord;
+import com.timgroup.eventstore.api.EventStore;
+import com.timgroup.eventstore.api.EventStreamReader;
+import com.timgroup.eventstore.api.EventStreamWriter;
+import com.timgroup.eventstore.api.NewEvent;
+import com.timgroup.eventstore.api.NoSuchStreamException;
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
+import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.api.StreamId;
+import com.timgroup.eventstore.api.WrongExpectedVersionException;
 import com.timgroup.eventstore.api.legacy.LegacyStore;
 
 import java.time.Clock;
@@ -81,36 +93,27 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
         return Long.compare(leftValue, rightValue);
     }
 
-    public EventStore toLegacy() {
-        return new LegacyStore(this, this, StreamId.streamId("all", "all"), InMemoryEventStorePosition::new, p -> ((InMemoryEventStorePosition) p).eventNumber);
-    }
-
-    private long currentVersionOf(StreamId streamId) {
-        return internalReadStream(streamId, EmptyStreamEventNumber)
-                .mapToLong(r -> r.eventRecord().eventNumber())
-                .max()
-                .orElse(EmptyStreamEventNumber);
-    }
-
     @Override
     public void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
-        long currentVersion = currentVersionOf(streamId);
+        synchronized (this) {
+            long currentVersion = currentVersionOf(streamId);
 
-        if (currentVersion != expectedVersion) {
-            throw new WrongExpectedVersionException(currentVersion, expectedVersion);
+            if (currentVersion != expectedVersion) {
+                throw new WrongExpectedVersionException(currentVersion, expectedVersion);
+            }
+
+            AtomicLong globalPosition = new AtomicLong(this.events.size());
+            AtomicLong eventNumber = new AtomicLong(currentVersion);
+
+            events.stream().map(newEvent -> new ResolvedEvent(new InMemoryEventStorePosition(globalPosition.incrementAndGet()), EventRecord.eventRecord(
+                    clock.instant(),
+                    streamId,
+                    eventNumber.incrementAndGet(),
+                    newEvent.type(),
+                    newEvent.data(),
+                    newEvent.metadata()
+            ))).forEach(this.events::add);
         }
-
-        AtomicLong globalPosition = new AtomicLong(this.events.size());
-        AtomicLong eventNumber = new AtomicLong(currentVersion);
-
-        events.stream().map(newEvent -> new ResolvedEvent(new InMemoryEventStorePosition(globalPosition.incrementAndGet()), EventRecord.eventRecord(
-                clock.instant(),
-                streamId,
-                eventNumber.incrementAndGet(),
-                newEvent.type(),
-                newEvent.data(),
-                newEvent.metadata()
-        ))).forEach(this.events::add);
     }
 
     @Override
@@ -145,6 +148,17 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     @Override
     public Position emptyCategoryPosition(String category) {
         return emptyStorePosition();
+    }
+
+    public EventStore toLegacy() {
+        return new LegacyStore(this, this, StreamId.streamId("all", "all"), InMemoryEventStorePosition::new, p -> ((InMemoryEventStorePosition) p).eventNumber);
+    }
+
+    private long currentVersionOf(StreamId streamId) {
+        return internalReadStream(streamId, EmptyStreamEventNumber)
+                .mapToLong(r -> r.eventRecord().eventNumber())
+                .max()
+                .orElse(EmptyStreamEventNumber);
     }
 
     private void ensureStreamExists(StreamId streamId) {

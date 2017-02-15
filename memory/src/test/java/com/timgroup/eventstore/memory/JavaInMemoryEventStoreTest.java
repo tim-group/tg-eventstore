@@ -3,7 +3,6 @@ package com.timgroup.eventstore.memory;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.JavaEventStoreTest;
 import com.timgroup.eventstore.api.Position;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.time.Clock;
@@ -38,13 +37,6 @@ public class JavaInMemoryEventStoreTest extends JavaEventStoreTest {
                 position(10L),
                 position(100L)
         )));
-    }
-
-    @Ignore
-    @Test
-    @Override
-    public void writes_consistent_event_numbers_from_multiple_threads() throws InterruptedException {
-        super.writes_consistent_event_numbers_from_multiple_threads();
     }
 
     private Position position(long n) {
