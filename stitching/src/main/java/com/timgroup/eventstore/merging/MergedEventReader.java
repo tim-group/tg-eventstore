@@ -20,9 +20,9 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
 
     private final Clock clock;
     private final MergingStrategy<T> mergingStrategy;
-    private final List<EventReader> readers;
+    private final List<NamedReaderWithCodec> readers;
 
-    public MergedEventReader(Clock clock, MergingStrategy<T> mergingStrategy, EventReader... readers) {
+    public MergedEventReader(Clock clock, MergingStrategy<T> mergingStrategy, NamedReaderWithCodec... readers) {
         this.clock = clock;
         this.mergingStrategy = mergingStrategy;
         this.readers = copyOf(readers);
@@ -34,7 +34,7 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
         Instant snapTimestamp = clock.instant().minus(mergingStrategy.delay());
 
         List<Stream<ResolvedEvent>> data = range(0, readers.size())
-                .mapToObj(i -> readers.get(i).readAllForwards(mergedPosition.inputPositions[i])).collect(toList());
+                .mapToObj(i -> readers.get(i).reader.readAllForwards(mergedPosition.inputPositions[i])).collect(toList());
 
         @SuppressWarnings("ConstantConditions")
         List<Iterator<ResolvedEvent>> snappedData = data.stream().map(eventStream ->
@@ -48,8 +48,9 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
 
     @Override
     public Position emptyStorePosition() {
-        Position[] positions = readers.stream().map(EventReader::emptyStorePosition).collect(toList()).toArray(new Position[0]);
-        return new MergedEventReaderPosition(positions);
+        String[] names = readers.stream().map(r -> r.name).collect(toList()).toArray(new String[0]);
+        Position[] positions = readers.stream().map(r -> r.reader.emptyStorePosition()).collect(toList()).toArray(new Position[0]);
+        return new MergedEventReaderPosition(names, positions);
     }
 
 

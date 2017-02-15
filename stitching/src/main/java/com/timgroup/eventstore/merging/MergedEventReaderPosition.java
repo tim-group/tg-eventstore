@@ -7,26 +7,32 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 final class MergedEventReaderPosition implements Position {
+    private final String[] names;
     final Position[] inputPositions;
 
-    MergedEventReaderPosition(Position... inputPositions) {
+    MergedEventReaderPosition(String[] names, Position[] inputPositions) {
+        this.names = names;
         this.inputPositions = inputPositions;
     }
 
     MergedEventReaderPosition withNextPosition(int readerIndex, Position position) {
         Position[] newPositions = inputPositions.clone();
         newPositions[readerIndex] = position;
-        return new MergedEventReaderPosition(newPositions);
+        return new MergedEventReaderPosition(names, newPositions);
     }
 
     @Override
     public String toString() {
-        return Arrays.toString(inputPositions);
+        StringBuilder builder = new StringBuilder();
+        for (int index = 0; index < names.length; index++) {
+            builder.append(names[index]).append(':').append(inputPositions[index]).append(";");
+        }
+        builder.setLength(builder.length() - 1);
+        return builder.toString();
     }
 
     static final class MergedEventReaderPositionCodec implements PositionCodec {
@@ -34,7 +40,7 @@ final class MergedEventReaderPosition implements Position {
 
         private final NamedReaderWithCodec[] namedReaders;
 
-        MergedEventReaderPositionCodec(NamedReaderWithCodec... namedReaders) {
+        MergedEventReaderPositionCodec(NamedReaderWithCodec[] namedReaders) {
             this.namedReaders = namedReaders;
         }
 
@@ -60,12 +66,15 @@ final class MergedEventReaderPosition implements Position {
             try {
                 JsonNode positionMap = objectMapper.readTree(serialisedPosition);
 
+                String[] names = new String[namedReaders.length];
                 Position[] deserialisedPositions = new Position[namedReaders.length];
                 for (int index = 0; index < namedReaders.length; index++) {
-                    deserialisedPositions[index] = namedReaders[index].codec.deserializePosition(positionMap.get(namedReaders[index].name).asText());
+                    String name = namedReaders[index].name;
+                    names[index] = name;
+                    deserialisedPositions[index] = namedReaders[index].codec.deserializePosition(positionMap.get(name).asText());
                 }
 
-                return new MergedEventReaderPosition(deserialisedPositions);
+                return new MergedEventReaderPosition(names, deserialisedPositions);
 
             } catch (IOException e) {
                 throw new IllegalArgumentException("unable to deserialise position", e);

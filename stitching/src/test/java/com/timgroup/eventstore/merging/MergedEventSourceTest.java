@@ -26,6 +26,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.singleton;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 
 public final class MergedEventSourceTest {
@@ -272,6 +273,20 @@ public final class MergedEventSourceTest {
         } catch (IllegalStateException e) {
             //pass
         }
+    }
+
+    @Test public void
+    has_readable_toString_for_its_position() throws Exception {
+        JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
+        JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
+        MergedEventSource<Integer> eventSource = MergedEventSource.streamOrderMergedEventSource(
+                clock,
+                new NamedReaderWithCodec("a", input1, input1),
+                new NamedReaderWithCodec("b", input2, input2)
+        );
+
+        String positionToString = eventSource.readAll().emptyStorePosition().toString();
+        assertThat(positionToString, is(equalTo("a:0;b:0")));
     }
 
     private static void inputEventArrived(EventStreamWriter input, String eventType) {
