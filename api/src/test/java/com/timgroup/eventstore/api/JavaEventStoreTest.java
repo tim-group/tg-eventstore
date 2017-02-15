@@ -5,7 +5,6 @@ import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -13,7 +12,10 @@ import org.junit.rules.ExpectedException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Iterator;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Stream;
 
 import static com.timgroup.eventstore.api.EventStreamReader.EmptyStreamEventNumber;
@@ -22,9 +24,15 @@ import static com.timgroup.eventstore.api.ObjectPropertiesMatcher.objectWith;
 import static com.timgroup.eventstore.api.StreamId.streamId;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.LongStream.range;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 
 public abstract class JavaEventStoreTest {
     @Rule
@@ -422,6 +430,33 @@ public abstract class JavaEventStoreTest {
         Position position = eventSource().readCategory().readCategoryBackwards(category_1).reduce((a, b) -> b).get().position();
 
         assertThat(eventSource().readCategory().readCategoryBackwards(category_1, position).collect(toList()), empty());
+    }
+
+    @Test public void
+    writes_consistent_event_numbers_from_multiple_threads() throws InterruptedException {
+        StreamId stream = streamId(category_1, "Id1");
+
+        ExecutorService exec = Executors.newFixedThreadPool(4);
+
+        EventStreamWriter writer = eventSource().writeStream();
+
+        range(0, 100).forEach(i -> {
+            exec.submit(() -> {
+               while (true) {
+                    try {
+                        writer.write(stream, singletonList(anEvent()));
+                        return;
+                    } catch (Exception e) {}
+               }
+           });
+        });
+
+        exec.shutdown();
+        exec.awaitTermination(2, SECONDS);
+
+        List<Long> eventNumberWritten = eventSource().readStream().readStreamForwards(stream).map(e -> e.eventRecord().eventNumber()).collect(toList());
+
+        assertThat(eventNumberWritten, is(range(0, 100).mapToObj(i -> i).collect(toList())));
     }
 
     private static Matcher<Instant> shortlyAfter(Instant expected) {

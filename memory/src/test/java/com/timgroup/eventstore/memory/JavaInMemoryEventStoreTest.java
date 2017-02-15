@@ -1,13 +1,14 @@
 package com.timgroup.eventstore.memory;
 
-import java.time.Clock;
-import java.util.Arrays;
-import java.util.List;
-
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.JavaEventStoreTest;
 import com.timgroup.eventstore.api.Position;
+import org.junit.Ignore;
 import org.junit.Test;
+
+import java.time.Clock;
+import java.util.Arrays;
+import java.util.List;
 
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -37,6 +38,13 @@ public class JavaInMemoryEventStoreTest extends JavaEventStoreTest {
                 position(10L),
                 position(100L)
         )));
+    }
+
+    @Ignore
+    @Test
+    @Override
+    public void writes_consistent_event_numbers_from_multiple_threads() throws InterruptedException {
+        super.writes_consistent_event_numbers_from_multiple_threads();
     }
 
     private Position position(long n) {
