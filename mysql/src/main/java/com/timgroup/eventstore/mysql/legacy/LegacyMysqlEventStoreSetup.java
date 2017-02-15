@@ -2,7 +2,11 @@ package com.timgroup.eventstore.mysql.legacy;
 
 import com.timgroup.eventstore.mysql.ConnectionProvider;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 public final class LegacyMysqlEventStoreSetup {
     private final ConnectionProvider connectionProvider;
@@ -44,7 +48,7 @@ public final class LegacyMysqlEventStoreSetup {
             }
 
             try (Statement statement = connection.createStatement()) {
-                statement.execute("create table " + tableName + "(" +
+                statement.execute("create table " + (ifNotExists ? "if not exists" : "") + " " + tableName + "(" +
                         "version bigint primary key, " +
                         "effective_timestamp datetime not null, " +
                         "eventType varchar(255) not null," +
