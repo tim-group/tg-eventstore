@@ -36,7 +36,7 @@ public final class LegacyMysqlEventStoreSetup {
                 DatabaseMetaData meta = connection.getMetaData();
                 String searchStringEscape = meta.getSearchStringEscape();
                 String escapedTableName = tableName.replace("_", searchStringEscape + "_").replace("%", searchStringEscape + "%");
-                try(ResultSet res = meta.getTables(null, null, escapedTableName, new String[]{"TABLE"})) {
+                try(ResultSet res = meta.getTables(null, null, escapedTableName, new String[]{"TABLE", "VIEW"})) {
                     if (res.first()) {
                         return;
                     }
