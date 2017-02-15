@@ -4,6 +4,10 @@ import java.sql.Connection
 
 import org.slf4j.LoggerFactory
 
+/**
+  * @deprecated uaw LegacyMysqlEventSource instead
+  */
+@Deprecated
 private[mysql] object ResourceManagement {
   private val logger = LoggerFactory.getLogger(getClass)
 

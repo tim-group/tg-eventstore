@@ -6,6 +6,10 @@ import java.sql.{Connection, Timestamp}
 import com.timgroup.eventstore.mysql._
 import org.joda.time.{DateTime, DateTimeZone}
 
+/**
+  * @deprecated uaw LegacyMysqlEventSource instead
+  */
+@Deprecated
 object AutoIncrementBasedEventStore {
   def apply(connectionProvider: ConnectionProvider,
             tableName: String = "Event",
@@ -20,7 +24,10 @@ object AutoIncrementBasedEventStore {
       batchSize)
   }
 }
-
+/**
+  * @deprecated uaw LegacyMysqlEventSource instead
+  */
+@Deprecated
 class AutoIncrementBasedEventPersister(tableName: String) extends EventPersister {
   override def saveEventsToDB(connection: Connection, newEvents: Seq[EventAtATime], expectedVersion: Option[Long]): Unit = {
     if (expectedVersion.isDefined) {

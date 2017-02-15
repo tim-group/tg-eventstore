@@ -5,6 +5,10 @@ import java.sql.Timestamp
 import com.timgroup.eventstore.mysql.ResourceManagement.withResource
 import org.joda.time.DateTime
 
+/**
+  * @deprecated uaw LegacyMysqlEventSource instead
+  */
+@Deprecated
 class VersionByEffectiveTimestamp(connectionProvider: ConnectionProvider, tableName: String = "Event") {
   def versionFor(cutoff: DateTime): Long =
     withResource(connectionProvider.getConnection()) { connection =>

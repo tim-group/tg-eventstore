@@ -6,6 +6,10 @@ import com.timgroup.eventstore.api.{IdempotentWriteFailure, OptimisticConcurrenc
 
 import scala.util.control.NoStackTrace
 
+/**
+  * @deprecated uaw LegacyMysqlEventSource with an IdempotentEventStreamWriter instead
+  */
+@Deprecated
 class IdempotentSQLEventPersister(tableName: String = "Event", lastVersionFetcher: LastVersionFetcher = new LastVersionFetcher("Event"),
                      compatibility: CompatibilityPredicate = CompatibilityPredicate.BytewiseEqual) extends EventPersister {
 

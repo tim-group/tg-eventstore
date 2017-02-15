@@ -5,6 +5,10 @@ import java.sql.{Connection, SQLException, Timestamp}
 import com.timgroup.eventstore.api.{EventData, OptimisticConcurrencyFailure}
 import com.timgroup.eventstore.mysql.ResourceManagement.withResource
 
+/**
+  * @deprecated uaw LegacyMysqlEventSource instead
+  */
+@Deprecated
 class SQLEventPersister(tableName: String = "Event", lastVersionFetcher: LastVersionFetcher = new LastVersionFetcher("Event")) extends EventPersister {
 
   def saveEventsToDB(connection: Connection, newEvents: Seq[EventAtATime], expectedVersion: Option[Long] = None): Unit = {
@@ -38,6 +42,10 @@ class SQLEventPersister(tableName: String = "Event", lastVersionFetcher: LastVer
   }
 }
 
+/**
+  * @deprecated uaw LegacyMysqlEventSource instead
+  */
+@Deprecated
 class LastVersionFetcher(tableName: String = "Event") {
   def fetchBatch(connection: Connection, fromVersion: Long, batchsize: Int): (Long, Vector[EventData]) =
     withResource(connection.createStatement()) { statement =>

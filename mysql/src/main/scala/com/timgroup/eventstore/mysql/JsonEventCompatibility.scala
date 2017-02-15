@@ -10,6 +10,10 @@ import com.fasterxml.jackson.core._
 import com.fasterxml.jackson.databind._
 import com.fasterxml.jackson.databind.node._
 
+/**
+  * @deprecated uaw LegacyMysqlEventSource instead
+  */
+@Deprecated
 object JsonEventCompatibility extends CompatibilityPredicate {
   private val objectMapper = new ObjectMapper
   private val nodeReader = objectMapper.readerFor(classOf[ObjectNode])

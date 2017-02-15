@@ -5,6 +5,10 @@ import java.sql.Connection
 import com.timgroup.eventstore.api.{EventInStream, EventData}
 import org.joda.time.{DateTime, DateTimeZone}
 
+/**
+  * @deprecated uaw LegacyMysqlEventSource instead
+  */
+@Deprecated
 class SQLEventFetcher(tableName: String) {
   def fetchEventsFromDB(connection: Connection, version: Long = 0, batchSize: Option[Int] = None): Seq[EventInStream] = {
     import ResourceManagement.withResource
