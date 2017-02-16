@@ -43,6 +43,7 @@ case class EventData(eventType: String, body: Body)
 /**
   * @deprecated uaw EventSource instead
   */
+@Deprecated
 object EventData {
   def apply(eventType: String, body: Array[Byte]): EventData = EventData(eventType, Body(body))
 }
