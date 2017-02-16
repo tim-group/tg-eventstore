@@ -7,7 +7,9 @@ import java.util.Properties;
 
 import static java.lang.String.format;
 
-public class StacksConfiguredDataSource {
+public final class StacksConfiguredDataSource {
+    private StacksConfiguredDataSource() { /* prevent instantiation */ }
+
     public static ComboPooledDataSource pooled(Properties properties, String configPrefix) {
         String prefix = configPrefix;
 
