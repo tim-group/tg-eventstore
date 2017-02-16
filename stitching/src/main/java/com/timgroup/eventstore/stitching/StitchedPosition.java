@@ -35,10 +35,7 @@ final class StitchedPosition implements Position {
 
     @Override
     public String toString() {
-        return "StitchedPosition{" +
-                "backfillPosition=" + backfillPosition +
-                ", livePosition=" + livePosition +
-                '}';
+        return "Stitched{backfill:" + backfillPosition + ";live:" + livePosition + '}';
     }
 
     static final class StitchedPositionCodec implements PositionCodec {
