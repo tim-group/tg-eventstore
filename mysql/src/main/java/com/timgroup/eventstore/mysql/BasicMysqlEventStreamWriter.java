@@ -24,6 +24,9 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
 
     @Override
     public void write(StreamId streamId, Collection<NewEvent> events) {
+        if (events.isEmpty()) {
+            return;
+        }
         try (Connection connection = connectionProvider.getConnection()) {
             connection.setAutoCommit(false);
             long currentEventNumber = currentEventNumber(streamId, connection);
@@ -38,6 +41,9 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
 
     @Override
     public void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
+        if (events.isEmpty()) {
+            return;
+        }
         try (Connection connection = connectionProvider.getConnection()) {
             connection.setAutoCommit(false);
 
