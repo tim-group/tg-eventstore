@@ -6,7 +6,10 @@ import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.api.WrongExpectedVersionException;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Collection;
 
 import static java.lang.String.format;
@@ -24,6 +27,9 @@ public final class LegacyMysqlEventStreamWriter implements EventStreamWriter {
 
     @Override
     public void write(StreamId streamId, Collection<NewEvent> events) {
+        if (events.isEmpty()) {
+            return;
+        }
         if (!streamId.equals(pretendStreamId)) {
             throw new IllegalArgumentException("Cannot write " + streamId + " to legacy store");
         }
@@ -41,6 +47,9 @@ public final class LegacyMysqlEventStreamWriter implements EventStreamWriter {
 
     @Override
     public void write(StreamId streamId, Collection<NewEvent> events, long expectedEventNumber) {
+        if (events.isEmpty()) {
+            return;
+        }
         if (!streamId.equals(pretendStreamId)) {
             throw new IllegalArgumentException("Cannot write " + streamId + " to legacy store");
         }
