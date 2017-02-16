@@ -2,6 +2,10 @@ package com.timgroup.eventstore.api
 
 import org.joda.time.DateTime
 
+/**
+  * @deprecated uaw EventSource instead
+  */
+@Deprecated
 trait EventStore {
   def save(newEvents: Seq[EventData], expectedVersion: Option[Long] = None): Unit
 
@@ -10,6 +14,9 @@ trait EventStore {
   def streamingFromAll(version: Long = 0): java.util.stream.Stream[EventInStream]
 }
 
+/**
+  * @deprecated uaw EventSource instead
+  */
 trait EventStream extends Iterator[EventInStream]
 
 case class Body(data: Array[Byte]) {

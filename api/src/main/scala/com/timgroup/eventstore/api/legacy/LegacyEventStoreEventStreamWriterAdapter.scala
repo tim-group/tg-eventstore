@@ -4,6 +4,10 @@ import com.timgroup.eventstore.api._
 
 import scala.collection.JavaConversions._
 
+/**
+  * @deprecated uaw LegacyMysqlEventSource instead
+  */
+@Deprecated
 class LegacyEventStoreEventStreamWriterAdapter(eventstore: EventStore, pretendStreamId: StreamId) extends EventStreamWriter {
 
   def this(eventstore: EventStore) { this(eventstore, StreamId.streamId("all", "all")) }
