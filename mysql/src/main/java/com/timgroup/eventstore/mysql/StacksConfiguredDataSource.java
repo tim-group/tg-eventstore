@@ -9,14 +9,22 @@ import static java.lang.String.format;
 
 public class StacksConfiguredDataSource {
     public static ComboPooledDataSource pooled(Properties properties, String configPrefix) {
+        String prefix = configPrefix;
+
+        if (properties.getProperty(prefix + "hostname") == null) {
+            prefix = "db." + prefix + ".";
+            if (properties.getProperty(prefix) == null) {
+                throw new IllegalArgumentException("unable to read configuration for data source with prefix + " + configPrefix);
+            }
+        }
 
         return pooled(
-                properties.getProperty(configPrefix + "hostname"),
-                Integer.parseInt(properties.getProperty(configPrefix + "port")),
-                properties.getProperty(configPrefix + "username"),
-                properties.getProperty(configPrefix + "password"),
-                properties.getProperty(configPrefix + "database"),
-                properties.getProperty(configPrefix + "driver")
+                properties.getProperty(prefix + "hostname"),
+                Integer.parseInt(properties.getProperty(prefix + "port")),
+                properties.getProperty(prefix + "username"),
+                properties.getProperty(prefix + "password"),
+                properties.getProperty(prefix + "database"),
+                properties.getProperty(prefix + "driver")
         );
     }
 
