@@ -65,12 +65,18 @@ final class MergedEventReaderPosition implements Position {
         public Position deserializePosition(String serialisedPosition) {
             try {
                 JsonNode positionMap = objectMapper.readTree(serialisedPosition);
+                if (positionMap.size() > namedReaders.length) {
+                    throw new IllegalArgumentException("Bad position, containing unexpected keys " + serialisedPosition);
+                }
 
                 String[] names = new String[namedReaders.length];
                 Position[] deserialisedPositions = new Position[namedReaders.length];
                 for (int index = 0; index < namedReaders.length; index++) {
                     String name = namedReaders[index].name;
                     names[index] = name;
+                    if (!positionMap.has(name)) {
+                        throw new IllegalArgumentException("Bad position, containing no key for " + name + " :" + serialisedPosition);
+                    }
                     deserialisedPositions[index] = namedReaders[index].codec.deserializePosition(positionMap.get(name).asText());
                 }
 

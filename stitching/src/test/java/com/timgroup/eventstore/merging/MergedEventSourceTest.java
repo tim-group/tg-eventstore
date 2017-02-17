@@ -289,6 +289,61 @@ public final class MergedEventSourceTest {
         assertThat(positionToString, is(equalTo("a:0;b:0")));
     }
 
+    @Test public void
+    blows_up_when_decoding_a_position_with_missing_feeds() throws Exception {
+        JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
+        JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
+        MergedEventSource<Integer> eventSource1 = MergedEventSource.streamOrderMergedEventSource(
+                clock,
+                new NamedReaderWithCodec("a", input1, input1),
+                new NamedReaderWithCodec("b", input2, input2)
+        );
+
+        Position position = eventSource1.readAll().emptyStorePosition();
+        String serialisedPosition = eventSource1.positionCodec().serializePosition(position);
+
+        JavaInMemoryEventStore input3 = new JavaInMemoryEventStore(clock);
+        MergedEventSource<Integer> eventSource2 = MergedEventSource.streamOrderMergedEventSource(
+                clock,
+                new NamedReaderWithCodec("a", input1, input1),
+                new NamedReaderWithCodec("b", input2, input2),
+                new NamedReaderWithCodec("c", input3, input3)
+        );
+
+        try {
+            eventSource2.positionCodec().deserializePosition(serialisedPosition);
+            Assert.fail("expected IllegalArgumentException");
+        } catch (IllegalArgumentException e) {
+            assertThat(e.getMessage(), equalTo("Bad position, containing no key for c :{\"a\":\"0\",\"b\":\"0\"}"));
+        }
+    }
+
+    @Test public void
+    blows_up_when_decoding_a_position_with_extra_feeds() throws Exception {
+        JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
+        JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
+        MergedEventSource<Integer> eventSource1 = MergedEventSource.streamOrderMergedEventSource(
+                clock,
+                new NamedReaderWithCodec("a", input1, input1),
+                new NamedReaderWithCodec("b", input2, input2)
+        );
+
+        Position position = eventSource1.readAll().emptyStorePosition();
+        String serialisedPosition = eventSource1.positionCodec().serializePosition(position);
+
+        MergedEventSource<Integer> eventSource2 = MergedEventSource.streamOrderMergedEventSource(
+                clock,
+                new NamedReaderWithCodec("a", input1, input1)
+        );
+
+        try {
+            eventSource2.positionCodec().deserializePosition(serialisedPosition);
+            Assert.fail("expected IllegalArgumentException");
+        } catch (IllegalArgumentException e) {
+            assertThat(e.getMessage(), equalTo("Bad position, containing unexpected keys {\"a\":\"0\",\"b\":\"0\"}"));
+        }
+    }
+
     private static void inputEventArrived(EventStreamWriter input, String eventType) {
         inputEventArrived(input, streamId("all", "all"), eventType);
     }
