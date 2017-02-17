@@ -6,7 +6,7 @@ import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
-import com.timgroup.eventstore.common.IdempotentEventStreamWriter;
+import com.timgroup.eventstore.writerutils.IdempotentEventStreamWriter;
 import com.timgroup.eventstore.memory.InMemoryEventSource;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Assert;

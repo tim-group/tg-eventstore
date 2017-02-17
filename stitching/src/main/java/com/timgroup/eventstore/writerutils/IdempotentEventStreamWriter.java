@@ -1,4 +1,4 @@
-package com.timgroup.eventstore.common;
+package com.timgroup.eventstore.writerutils;
 
 import com.timgroup.eventstore.api.*;
 
@@ -10,8 +10,6 @@ import java.util.stream.Stream;
 
 import static com.timgroup.eventstore.api.EventStreamReader.EmptyStreamEventNumber;
 import static java.nio.charset.StandardCharsets.UTF_8;
-
-import com.timgroup.eventstore.common.IdempotentEventStreamWriter.IsCompatible;
 
 public final class IdempotentEventStreamWriter implements EventStreamWriter {
 

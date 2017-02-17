@@ -1,4 +1,4 @@
-package com.timgroup.eventstore.common;
+package com.timgroup.eventstore.writerutils;
 
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.EventStreamWriter;
@@ -15,8 +15,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static com.timgroup.eventstore.api.EventStreamReader.EmptyStreamEventNumber;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.eventstore.api.StreamId.streamId;
-import static com.timgroup.eventstore.common.IdempotentEventStreamWriter.idempotent;
-import static com.timgroup.eventstore.common.IdempotentEventStreamWriter.idempotentWithMetadataCheck;
+import static com.timgroup.eventstore.writerutils.IdempotentEventStreamWriter.idempotent;
+import static com.timgroup.eventstore.writerutils.IdempotentEventStreamWriter.idempotentWithMetadataCheck;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
