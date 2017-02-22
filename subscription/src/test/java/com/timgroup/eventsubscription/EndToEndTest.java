@@ -1,22 +1,6 @@
 package com.timgroup.eventsubscription;
 
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
-import java.util.function.BinaryOperator;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collector;
-
 import com.timgroup.clocks.testing.ManualClock;
-import com.timgroup.eventstore.api.EventData;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.Position;
@@ -35,6 +19,21 @@ import org.junit.After;
 import org.junit.Test;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
+
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
+import java.util.function.BinaryOperator;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collector;
 
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static com.timgroup.eventstore.api.StreamId.streamId;
@@ -56,6 +55,8 @@ public class EndToEndTest {
     private final StreamId stream = streamId("any", "any");
     private final JavaInMemoryEventStore store = new JavaInMemoryEventStore(clock);
 
+    private final Deserializer<DeserialisedEvent> deserializer = event -> deserialize(event);
+
     private EventSubscription<DeserialisedEvent> subscription;
 
     @After
@@ -68,7 +69,7 @@ public class EndToEndTest {
     public void reports_ill_during_initial_replay() throws Exception {
         BlockingEventHandler eventProcessing = new BlockingEventHandler();
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
-        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(eventProcessing), clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), emptyList());
+        subscription = subscription(deserializer, eventProcessing);
         subscription.start();
 
         eventually(() -> {
@@ -93,7 +94,7 @@ public class EndToEndTest {
     @Test
     public void reports_warning_if_event_store_was_not_polled_recently() throws Exception {
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
-        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(failingHandler(() -> new RuntimeException("failure"))), clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), emptyList());
+        subscription = subscription(deserializer, failingHandler(() -> new RuntimeException("failure")));
         subscription.start();
 
         eventually(() -> {
@@ -106,12 +107,12 @@ public class EndToEndTest {
     public void does_not_continue_processing_events_if_event_processing_failed_on_a_previous_event() throws Exception {
         store.write(stream, Arrays.asList(newEvent(), newEvent()));
         AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(handler(e -> {
+        subscription = subscription(deserializer, handler(e -> {
             eventsProcessed.incrementAndGet();
             if (e.event.eventNumber() == 0) {
                 throw new RuntimeException("failure");
             }
-        })), clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), emptyList());
+        }));
         subscription.start();
 
         Thread.sleep(50L);
@@ -127,17 +128,17 @@ public class EndToEndTest {
     public void does_not_continue_processing_events_if_deserialisation_failed_on_a_previous_event() throws Exception {
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
         AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = new EventSubscription<>("test", store, e -> {
+        subscription = subscription(e -> {
             if (e.eventNumber() == 0) {
                 throw new RuntimeException("Failed to deserialize first event");
             }
             else {
                 return deserialize(e);
             }
-        }, singletonList(handler(e -> {
+        }, handler(e -> {
             eventsProcessed.incrementAndGet();
             throw new UnsupportedOperationException();
-        })), clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), emptyList());
+        }));
         subscription.start();
 
         Thread.sleep(50L);
@@ -154,7 +155,7 @@ public class EndToEndTest {
         store.write(stream, Arrays.asList(event1, event2));
         @SuppressWarnings("unchecked")
         EventHandler<DeserialisedEvent> eventHandler = Mockito.mock(EventHandler.class);
-        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(eventHandler), clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), emptyList());
+        subscription = subscription(deserializer, eventHandler);
         subscription.start();
 
         eventually(() -> {
@@ -209,9 +210,7 @@ public class EndToEndTest {
     @Test
     public void starts_up_healthy_when_there_are_no_events() throws Exception {
         AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(handler(e -> {
-            eventsProcessed.incrementAndGet();
-        })), clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), emptyList());
+        subscription = subscription(deserializer, handler(e -> {eventsProcessed.incrementAndGet(); }));
         subscription.start();
 
         eventually(() -> {
@@ -235,6 +234,11 @@ public class EndToEndTest {
             assertThat(eventsProcessed.get(), is(0));
         });
     }
+
+    private EventSubscription<DeserialisedEvent> subscription(Deserializer<DeserialisedEvent> deserializer, EventHandler<DeserialisedEvent> eventHandler) {
+        return new EventSubscription<>("test", store, deserializer, singletonList(eventHandler), clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), emptyList());
+    }
+
 
     private static Matcher<Position> inMemoryPosition(long n) {
         return new TypeSafeDiagnosingMatcher<Position>() {
@@ -296,10 +300,6 @@ public class EndToEndTest {
 
     private static NewEvent newEvent() {
         return NewEvent.newEvent("A", "{}".getBytes(), "{}".getBytes());
-    }
-
-    private static EventData anEvent() {
-        return EventData.apply("A", "{}".getBytes());
     }
 
     private static DeserialisedEvent deserialize(EventRecord eventRecord) {
