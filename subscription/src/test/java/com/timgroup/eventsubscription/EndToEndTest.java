@@ -236,7 +236,10 @@ public class EndToEndTest {
     }
 
     private EventSubscription<DeserialisedEvent> subscription(Deserializer<DeserialisedEvent> deserializer, EventHandler<DeserialisedEvent> eventHandler) {
-        return new EventSubscription<>("test", store, deserializer, singletonList(eventHandler), clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), emptyList());
+        return subscription(deserializer, eventHandler, store.emptyStorePosition());
+    }
+    private EventSubscription<DeserialisedEvent> subscription(Deserializer<DeserialisedEvent> deserializer, EventHandler<DeserialisedEvent> eventHandler, Position startingPosition) {
+        return new EventSubscription<>("test", store, deserializer, singletonList(eventHandler), clock, 1024, Duration.ofMillis(1L), startingPosition, Duration.ofSeconds(320), emptyList());
     }
 
 
