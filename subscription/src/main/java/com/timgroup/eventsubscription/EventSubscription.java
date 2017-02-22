@@ -1,17 +1,5 @@
 package com.timgroup.eventsubscription;
 
-import java.time.Clock;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-import java.util.stream.Stream;
-
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.ExceptionHandler;
 import com.lmax.disruptor.dsl.Disruptor;
@@ -27,6 +15,18 @@ import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Health;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.time.Clock;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 import static com.lmax.disruptor.dsl.ProducerType.SINGLE;
 import static java.util.Collections.unmodifiableCollection;
@@ -73,7 +73,7 @@ public class EventSubscription<T> {
         this(name, eventReader::readAllForwards, deserializer, eventHandlers, clock, bufferSize, runFrequency, startingPosition, maxInitialReplayDuration, listeners);
     }
 
-    private EventSubscription(
+    EventSubscription(
                 String name,
                 Function<Position, Stream<ResolvedEvent>> eventSource,
                 Deserializer<T> deserializer,

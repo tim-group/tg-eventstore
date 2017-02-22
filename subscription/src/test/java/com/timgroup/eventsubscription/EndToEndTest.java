@@ -37,10 +37,13 @@ import java.util.stream.Collector;
 
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static com.timgroup.eventstore.api.StreamId.streamId;
+import static com.timgroup.eventsubscription.SubscriptionBuilder.eventSubscription;
 import static com.timgroup.tucker.info.Health.State.healthy;
 import static com.timgroup.tucker.info.Health.State.ill;
 import static com.timgroup.tucker.info.Status.CRITICAL;
 import static com.timgroup.tucker.info.Status.OK;
+import static java.time.Duration.ofMillis;
+import static java.time.Duration.ofSeconds;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
@@ -185,7 +188,7 @@ public class EndToEndTest {
         store.write(streamId("alpha", "2"), Arrays.asList(event3));
         @SuppressWarnings("unchecked")
         EventHandler<DeserialisedEvent> eventHandler = Mockito.mock(EventHandler.class);
-        subscription = new EventSubscription<>("test", store, "alpha", EndToEndTest::deserialize, singletonList(eventHandler), clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), emptyList());
+        subscription = new EventSubscription<>("test", store, "alpha", EndToEndTest::deserialize, singletonList(eventHandler), clock, 1024, ofMillis(1L), store.emptyStorePosition(), ofSeconds(320), emptyList());
         subscription.start();
 
         eventually(() -> {
@@ -224,9 +227,7 @@ public class EndToEndTest {
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
         Position lastPosition = store.readAllForwards().map(ResolvedEvent::position).collect(last()).get();
         AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = new EventSubscription<>("test", store, EndToEndTest::deserialize, singletonList(handler(e -> {
-            eventsProcessed.incrementAndGet();
-        })), clock, 1024, Duration.ofMillis(1L), lastPosition, Duration.ofSeconds(320), emptyList());
+        subscription = subscription(deserializer, handler(e -> eventsProcessed.incrementAndGet()), lastPosition);
         subscription.start();
 
         eventually(() -> {
@@ -238,10 +239,17 @@ public class EndToEndTest {
     private EventSubscription<DeserialisedEvent> subscription(Deserializer<DeserialisedEvent> deserializer, EventHandler<DeserialisedEvent> eventHandler) {
         return subscription(deserializer, eventHandler, store.emptyStorePosition());
     }
-    private EventSubscription<DeserialisedEvent> subscription(Deserializer<DeserialisedEvent> deserializer, EventHandler<DeserialisedEvent> eventHandler, Position startingPosition) {
-        return new EventSubscription<>("test", store, deserializer, singletonList(eventHandler), clock, 1024, Duration.ofMillis(1L), startingPosition, Duration.ofSeconds(320), emptyList());
-    }
 
+    private EventSubscription<DeserialisedEvent> subscription(Deserializer<DeserialisedEvent> deserializer, EventHandler<DeserialisedEvent> eventHandler, Position startingPosition) {
+        return eventSubscription("test")
+                .withClock(clock)
+                .withRunFrequency(ofMillis(1))
+                .withMaxInitialReplayDuration(ofSeconds(320))
+                .readingFrom(store, startingPosition)
+                .deserializingUsing(deserializer)
+                .publishingTo(eventHandler)
+                .build();
+    }
 
     private static Matcher<Position> inMemoryPosition(long n) {
         return new TypeSafeDiagnosingMatcher<Position>() {
@@ -263,7 +271,7 @@ public class EndToEndTest {
 
     private void eventually(Runnable work) throws Exception {
         int remaining = 10;
-        Duration interval = Duration.ofMillis(15);
+        Duration interval = ofMillis(15);
 
         while (true) {
             try {
