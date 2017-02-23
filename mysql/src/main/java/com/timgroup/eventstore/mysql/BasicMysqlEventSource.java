@@ -16,7 +16,6 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.Properties;
 
-import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 
 public class BasicMysqlEventSource implements EventSource {
@@ -83,36 +82,33 @@ public class BasicMysqlEventSource implements EventSource {
         return Optional.empty();
     }
 
+
+
     public static PooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name) {
-        ComboPooledDataSource dataSource = StacksConfiguredDataSource.pooled(config);
+        return pooledMasterDbEventSource(config, tableName, name, DefaultBatchSize);
+    }
 
-        try {
-            Class.forName(config.getString("driver"));
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-
-        try {
-            new BasicMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
-        } catch (Exception e) {
-            LoggerFactory.getLogger(BasicMysqlEventSource.class).warn("Failed to ensure ES scheme is created", e);
-        }
-
-        return new PooledMysqlEventSource(dataSource, tableName, DefaultBatchSize, name);
+    public static PooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name, int batchSize) {
+        return pooledMasterDbEventSource(StacksConfiguredDataSource.pooled(config), tableName, name, batchSize);
     }
 
     public static PooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name) {
-        ComboPooledDataSource dataSource = StacksConfiguredDataSource.pooled(properties, configPrefix);
+        return pooledMasterDbEventSource(properties, configPrefix, tableName, name, DefaultBatchSize);
+    }
 
+    public static PooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize) {
+        return pooledMasterDbEventSource(StacksConfiguredDataSource.pooled(properties, configPrefix), tableName, name, batchSize);
+    }
+
+    private static PooledMysqlEventSource pooledMasterDbEventSource(ComboPooledDataSource dataSource, String tableName, String name, int batchSize) {
         try {
             new BasicMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
         } catch (Exception e) {
             LoggerFactory.getLogger(BasicMysqlEventSource.class).warn("Failed to ensure ES scheme is created", e);
         }
 
-        return new PooledMysqlEventSource(dataSource, tableName, DefaultBatchSize, name);
+        return new PooledMysqlEventSource(dataSource, tableName, batchSize, name);
     }
-
 
     public static final class PooledMysqlEventSource extends BasicMysqlEventSource implements AutoCloseable {
         private final ComboPooledDataSource dataSource;
