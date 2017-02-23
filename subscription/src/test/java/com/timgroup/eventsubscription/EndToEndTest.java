@@ -37,7 +37,6 @@ import java.util.stream.Collector;
 
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static com.timgroup.eventstore.api.StreamId.streamId;
-import static com.timgroup.eventsubscription.SubscriptionBuilder.eventSubscription;
 import static com.timgroup.tucker.info.Health.State.healthy;
 import static com.timgroup.tucker.info.Health.State.ill;
 import static com.timgroup.tucker.info.Status.CRITICAL;
@@ -241,7 +240,7 @@ public class EndToEndTest {
     }
 
     private EventSubscription<DeserialisedEvent> subscription(Deserializer<DeserialisedEvent> deserializer, EventHandler<DeserialisedEvent> eventHandler, Position startingPosition) {
-        return eventSubscription("test")
+        return SubscriptionBuilder.<DeserialisedEvent>eventSubscription("test")
                 .withClock(clock)
                 .withRunFrequency(ofMillis(1))
                 .withMaxInitialReplayDuration(ofSeconds(320))

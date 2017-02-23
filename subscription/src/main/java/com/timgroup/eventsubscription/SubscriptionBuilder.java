@@ -35,8 +35,8 @@ public class SubscriptionBuilder<T> {
         this.name = name;
     }
 
-    public static <T> SubscriptionBuilder eventSubscription(String name) {
-        return new SubscriptionBuilder(name);
+    public static <T> SubscriptionBuilder<T> eventSubscription(String name) {
+        return new SubscriptionBuilder<T>(name);
     }
 
     public SubscriptionBuilder<T> deserializingUsing(Deserializer<T> deserializer) {
