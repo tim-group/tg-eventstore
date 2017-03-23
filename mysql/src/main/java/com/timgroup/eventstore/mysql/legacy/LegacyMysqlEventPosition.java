@@ -1,9 +1,9 @@
 package com.timgroup.eventstore.mysql.legacy;
 
+import java.util.Objects;
+
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
-
-import java.util.Objects;
 
 final class LegacyMysqlEventPosition implements Position {
     final long legacyVersion;
@@ -42,17 +42,7 @@ final class LegacyMysqlEventPosition implements Position {
         return String.valueOf(legacyVersion);
     }
 
-    static final class LegacyPositionCodec implements PositionCodec {
-        LegacyPositionCodec() { /* reduce visibility */ }
-
-        @Override
-        public Position deserializePosition(String serialisedPosition) {
-            return fromLegacyVersion(Long.parseLong(serialisedPosition));
-        }
-
-        @Override
-        public String serializePosition(Position position) {
-            return Long.toString(((LegacyMysqlEventPosition) position).legacyVersion);
-        }
-    }
+    static final PositionCodec CODEC = PositionCodec.unordered(LegacyMysqlEventPosition.class,
+            str -> fromLegacyVersion(Long.parseLong(str)),
+            pos -> Long.toString(pos.legacyVersion));
 }

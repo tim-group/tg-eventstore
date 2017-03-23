@@ -1,5 +1,8 @@
 package com.timgroup.eventstore.mysql.legacy;
 
+import java.util.Collection;
+import java.util.Properties;
+
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventReader;
@@ -15,9 +18,6 @@ import com.timgroup.tucker.info.component.DatabaseConnectionComponent;
 import com.typesafe.config.Config;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
-import java.util.Properties;
-
 import static java.util.Collections.singletonList;
 
 public class LegacyMysqlEventSource implements EventSource {
@@ -29,14 +29,12 @@ public class LegacyMysqlEventSource implements EventSource {
 
     private final LegacyMysqlEventReader eventReader;
     private final LegacyMysqlEventStreamWriter eventStreamWriter;
-    private final LegacyMysqlEventPosition.LegacyPositionCodec positionCodec;
 
     public LegacyMysqlEventSource(ConnectionProvider connectionProvider, String tableName, StreamId pretendStreamId, int batchSize, String name) {
         this.connectionProvider = connectionProvider;
         this.name = name;
         this.eventReader = new LegacyMysqlEventReader(connectionProvider, tableName, pretendStreamId, batchSize);
         this.eventStreamWriter = new LegacyMysqlEventStreamWriter(connectionProvider, tableName, pretendStreamId);
-        this.positionCodec = new LegacyMysqlEventPosition.LegacyPositionCodec();
     }
 
     public LegacyMysqlEventSource(ConnectionProvider connectionProvider, String tableName, int batchSize) {
@@ -69,7 +67,7 @@ public class LegacyMysqlEventSource implements EventSource {
 
     @Override
     public PositionCodec positionCodec() {
-        return positionCodec;
+        return LegacyMysqlEventPosition.CODEC;
     }
 
     @Override

@@ -1,5 +1,9 @@
 package com.timgroup.eventstore.mysql;
 
+import java.util.Collection;
+import java.util.Optional;
+import java.util.Properties;
+
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventReader;
@@ -11,10 +15,6 @@ import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.component.DatabaseConnectionComponent;
 import com.typesafe.config.Config;
 import org.slf4j.LoggerFactory;
-
-import java.util.Collection;
-import java.util.Optional;
-import java.util.Properties;
 
 import static java.util.Collections.singletonList;
 
@@ -63,7 +63,7 @@ public class BasicMysqlEventSource implements EventSource {
 
     @Override
     public PositionCodec positionCodec() {
-        return new BasicMysqlPositionCodec();
+        return BasicMysqlEventStorePosition.CODEC;
     }
 
     @Override
