@@ -1,15 +1,22 @@
 package com.timgroup.eventstore.readerutils;
 
-import com.timgroup.eventstore.api.*;
-
-import java.util.*;
+import java.util.Iterator;
+import java.util.Objects;
+import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import com.timgroup.eventstore.api.EventReader;
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
+import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.api.StreamId;
+
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static java.lang.Long.MAX_VALUE;
 import static java.lang.Long.parseLong;
+import static java.util.Comparator.comparing;
 import static java.util.stream.StreamSupport.stream;
 
 public final class RekeyingEventReader implements EventReader {
@@ -43,7 +50,7 @@ public final class RekeyingEventReader implements EventReader {
     }
 
     public PositionCodec positionCodec() {
-        return new RekeyedStreamPositionCodec(underlyingPositionCodec);
+        return RekeyedStreamPosition.codec(underlyingPositionCodec);
     }
 
     private static final class RekeyingSpliterator implements Spliterator<ResolvedEvent> {
@@ -96,6 +103,25 @@ public final class RekeyingEventReader implements EventReader {
     }
 
     private static final class RekeyedStreamPosition implements Position {
+        private static final String REKEY_SEPARATOR = ":";
+        private static final Pattern REKEY_PATTERN = Pattern.compile(Pattern.quote(REKEY_SEPARATOR));
+
+        private static PositionCodec codec(PositionCodec underlying) {
+            return PositionCodec.fromComparator(RekeyedStreamPosition.class,
+                    string -> {
+                        String[] data = REKEY_PATTERN.split(string, 2);
+                        return new RekeyedStreamPosition(
+                                underlying.deserializePosition(data[1]),
+                                parseLong(data[0])
+                        );
+                    },
+                    position ->
+                            position.eventNumber
+                                + REKEY_SEPARATOR
+                                + underlying.serializePosition(position.underlyingPosition),
+                    comparing(pos -> pos.underlyingPosition, underlying::comparePositions));
+        }
+
         private final Position underlyingPosition;
         private final long eventNumber;
 
@@ -124,34 +150,6 @@ public final class RekeyingEventReader implements EventReader {
                     "underlyingPosition=" + underlyingPosition +
                     ", eventNumber=" + eventNumber +
                     '}';
-        }
-    }
-
-    private static final class RekeyedStreamPositionCodec implements PositionCodec {
-        private static final String REKEY_SEPARATOR = ":";
-        private static final Pattern REKEY_PATTERN = Pattern.compile(Pattern.quote(REKEY_SEPARATOR));
-
-        private final PositionCodec underlyingPositionCodec;
-
-        public RekeyedStreamPositionCodec(PositionCodec underlyingPositionCodec) {
-            this.underlyingPositionCodec = underlyingPositionCodec;
-        }
-
-        @Override
-        public String serializePosition(Position position) {
-            RekeyedStreamPosition rekeyedPosition = (RekeyedStreamPosition) position;
-            return String.valueOf(rekeyedPosition.eventNumber)
-                    + REKEY_SEPARATOR
-                    + underlyingPositionCodec.serializePosition(rekeyedPosition.underlyingPosition);
-        }
-
-        @Override
-        public Position deserializePosition(String string) {
-            String[] data = REKEY_PATTERN.split(string, 2);
-            return new RekeyedStreamPosition(
-                    underlyingPositionCodec.deserializePosition(data[1]),
-                    parseLong(data[0])
-            );
         }
     }
 }
