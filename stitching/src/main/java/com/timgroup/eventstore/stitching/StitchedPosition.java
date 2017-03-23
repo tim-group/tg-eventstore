@@ -1,12 +1,34 @@
 package com.timgroup.eventstore.stitching;
 
-import com.timgroup.eventstore.api.Position;
-import com.timgroup.eventstore.api.PositionCodec;
-
 import java.util.Objects;
 import java.util.regex.Pattern;
 
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
+
+import static java.util.Comparator.comparing;
+
 final class StitchedPosition implements Position {
+    private static final String STITCH_SEPARATOR = "~~~";
+    private static final Pattern STITCH_PATTERN = Pattern.compile(Pattern.quote(STITCH_SEPARATOR));
+    static PositionCodec codec(PositionCodec backfillCodec, PositionCodec liveCodec) {
+        return PositionCodec.fromComparator(StitchedPosition.class,
+                string -> {
+                    String[] positions = STITCH_PATTERN.split(string, 2);
+                    return new StitchedPosition(
+                            backfillCodec.deserializePosition(positions[0]),
+                            liveCodec.deserializePosition(positions[1])
+                    );
+                },
+                stitchedPosition -> {
+                    return backfillCodec.serializePosition(stitchedPosition.backfillPosition)
+                            + STITCH_SEPARATOR
+                            + liveCodec.serializePosition(stitchedPosition.livePosition);
+                },
+                comparing((StitchedPosition p) -> p.backfillPosition, backfillCodec::comparePositions)
+                        .thenComparing(p -> p.livePosition, liveCodec::comparePositions));
+    }
+
     final Position backfillPosition;
     final Position livePosition;
 
@@ -36,35 +58,5 @@ final class StitchedPosition implements Position {
     @Override
     public String toString() {
         return "Stitched{backfill:" + backfillPosition + ";live:" + livePosition + '}';
-    }
-
-    static final class StitchedPositionCodec implements PositionCodec {
-        private static final String STITCH_SEPARATOR = "~~~";
-        private static final Pattern STITCH_PATTERN = Pattern.compile(Pattern.quote(STITCH_SEPARATOR));
-
-        private final PositionCodec backfillPositionCodec;
-        private final PositionCodec livePositionCodec;
-
-        StitchedPositionCodec(PositionCodec backfillPositionCodec, PositionCodec livePositionCodec) {
-            this.backfillPositionCodec = backfillPositionCodec;
-            this.livePositionCodec = livePositionCodec;
-        }
-
-        @Override
-        public Position deserializePosition(String string) {
-            String[] positions = STITCH_PATTERN.split(string, 2);
-            return new StitchedPosition(
-                    backfillPositionCodec.deserializePosition(positions[0]),
-                    livePositionCodec.deserializePosition(positions[1])
-            );
-        }
-
-        @Override
-        public String serializePosition(Position position) {
-            StitchedPosition stitchedPosition = (StitchedPosition) position;
-            return backfillPositionCodec.serializePosition(stitchedPosition.backfillPosition)
-                    + STITCH_SEPARATOR
-                    + livePositionCodec.serializePosition(stitchedPosition.livePosition);
-        }
     }
 }

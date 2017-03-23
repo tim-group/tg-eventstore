@@ -1,24 +1,29 @@
 package com.timgroup.eventstore.stitching;
 
-import com.timgroup.eventstore.api.*;
-import com.timgroup.eventstore.stitching.StitchedPosition.StitchedPositionCodec;
-import com.timgroup.tucker.info.Component;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
+import com.timgroup.eventstore.api.EventCategoryReader;
+import com.timgroup.eventstore.api.EventReader;
+import com.timgroup.eventstore.api.EventSource;
+import com.timgroup.eventstore.api.EventStreamReader;
+import com.timgroup.eventstore.api.EventStreamWriter;
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
+import com.timgroup.tucker.info.Component;
 
 public final class BackfillStitchingEventSource implements EventSource {
 
     private final EventSource backfill;
     private final EventSource live;
-    private final StitchedPositionCodec positionCodec;
+    private final PositionCodec positionCodec;
     private final BackfillStitchingEventReader eventReader;
 
     public BackfillStitchingEventSource(EventSource backfill, EventSource live, Position liveCutoffStartPosition) {
         this.backfill = backfill;
         this.live = live;
-        this.positionCodec = new StitchedPositionCodec(backfill.positionCodec(), live.positionCodec());
+        this.positionCodec = StitchedPosition.codec(backfill.positionCodec(), live.positionCodec());
         this.eventReader = new BackfillStitchingEventReader(backfill, live, liveCutoffStartPosition);
     }
 
