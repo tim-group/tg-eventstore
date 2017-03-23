@@ -1,5 +1,12 @@
 package com.timgroup.eventstore.merging;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.Iterator;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventRecord;
@@ -11,13 +18,6 @@ import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.util.Iterator;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import static com.timgroup.eventstore.api.EventRecordMatcher.anEventRecord;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
@@ -37,7 +37,7 @@ public final class MergedEventSourceTest {
     supports_reading_all_forwards_from_a_single_input_stream() throws Exception {
         JavaInMemoryEventStore input = new JavaInMemoryEventStore(clock);
 
-        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(clock, new NamedReaderWithCodec("a", input, input)).readAll();
+        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(clock, new NamedReaderWithCodec("a", input, JavaInMemoryEventStore.CODEC)).readAll();
 
         Instant instant = clock.instant();
         inputEventArrived(input, "CoolenessAdded");
@@ -79,7 +79,7 @@ public final class MergedEventSourceTest {
     supports_reading_from_given_position_from_a_single_input_stream() throws Exception {
         JavaInMemoryEventStore input = new JavaInMemoryEventStore(clock);
 
-        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(clock, new NamedReaderWithCodec("a", input, input)).readAll();
+        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(clock, new NamedReaderWithCodec("a", input, JavaInMemoryEventStore.CODEC)).readAll();
 
         Instant instant = clock.instant();
         inputEventArrived(input, "CoolenessAdded");
@@ -107,8 +107,8 @@ public final class MergedEventSourceTest {
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
         MergedEventSource<Integer> eventSource = MergedEventSource.streamOrderMergedEventSource(
                 clock,
-                new NamedReaderWithCodec("a", input1, input1),
-                new NamedReaderWithCodec("b", input2, input2)
+                new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC),
+                new NamedReaderWithCodec("b", input2, JavaInMemoryEventStore.CODEC)
         );
         EventReader outputReader = eventSource.readAll();
 
@@ -153,8 +153,8 @@ public final class MergedEventSourceTest {
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
         EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(
                 clock,
-                new NamedReaderWithCodec("a", input1, input1),
-                new NamedReaderWithCodec("b", input2, input2)
+                new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC),
+                new NamedReaderWithCodec("b", input2, JavaInMemoryEventStore.CODEC)
         ).readAll();
 
         Instant instant = clock.instant();
@@ -201,8 +201,8 @@ public final class MergedEventSourceTest {
         EventReader outputReader = MergedEventSource.effectiveTimestampMergedEventSource(
                 clock,
                 Duration.ZERO,
-                new NamedReaderWithCodec("a", input1, input1),
-                new NamedReaderWithCodec("b", input2, input2)
+                new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC),
+                new NamedReaderWithCodec("b", input2, JavaInMemoryEventStore.CODEC)
         ).readAll();
 
         Instant instant = clock.instant();
@@ -248,7 +248,7 @@ public final class MergedEventSourceTest {
         EventReader outputReader = MergedEventSource.effectiveTimestampMergedEventSource(
                 clock,
                 Duration.ZERO,
-                new NamedReaderWithCodec("a", input1, input1)
+                new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC)
         ).readAll();
 
         inputEventArrived(input1, streamId("baz", "bob"), newEvent("CoolenessAdded",   new byte[0], "{\"effective_timestamp\":\"2014-01-23T00:23:54Z\"}".getBytes(UTF_8)));
@@ -260,7 +260,7 @@ public final class MergedEventSourceTest {
     blows_up_when_merging_by_effective_timestamp_on_encountering_an_event_without_an_effective_timestamp() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
 
-        EventReader outputReader = MergedEventSource.effectiveTimestampMergedEventSource(clock, new NamedReaderWithCodec("a", input1, input1)).readAll();
+        EventReader outputReader = MergedEventSource.effectiveTimestampMergedEventSource(clock, new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC)).readAll();
 
         inputEventArrived(input1, streamId("baz", "bob"), newEvent("CoolenessAdded", new byte[0], "{\"cheese_date\":\"2014-01-23T00:23:54Z\"}".getBytes(UTF_8)));
 
@@ -281,8 +281,8 @@ public final class MergedEventSourceTest {
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
         MergedEventSource<Integer> eventSource = MergedEventSource.streamOrderMergedEventSource(
                 clock,
-                new NamedReaderWithCodec("a", input1, input1),
-                new NamedReaderWithCodec("b", input2, input2)
+                new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC),
+                new NamedReaderWithCodec("b", input2, JavaInMemoryEventStore.CODEC)
         );
 
         String positionToString = eventSource.readAll().emptyStorePosition().toString();
@@ -295,8 +295,8 @@ public final class MergedEventSourceTest {
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
         MergedEventSource<Integer> eventSource1 = MergedEventSource.streamOrderMergedEventSource(
                 clock,
-                new NamedReaderWithCodec("a", input1, input1),
-                new NamedReaderWithCodec("b", input2, input2)
+                new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC),
+                new NamedReaderWithCodec("b", input2, JavaInMemoryEventStore.CODEC)
         );
 
         Position position = eventSource1.readAll().emptyStorePosition();
@@ -305,9 +305,9 @@ public final class MergedEventSourceTest {
         JavaInMemoryEventStore input3 = new JavaInMemoryEventStore(clock);
         MergedEventSource<Integer> eventSource2 = MergedEventSource.streamOrderMergedEventSource(
                 clock,
-                new NamedReaderWithCodec("a", input1, input1),
-                new NamedReaderWithCodec("b", input2, input2),
-                new NamedReaderWithCodec("c", input3, input3)
+                new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC),
+                new NamedReaderWithCodec("b", input2, JavaInMemoryEventStore.CODEC),
+                new NamedReaderWithCodec("c", input3, JavaInMemoryEventStore.CODEC)
         );
 
         try {
@@ -324,8 +324,8 @@ public final class MergedEventSourceTest {
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
         MergedEventSource<Integer> eventSource1 = MergedEventSource.streamOrderMergedEventSource(
                 clock,
-                new NamedReaderWithCodec("a", input1, input1),
-                new NamedReaderWithCodec("b", input2, input2)
+                new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC),
+                new NamedReaderWithCodec("b", input2, JavaInMemoryEventStore.CODEC)
         );
 
         Position position = eventSource1.readAll().emptyStorePosition();
@@ -333,7 +333,7 @@ public final class MergedEventSourceTest {
 
         MergedEventSource<Integer> eventSource2 = MergedEventSource.streamOrderMergedEventSource(
                 clock,
-                new NamedReaderWithCodec("a", input1, input1)
+                new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC)
         );
 
         try {

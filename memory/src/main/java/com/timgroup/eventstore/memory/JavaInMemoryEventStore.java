@@ -1,5 +1,16 @@
 package com.timgroup.eventstore.memory;
 
+import java.time.Clock;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventRecord;
@@ -15,18 +26,10 @@ import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.api.WrongExpectedVersionException;
 import com.timgroup.eventstore.api.legacy.LegacyStore;
 
-import java.time.Clock;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamReader, EventCategoryReader, EventReader, PositionCodec {
+public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamReader, EventCategoryReader, EventReader {
+    public static final PositionCodec CODEC = PositionCodec.ofComparable(InMemoryEventStorePosition.class,
+            str -> new InMemoryEventStorePosition(Long.parseLong(str)),
+            pos -> Long.toString(pos.eventNumber));
     private final Collection<ResolvedEvent> events;
     private final Clock clock;
 
@@ -74,23 +77,6 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     @Override
     public Position emptyStorePosition() {
         return new InMemoryEventStorePosition(0);
-    }
-
-    @Override
-    public Position deserializePosition(String string) {
-        return new InMemoryEventStorePosition(Long.parseLong(string));
-    }
-
-    @Override
-    public String serializePosition(Position position) {
-        return Long.toString(((InMemoryEventStorePosition) position).eventNumber);
-    }
-
-    @Override
-    public int comparePositions(Position left, Position right) {
-        long leftValue = ((InMemoryEventStorePosition) left).eventNumber;
-        long rightValue = ((InMemoryEventStorePosition) right).eventNumber;
-        return Long.compare(leftValue, rightValue);
     }
 
     @Override
@@ -173,11 +159,17 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
                 .filter(event -> event.eventRecord().eventNumber() > eventNumberExclusive);
     }
 
-    private static final class InMemoryEventStorePosition implements Position {
+    static final class InMemoryEventStorePosition implements Position, Comparable<InMemoryEventStorePosition> {
+
         private final long eventNumber;
 
         private InMemoryEventStorePosition(long eventNumber) {
             this.eventNumber = eventNumber;
+        }
+
+        @Override
+        public int compareTo(InMemoryEventStorePosition o) {
+            return Long.compare(eventNumber, o.eventNumber);
         }
 
         @Override

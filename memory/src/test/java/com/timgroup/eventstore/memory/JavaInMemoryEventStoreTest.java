@@ -1,13 +1,13 @@
 package com.timgroup.eventstore.memory;
 
+import java.time.Clock;
+import java.util.Arrays;
+import java.util.List;
+
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.JavaEventStoreTest;
 import com.timgroup.eventstore.api.Position;
 import org.junit.Test;
-
-import java.time.Clock;
-import java.util.Arrays;
-import java.util.List;
 
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -31,7 +31,7 @@ public class JavaInMemoryEventStoreTest extends JavaEventStoreTest {
                 position(1L),
                 position(100L)
         );
-        assertThat(positions.stream().sorted(eventStore::comparePositions).collect(toList()), equalTo(Arrays.asList(
+        assertThat(positions.stream().sorted(eventSource().positionCodec()::comparePositions).collect(toList()), equalTo(Arrays.asList(
                 position(1L),
                 position(2L),
                 position(10L),
@@ -40,6 +40,6 @@ public class JavaInMemoryEventStoreTest extends JavaEventStoreTest {
     }
 
     private Position position(long n) {
-        return eventStore.deserializePosition(Long.toString(n));
+        return eventSource().positionCodec().deserializePosition(Long.toString(n));
     }
 }

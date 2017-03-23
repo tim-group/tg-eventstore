@@ -1,12 +1,12 @@
 package com.timgroup.eventstore.readerutils;
 
+import java.time.Instant;
+
 import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Test;
-
-import java.time.Instant;
 
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
@@ -176,6 +176,6 @@ public final class BackdatingEventReaderTest {
     }
 
     private Position position(int position) {
-        return underlying.deserializePosition(String.valueOf(position));
+        return JavaInMemoryEventStore.CODEC.deserializePosition(String.valueOf(position));
     }
 }
