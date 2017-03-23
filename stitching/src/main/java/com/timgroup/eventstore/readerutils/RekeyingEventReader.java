@@ -1,6 +1,5 @@
 package com.timgroup.eventstore.readerutils;
 
-import java.util.Iterator;
 import java.util.Objects;
 import java.util.Spliterator;
 import java.util.function.Consumer;
@@ -14,7 +13,6 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
-import static java.lang.Long.MAX_VALUE;
 import static java.lang.Long.parseLong;
 import static java.util.Comparator.comparing;
 import static java.util.stream.StreamSupport.stream;
@@ -40,7 +38,7 @@ public final class RekeyingEventReader implements EventReader {
         RekeyedStreamPosition rekeyedEventPosition = (RekeyedStreamPosition)positionExclusive;
 
         Stream<ResolvedEvent> events = underlying.readAllForwards(rekeyedEventPosition.underlyingPosition);
-        return stream(new RekeyingSpliterator(newStreamId, rekeyedEventPosition.eventNumber, events.iterator()), false)
+        return stream(new RekeyingSpliterator(newStreamId, rekeyedEventPosition.eventNumber, events.spliterator()), false)
                 .onClose(events::close);
     }
 
@@ -55,11 +53,11 @@ public final class RekeyingEventReader implements EventReader {
 
     private static final class RekeyingSpliterator implements Spliterator<ResolvedEvent> {
         private final StreamId newStreamId;
-        private final Iterator<ResolvedEvent> events;
+        private final Spliterator<ResolvedEvent> events;
 
         private long eventNumber;
 
-        public RekeyingSpliterator(StreamId newStreamId, long lastEventNumber, Iterator<ResolvedEvent> events) {
+        public RekeyingSpliterator(StreamId newStreamId, long lastEventNumber, Spliterator<ResolvedEvent> events) {
             this.newStreamId = newStreamId;
             this.eventNumber = lastEventNumber;
             this.events = events;
@@ -67,8 +65,31 @@ public final class RekeyingEventReader implements EventReader {
 
         @Override
         public boolean tryAdvance(Consumer<? super ResolvedEvent> action) {
-            if (events.hasNext()) {
-                ResolvedEvent event = events.next();
+            return events.tryAdvance(rekey(action));
+        }
+
+        @Override
+        public void forEachRemaining(Consumer<? super ResolvedEvent> action) {
+            events.forEachRemaining(rekey(action));
+        }
+
+        @Override
+        public Spliterator<ResolvedEvent> trySplit() {
+            return null;
+        }
+
+        @Override
+        public long estimateSize() {
+            return events.estimateSize();
+        }
+
+        @Override
+        public int characteristics() {
+            return ORDERED | NONNULL | DISTINCT | SIZED;
+        }
+
+        private Consumer<ResolvedEvent> rekey(Consumer<? super ResolvedEvent> action) {
+            return event -> {
                 eventNumber++;
                 action.accept(new ResolvedEvent(
                         new RekeyedStreamPosition(event.position(), eventNumber),
@@ -81,24 +102,7 @@ public final class RekeyingEventReader implements EventReader {
                                 event.eventRecord().metadata()
                         )
                 ));
-                return true;
-            }
-            return false;
-        }
-
-        @Override
-        public Spliterator<ResolvedEvent> trySplit() {
-            return null;
-        }
-
-        @Override
-        public long estimateSize() {
-            return MAX_VALUE;
-        }
-
-        @Override
-        public int characteristics() {
-            return ORDERED | NONNULL | DISTINCT;
+            };
         }
     }
 
