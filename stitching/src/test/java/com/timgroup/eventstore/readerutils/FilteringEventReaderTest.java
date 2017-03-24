@@ -96,64 +96,6 @@ public final class FilteringEventReaderTest {
     }
 
     @Test public void
-    backwards_works() throws Exception {
-        inputEventArrived(streamId("david", "tom"), newEvent("CoolenessAdded", new byte[0], new byte[0]));
-        inputEventArrived(streamId("david", "tom"), newEvent("CoolenessChanged", new byte[0], new byte[0]));
-        inputEventArrived(streamId("foo", "bar"), newEvent("CoolenessRemoved", new byte[0], new byte[0]));
-
-        Predicate<? super ResolvedEvent> predicate = (e -> "CoolenessRemoved".equals(e.eventRecord().eventType()) || "CoolenessAdded".equals(e.eventRecord().eventType()));
-
-        FilteringEventReader underTest = new FilteringEventReader(inputSource.readAll(), predicate);
-
-        List<EventRecord> events = underTest.readAllBackwards().map(ResolvedEvent::eventRecord).collect(Collectors.toList());
-
-        assertThat(events, contains(
-                anEventRecord(
-                        clock.instant(),
-                        StreamId.streamId("foo", "bar"),
-                        0L,
-                        "CoolenessRemoved",
-                        new byte[0],
-                        new byte[0]
-                ),
-                anEventRecord(
-                        clock.instant(),
-                        StreamId.streamId("david", "tom"),
-                        0L,
-                        "CoolenessAdded",
-                        new byte[0],
-                        new byte[0]
-                )
-        ));
-    }
-
-    @Test public void
-    backwards_works_continuing_from_position() throws Exception {
-        inputEventArrived(streamId("david", "tom"), newEvent("CoolenessAdded", new byte[0], new byte[0]));
-        inputEventArrived(streamId("david", "tom"), newEvent("CoolenessChanged", new byte[0], new byte[0]));
-        inputEventArrived(streamId("foo", "bar"), newEvent("CoolenessRemoved", new byte[0], new byte[0]));
-
-        Predicate<? super ResolvedEvent> predicate = (e -> "CoolenessRemoved".equals(e.eventRecord().eventType()) || "CoolenessAdded".equals(e.eventRecord().eventType()));
-
-        FilteringEventReader underTest = new FilteringEventReader(inputSource.readAll(), predicate);
-
-        Position checkpoint = underTest.readAllBackwards().findFirst().get().position();
-
-        List<EventRecord> events = underTest.readAllBackwards(checkpoint).map(ResolvedEvent::eventRecord).collect(Collectors.toList());
-
-        assertThat(events, contains(
-                anEventRecord(
-                        clock.instant(),
-                        StreamId.streamId("david", "tom"),
-                        0L,
-                        "CoolenessAdded",
-                        new byte[0],
-                        new byte[0]
-                )
-        ));
-    }
-
-    @Test public void
     continuing_from_a_position_works() throws Exception {
         inputEventArrived(streamId("david", "tom"), newEvent("CoolenessAdded", new byte[0], new byte[0]));
         inputEventArrived(streamId("david", "tom"), newEvent("CoolenessChanged", new byte[0], new byte[0]));
