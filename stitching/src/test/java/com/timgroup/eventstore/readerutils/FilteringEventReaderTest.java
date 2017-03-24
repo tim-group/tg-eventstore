@@ -12,11 +12,11 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.eventstore.api.StreamId.streamId;
 import static com.timgroup.eventstore.api.EventRecordMatcher.anEventRecord;
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 
@@ -36,34 +36,37 @@ public final class FilteringEventReaderTest {
 
         FilteringEventReader underTest = new FilteringEventReader(inputSource.readAll(), predicate);
 
-        List<EventRecord> events = underTest.readAllForwards().map(ResolvedEvent::eventRecord).collect(Collectors.toList());
+        EventRecordMatcher coolenessAdded = anEventRecord(
+                clock.instant(),
+                StreamId.streamId("david", "tom"),
+                0L,
+                "CoolenessAdded",
+                new byte[0],
+                new byte[0]
+        );
+        EventRecordMatcher coolenessChanged = anEventRecord(
+                clock.instant(),
+                StreamId.streamId("david", "tom"),
+                1L,
+                "CoolenessChanged",
+                new byte[0],
+                new byte[0]
+        );
+        EventRecordMatcher coolenessRemoved = anEventRecord(
+                clock.instant(),
+                StreamId.streamId("foo", "bar"),
+                0L,
+                "CoolenessRemoved",
+                new byte[0],
+                new byte[0]
+        );
 
-        assertThat(events, contains(
-                anEventRecord(
-                        clock.instant(),
-                        StreamId.streamId("david", "tom"),
-                        0L,
-                        "CoolenessAdded",
-                        new byte[0],
-                        new byte[0]
-                ),
-                anEventRecord(
-                        clock.instant(),
-                        StreamId.streamId("david", "tom"),
-                        1L,
-                        "CoolenessChanged",
-                        new byte[0],
-                        new byte[0]
-                ),
-                anEventRecord(
-                        clock.instant(),
-                        StreamId.streamId("foo", "bar"),
-                        0L,
-                        "CoolenessRemoved",
-                        new byte[0],
-                        new byte[0]
-                )
-        ));
+        List<EventRecord> eventsReadForwards = underTest.readAllForwards().map(ResolvedEvent::eventRecord).collect(toList());
+        assertThat(eventsReadForwards, contains(coolenessAdded, coolenessChanged, coolenessRemoved));
+
+        List<EventRecord> eventsReadBackwards = underTest.readAllBackwards().map(ResolvedEvent::eventRecord).collect(toList());
+        assertThat(eventsReadBackwards, contains(coolenessRemoved, coolenessChanged, coolenessAdded));
+
     }
 
     @Test public void
@@ -76,18 +79,20 @@ public final class FilteringEventReaderTest {
 
         FilteringEventReader underTest = new FilteringEventReader(inputSource.readAll(), predicate);
 
-        List<EventRecord> events = underTest.readAllForwards().map(ResolvedEvent::eventRecord).collect(Collectors.toList());
+        EventRecordMatcher coolenessRemoved = anEventRecord(
+                clock.instant(),
+                StreamId.streamId("foo", "bar"),
+                0L,
+                "CoolenessRemoved",
+                new byte[0],
+                new byte[0]
+        );
 
-        assertThat(events, contains(
-                anEventRecord(
-                        clock.instant(),
-                        StreamId.streamId("foo", "bar"),
-                        0L,
-                        "CoolenessRemoved",
-                        new byte[0],
-                        new byte[0]
-                )
-        ));
+        List<EventRecord> events = underTest.readAllForwards().map(ResolvedEvent::eventRecord).collect(toList());
+        assertThat(events, contains(coolenessRemoved));
+
+        List<EventRecord> eventsReadBackwards = underTest.readAllBackwards().map(ResolvedEvent::eventRecord).collect(toList());
+        assertThat(eventsReadBackwards, contains(coolenessRemoved));
     }
 
     @Test public void
@@ -98,7 +103,7 @@ public final class FilteringEventReaderTest {
 
         FilteringEventReader underTest = FilteringEventReader.containingEventTypes(inputSource.readAll(), Sets.newHashSet("CoolenessRemoved"));
 
-        List<ResolvedEvent> events = underTest.readAllForwards().collect(Collectors.toList());
+        List<ResolvedEvent> events = underTest.readAllForwards().collect(toList());
 
         Position checkpoint = events.get(0).position();
 
@@ -106,12 +111,24 @@ public final class FilteringEventReaderTest {
         inputEventArrived(streamId("david", "tom"), newEvent("CoolenessChanged", new byte[0], new byte[0]));
         inputEventArrived(streamId("fizz", "bar"), newEvent("CoolenessRemoved", new byte[0], new byte[0]));
 
-        List<EventRecord> events2 = underTest.readAllForwards(checkpoint).map(ResolvedEvent::eventRecord).collect(Collectors.toList());
-
-        assertThat(events2, contains(
+        List<ResolvedEvent> events2 = underTest.readAllForwards(checkpoint).collect(toList());
+        assertThat(events2.stream().map(ResolvedEvent::eventRecord).collect(toList()), contains(
                 anEventRecord(
                         clock.instant(),
                         StreamId.streamId("fizz", "bar"),
+                        0L,
+                        "CoolenessRemoved",
+                        new byte[0],
+                        new byte[0]
+                )
+        ));
+
+        Position latestCoolenessRemovedPosition = events2.get(0).position();
+        List<EventRecord> eventReadBackwards = underTest.readAllBackwards(latestCoolenessRemovedPosition).map(ResolvedEvent::eventRecord).collect(toList());
+        assertThat(eventReadBackwards, contains(
+                anEventRecord(
+                        clock.instant(),
+                        StreamId.streamId("foo", "bar"),
                         0L,
                         "CoolenessRemoved",
                         new byte[0],

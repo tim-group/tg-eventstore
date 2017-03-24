@@ -24,6 +24,16 @@ public final class FilteringEventReader implements EventReader {
     }
 
     @Override
+    public Stream<ResolvedEvent> readAllBackwards() {
+        return underlying.readAllBackwards().filter(predicate);
+    }
+
+    @Override
+    public Stream<ResolvedEvent> readAllBackwards(Position positionExclusive) {
+        return underlying.readAllBackwards(positionExclusive).filter(predicate);
+    }
+
+    @Override
     public Position emptyStorePosition() {
         return underlying.emptyStorePosition();
     }
