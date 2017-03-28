@@ -18,7 +18,7 @@ public final class NamedReaderWithCodec {
         final String candidateName = name.trim();
         checkArgument(!candidateName.isEmpty(), "name cannot be empty");
 
-        this.name = candidateName;
+        this.name = candidateName.intern();
         this.reader = reader;
         this.codec = codec;
     }

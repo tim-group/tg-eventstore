@@ -73,7 +73,8 @@ final class MergedEventReaderPosition implements Position {
                     String name = jpars.getCurrentName();
                     int readerIndex = -1;
                     for (int index = 0; index < namedReaders.length; index++) {
-                        if (namedReaders[index].name.equals(name)) {
+                        //noinspection StringEquality  -- candidate name is interned, Jackson interns field names
+                        if (namedReaders[index].name == name) {
                             readerIndex = index;
                             break;
                         }
