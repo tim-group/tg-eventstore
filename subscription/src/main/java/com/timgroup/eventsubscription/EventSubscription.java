@@ -86,7 +86,7 @@ public class EventSubscription<T> {
                 List<SubscriptionListener> listeners
     ) {
         this.runFrequency = runFrequency;
-        ChaserHealth chaserHealth = new ChaserHealth(name, clock);
+        ChaserHealth chaserHealth = new ChaserHealth(name, clock, runFrequency);
         subscriptionStatus = new EventSubscriptionStatus(name, clock, maxInitialReplayDuration);
 
         List<SubscriptionListener> subListeners = new ArrayList<>();
