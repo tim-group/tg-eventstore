@@ -10,7 +10,7 @@ import static java.lang.String.format;
 public final class StacksConfiguredDataSource {
     private StacksConfiguredDataSource() { /* prevent instantiation */ }
 
-    public static ComboPooledDataSource pooled(Properties properties, String configPrefix) {
+    public static ComboPooledDataSource pooledMasterDb(Properties properties, String configPrefix) {
         String prefix = configPrefix;
 
         if (properties.getProperty(prefix + "hostname") == null) {
@@ -30,7 +30,27 @@ public final class StacksConfiguredDataSource {
         );
     }
 
-    public static ComboPooledDataSource pooled(Config config) {
+    public static ComboPooledDataSource pooledReadOnlyDb(Properties properties, String configPrefix) {
+        String prefix = configPrefix;
+
+        if (properties.getProperty(prefix + "read_only_cluster") == null) {
+            prefix = "db." + prefix + ".";
+            if (properties.getProperty(prefix) == null) {
+                throw new IllegalArgumentException("unable to read configuration for data source with prefix + " + configPrefix);
+            }
+        }
+
+        return pooled(
+                properties.getProperty(prefix + "read_only_cluster"),
+                Integer.parseInt(properties.getProperty(prefix + "port")),
+                properties.getProperty(prefix + "username"),
+                properties.getProperty(prefix + "password"),
+                properties.getProperty(prefix + "database"),
+                properties.getProperty(prefix + "driver")
+        );
+    }
+
+    public static ComboPooledDataSource pooledMasterDb(Config config) {
         return pooled(
                 config.getString("hostname"),
                 config.getInt("port"),

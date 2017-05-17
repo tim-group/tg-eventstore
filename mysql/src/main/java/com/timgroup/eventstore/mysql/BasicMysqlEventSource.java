@@ -89,7 +89,7 @@ public class BasicMysqlEventSource implements EventSource {
     }
 
     public static PooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name, int batchSize) {
-        return pooledMasterDbEventSource(StacksConfiguredDataSource.pooled(config), tableName, name, batchSize);
+        return pooledMasterDbEventSource(StacksConfiguredDataSource.pooledMasterDb(config), tableName, name, batchSize);
     }
 
     public static PooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name) {
@@ -97,7 +97,7 @@ public class BasicMysqlEventSource implements EventSource {
     }
 
     public static PooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize) {
-        return pooledMasterDbEventSource(StacksConfiguredDataSource.pooled(properties, configPrefix), tableName, name, batchSize);
+        return pooledMasterDbEventSource(StacksConfiguredDataSource.pooledMasterDb(properties, configPrefix), tableName, name, batchSize);
     }
 
     private static PooledMysqlEventSource pooledMasterDbEventSource(ComboPooledDataSource dataSource, String tableName, String name, int batchSize) {

@@ -92,7 +92,7 @@ public class LegacyMysqlEventSource implements EventSource {
     }
 
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, StreamId pretendStreamId, String name, int batchSize) {
-        return pooledMasterDbEventSource(StacksConfiguredDataSource.pooled(config), tableName, pretendStreamId, name, batchSize);
+        return pooledEventSource(StacksConfiguredDataSource.pooledMasterDb(config), tableName, pretendStreamId, name, batchSize);
     }
 
 
@@ -110,11 +110,28 @@ public class LegacyMysqlEventSource implements EventSource {
     }
 
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, StreamId pretendStreamId, String name, int batchSize) {
-        return pooledMasterDbEventSource(StacksConfiguredDataSource.pooled(properties, configPrefix), tableName, pretendStreamId, name, batchSize);
+        return pooledEventSource(StacksConfiguredDataSource.pooledMasterDb(properties, configPrefix), tableName, pretendStreamId, name, batchSize);
     }
 
 
-    private static LegacyPooledMysqlEventSource pooledMasterDbEventSource(ComboPooledDataSource dataSource, String tableName, StreamId pretendStreamId, String name, int batchSize) {
+    public static LegacyPooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name) {
+        return pooledReadOnlyDbEventSource(properties, configPrefix, tableName, DEFAULT_STREAM_ID, name);
+    }
+
+    public static LegacyPooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize) {
+        return pooledReadOnlyDbEventSource(properties, configPrefix, tableName, DEFAULT_STREAM_ID, name, batchSize);
+    }
+
+    public static LegacyPooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, StreamId pretendStreamId, String name) {
+        return pooledReadOnlyDbEventSource(properties, configPrefix, tableName, pretendStreamId, name, DEFAULT_BATCH_SIZE);
+    }
+
+    public static LegacyPooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, StreamId pretendStreamId, String name, int batchSize) {
+        return pooledEventSource(StacksConfiguredDataSource.pooledReadOnlyDb(properties, configPrefix), tableName, pretendStreamId, name, batchSize);
+    }
+
+
+    private static LegacyPooledMysqlEventSource pooledEventSource(ComboPooledDataSource dataSource, String tableName, StreamId pretendStreamId, String name, int batchSize) {
         try {
             new LegacyMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
         } catch (Exception e) {
