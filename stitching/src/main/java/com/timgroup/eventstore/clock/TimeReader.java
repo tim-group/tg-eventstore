@@ -74,9 +74,7 @@ public class TimeReader implements EventReader, PositionCodec {
 
         @Override
         public String toString() {
-            return "TimePosition{" +
-                    "value=" + value +
-                    '}';
+            return Instant.ofEpochMilli(value).toString();
         }
 
         @Override
