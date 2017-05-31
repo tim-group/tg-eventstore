@@ -1,7 +1,6 @@
 package com.timgroup.eventstore.mysql;
 
 import java.util.Collection;
-import java.util.Optional;
 import java.util.Properties;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
@@ -70,19 +69,8 @@ public class BasicMysqlEventSource implements EventSource {
     public Collection<Component> monitoring() {
         String id = "EventStore-" + this.name;
         String label = "EventStore (" + this.name + ")";
-        Component databaseConnection = new DatabaseConnectionComponent(id, label, connectionProvider::getConnection);
-        if (databaseConnectionInfo().isPresent()) {
-            String prefix = databaseConnectionInfo().get() + ": ";
-            databaseConnection = databaseConnection.mapValue(v -> prefix + v);
-        }
-        return singletonList(databaseConnection);
+        return singletonList(new DatabaseConnectionComponent(id, label, connectionProvider::getConnection));
     }
-
-    protected Optional<String> databaseConnectionInfo() {
-        return Optional.empty();
-    }
-
-
 
     public static PooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name) {
         return pooledMasterDbEventSource(config, tableName, name, DefaultBatchSize);
@@ -112,22 +100,15 @@ public class BasicMysqlEventSource implements EventSource {
 
     public static final class PooledMysqlEventSource extends BasicMysqlEventSource implements AutoCloseable {
         private final ComboPooledDataSource dataSource;
-        private final String connectionInfo;
 
         public PooledMysqlEventSource(ComboPooledDataSource dataSource, String tableName, int defaultBatchSize, String name) {
             super(dataSource::getConnection, tableName, defaultBatchSize, name);
-            this.connectionInfo = dataSource.getUser() == null ? dataSource.getJdbcUrl() : dataSource.getUser() + " @ " + dataSource.getJdbcUrl();
             this.dataSource = dataSource;
         }
 
         @Override
         public void close() {
             dataSource.close();
-        }
-
-        @Override
-        protected Optional<String> databaseConnectionInfo() {
-            return Optional.of(connectionInfo);
         }
     }
 }
