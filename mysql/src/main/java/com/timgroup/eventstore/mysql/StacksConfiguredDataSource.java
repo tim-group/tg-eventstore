@@ -61,6 +61,17 @@ public final class StacksConfiguredDataSource {
         );
     }
 
+    public static ComboPooledDataSource pooledReadOnlyDb(Config config) {
+        return pooled(
+                config.getString("read_only_cluster"),
+                config.getInt("port"),
+                config.getString("username"),
+                config.getString("password"),
+                config.getString("database"),
+                config.getString("driver")
+        );
+    }
+
     private static ComboPooledDataSource pooled(String hostname, int port, String username, String password, String database, String driver) {
         ComboPooledDataSource dataSource = new ComboPooledDataSource();
         dataSource.setJdbcUrl(format("jdbc:mysql://%s:%d/%s?rewriteBatchedStatements=true",
