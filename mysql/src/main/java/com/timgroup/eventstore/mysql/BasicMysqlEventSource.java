@@ -88,6 +88,14 @@ public class BasicMysqlEventSource implements EventSource {
         return pooledMasterDbEventSource(StacksConfiguredDataSource.pooledMasterDb(properties, configPrefix), tableName, name, batchSize);
     }
 
+    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name) {
+        return pooledReadOnlyDbEventSource(properties, configPrefix, tableName, name, DefaultBatchSize);
+    }
+
+    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize) {
+        return new PooledMysqlEventSource(StacksConfiguredDataSource.pooledReadOnlyDb(properties, configPrefix), tableName, batchSize, name);
+    }
+
     private static PooledMysqlEventSource pooledMasterDbEventSource(ComboPooledDataSource dataSource, String tableName, String name, int batchSize) {
         try {
             new BasicMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
