@@ -49,7 +49,7 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
     @Override
     public Position emptyStorePosition() {
         String[] names = readers.stream().map(r -> r.name).collect(toList()).toArray(new String[0]);
-        Position[] positions = readers.stream().map(r -> r.reader.emptyStorePosition()).collect(toList()).toArray(new Position[0]);
+        Position[] positions = readers.stream().map(r -> r.startingPosition).collect(toList()).toArray(new Position[0]);
         return new MergedEventReaderPosition(names, positions);
     }
 
