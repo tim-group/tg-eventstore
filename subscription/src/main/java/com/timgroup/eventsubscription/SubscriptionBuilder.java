@@ -5,6 +5,9 @@ import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
+import com.timgroup.structuredevents.EventSink;
+import com.timgroup.structuredevents.LocalEventSink;
+import com.timgroup.structuredevents.Slf4jEventSink;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -30,6 +33,7 @@ public class SubscriptionBuilder<T> {
     private Function<Position, Stream<ResolvedEvent>> reader = null;
     private Position startingPosition = null;
     private Deserializer<T> deserializer = null;
+    private EventSink eventSink = new Slf4jEventSink();
 
     private SubscriptionBuilder(String name) {
         this.name = name;
@@ -104,6 +108,12 @@ public class SubscriptionBuilder<T> {
         return this;
     }
 
+
+    public SubscriptionBuilder<T> withEventSink(EventSink eventSink) {
+        this.eventSink = eventSink;
+        return this;
+    }
+
     public EventSubscription<T> build() {
         requireNonNull(reader);
         requireNonNull(startingPosition);
@@ -119,7 +129,9 @@ public class SubscriptionBuilder<T> {
                 runFrequency,
                 startingPosition,
                 maxInitialReplayDuration,
-                listeners
+                listeners,
+                eventSink
         );
     }
+
 }

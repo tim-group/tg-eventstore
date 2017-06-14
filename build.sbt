@@ -83,7 +83,10 @@ val eventstore_subscription = Project(id = "eventstore-subscription", base = fil
   .settings(
     publishArtifact in (Compile, packageDoc) := false,
     libraryDependencies ++= Seq(
-  "com.lmax" % "disruptor" % "3.3.2",
-  "org.mockito" % "mockito-core" % "1.9.5" % "test"
+      "com.lmax" % "disruptor" % "3.3.2",
+      "com.timgroup" % "tim-structured-events" % autobump,
+      "com.timgroup" % "tim-structured-events-testing" % autobump,
+      "org.mockito" % "mockito-core" % "1.9.5" % "test",
+      "com.youdevise" % "Matchers" % autobump
 ))
   .settings(overridePublishSettings)

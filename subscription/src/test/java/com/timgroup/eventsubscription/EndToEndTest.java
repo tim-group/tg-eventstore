@@ -7,8 +7,11 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
+import com.timgroup.structuredevents.LocalEventSink;
+import com.timgroup.structuredevents.StructuredEventMatcher;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Report;
+import com.youdevise.testutils.matchers.Contains;
 import junit.framework.AssertionFailedError;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -57,6 +60,7 @@ public class EndToEndTest {
     private final StreamId stream = streamId("any", "any");
     private final JavaInMemoryEventStore store = new JavaInMemoryEventStore(clock);
 
+    private final LocalEventSink eventSink = new LocalEventSink();
     private final Deserializer<DeserialisedEvent> deserializer = event -> deserialize(event);
 
     private EventSubscription<DeserialisedEvent> subscription;
@@ -90,6 +94,7 @@ public class EndToEndTest {
         eventually(() -> {
             assertThat(subscription.health().get(), is(healthy));
             assertThat(statusComponent().getReport(), is(new Report(OK, "Caught up at version 3. Initial replay took PT2M3S")));
+            assertThat(eventSink.events(), Contains.only(StructuredEventMatcher.ofType("InitialReplayCompleted")));
         });
     }
 
@@ -247,6 +252,7 @@ public class EndToEndTest {
                 .readingFrom(store, startingPosition)
                 .deserializingUsing(deserializer)
                 .publishingTo(eventHandler)
+                .withEventSink(eventSink)
                 .build();
     }
 

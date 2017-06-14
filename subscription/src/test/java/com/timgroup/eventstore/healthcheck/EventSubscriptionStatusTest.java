@@ -3,6 +3,7 @@ package com.timgroup.eventstore.healthcheck;
 import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventsubscription.healthcheck.EventSubscriptionStatus;
 import com.timgroup.eventsubscription.healthcheck.SubscriptionListenerAdapter;
+import com.timgroup.structuredevents.LocalEventSink;
 import com.timgroup.tucker.info.Report;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,7 +29,7 @@ public class EventSubscriptionStatusTest {
 
     @Before
     public void setup() {
-        status = new EventSubscriptionStatus("", clock, Duration.ofSeconds(123));
+        status = new EventSubscriptionStatus("", clock, Duration.ofSeconds(123), new LocalEventSink());
         adapter = new SubscriptionListenerAdapter(new TestPosition(0), singletonList(status));
     }
 

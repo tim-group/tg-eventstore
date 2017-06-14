@@ -1,17 +1,5 @@
 package com.timgroup.eventsubscription;
 
-import java.time.Clock;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-import java.util.stream.Stream;
-
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.ExceptionHandler;
 import com.lmax.disruptor.dsl.Disruptor;
@@ -23,10 +11,24 @@ import com.timgroup.eventsubscription.healthcheck.ChaserHealth;
 import com.timgroup.eventsubscription.healthcheck.EventSubscriptionStatus;
 import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
 import com.timgroup.eventsubscription.healthcheck.SubscriptionListenerAdapter;
+import com.timgroup.structuredevents.EventSink;
+import com.timgroup.structuredevents.Slf4jEventSink;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Health;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.time.Clock;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 import static com.lmax.disruptor.dsl.ProducerType.SINGLE;
 import static java.util.Collections.emptyList;
@@ -57,7 +59,7 @@ public class EventSubscription<T> {
             Duration maxInitialReplayDuration,
             List<SubscriptionListener> listeners
     ) {
-        this(name, pos -> eventReader.readCategoryForwards(category, pos), deserializer, eventHandlers, clock, bufferSize, runFrequency, startingPosition, maxInitialReplayDuration, listeners);
+        this(name, pos -> eventReader.readCategoryForwards(category, pos), deserializer, eventHandlers, clock, bufferSize, runFrequency, startingPosition, maxInitialReplayDuration, listeners, new Slf4jEventSink());
     }
 
     public EventSubscription(
@@ -72,7 +74,7 @@ public class EventSubscription<T> {
             Duration maxInitialReplayDuration,
             List<SubscriptionListener> listeners
     ) {
-        this(name, eventReader::readAllForwards, deserializer, eventHandlers, clock, bufferSize, runFrequency, startingPosition, maxInitialReplayDuration, listeners);
+        this(name, eventReader::readAllForwards, deserializer, eventHandlers, clock, bufferSize, runFrequency, startingPosition, maxInitialReplayDuration, listeners, new Slf4jEventSink());
     }
 
     EventSubscription(
@@ -85,11 +87,12 @@ public class EventSubscription<T> {
                 Duration runFrequency,
                 Position startingPosition,
                 Duration maxInitialReplayDuration,
-                List<SubscriptionListener> listeners
+                List<SubscriptionListener> listeners,
+                EventSink eventSink
     ) {
         this.runFrequency = runFrequency;
         ChaserHealth chaserHealth = new ChaserHealth(name, clock, runFrequency);
-        subscriptionStatus = new EventSubscriptionStatus(name, clock, maxInitialReplayDuration);
+        subscriptionStatus = new EventSubscriptionStatus(name, clock, maxInitialReplayDuration, eventSink);
 
         List<SubscriptionListener> subListeners = new ArrayList<>();
         subListeners.add(subscriptionStatus);

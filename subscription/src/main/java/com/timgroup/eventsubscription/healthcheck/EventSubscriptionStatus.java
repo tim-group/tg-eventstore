@@ -1,6 +1,8 @@
 package com.timgroup.eventsubscription.healthcheck;
 
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.structuredevents.EventSink;
+import com.timgroup.structuredevents.SimpleEvent;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Health;
 import com.timgroup.tucker.info.Report;
@@ -18,9 +20,11 @@ import static com.timgroup.tucker.info.Status.WARNING;
 public class EventSubscriptionStatus extends Component implements Health, SubscriptionListener {
     private static final Duration STALENESS_WARNING_THRESHOLD = Duration.ofSeconds(1);
     private static final Duration STALENESS_CRITICAL_THRESHOLD = Duration.ofSeconds(30);
+    private final String name;
     private final Clock clock;
     private final Duration maxInitialReplayDuration;
     private final Duration criticalInitialReplayDuration;
+    private final EventSink eventSink;
 
     private volatile Instant startTime;
     private volatile Duration initialReplayDuration;
@@ -28,13 +32,15 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
     private volatile Report terminatedReport;
     private volatile Instant staleSince;
 
-    public EventSubscriptionStatus(String name, Clock clock, Duration maxInitialReplayDuration) {
+    public EventSubscriptionStatus(String name, Clock clock, Duration maxInitialReplayDuration, EventSink eventSink) {
         super("event-subscription-status-" + name, "Event subscription status (" + name + ")");
+        this.name = name;
         this.clock = clock;
         this.maxInitialReplayDuration = maxInitialReplayDuration;
         this.startTime = Instant.now(clock);
         this.staleSince = Instant.now(clock);
         criticalInitialReplayDuration = maxInitialReplayDuration.plus(maxInitialReplayDuration.dividedBy(4)); // 25% over max = critical
+        this.eventSink = eventSink;
     }
 
     @Override
@@ -82,6 +88,7 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
     public void caughtUpAt(Position position) {
         if (initialReplayDuration == null) {
             initialReplayDuration = Duration.between(startTime, Instant.now(clock));
+            eventSink.sendEvent(SimpleEvent.ofType("InitialReplayCompleted").withField("name", name).withField("time_ms", initialReplayDuration.toMillis()));
         }
 
         staleSince = null;
