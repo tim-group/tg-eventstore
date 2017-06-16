@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.api;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Objects;
@@ -15,12 +16,12 @@ public final class EventRecord {
     private final byte[] metadata;
 
     private EventRecord(Instant timestamp, StreamId streamId, long eventNumber, String eventType, byte[] data, byte[] metadata) {
-            this.timestamp = requireNonNull(timestamp);
-            this.streamId = requireNonNull(streamId);
-            this.eventNumber = requireNonNull(eventNumber);
-            this.eventType = requireNonNull(eventType);
-            this.data = requireNonNull(data);
-            this.metadata = requireNonNull(metadata);
+        this.timestamp = requireNonNull(timestamp);
+        this.streamId = requireNonNull(streamId);
+        this.eventNumber = requireNonNull(eventNumber);
+        this.eventType = requireNonNull(eventType);
+        this.data = requireNonNull(data);
+        this.metadata = requireNonNull(metadata);
     }
 
     public static EventRecord eventRecord(Instant timestamp, StreamId streamId, long eventNumber, String eventType, byte[] data, byte[] metadata) {
@@ -65,9 +66,17 @@ public final class EventRecord {
                 ", streamId=" + streamId +
                 ", eventNumber=" + eventNumber +
                 ", eventType='" + eventType + '\'' +
-                ", data=" + Arrays.toString(data) +
-                ", metadata=" + Arrays.toString(metadata) +
+                ", data=" + byteArrayAsString(data) +
+                ", metadata=" + byteArrayAsString(metadata) +
                 '}';
+    }
+
+    private static String byteArrayAsString(byte[] data) {
+        try {
+            return new String(data, StandardCharsets.UTF_8);
+        } catch (Throwable t) {
+            return Arrays.toString(data);
+        }
     }
 
     public long eventNumber() {
