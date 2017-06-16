@@ -39,7 +39,7 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
         this.maxInitialReplayDuration = maxInitialReplayDuration;
         this.startTime = Instant.now(clock);
         this.staleSince = Instant.now(clock);
-        criticalInitialReplayDuration = maxInitialReplayDuration.plus(maxInitialReplayDuration.dividedBy(4)); // 25% over max = critical
+        this.criticalInitialReplayDuration = maxInitialReplayDuration.plus(maxInitialReplayDuration.dividedBy(4)); // 25% over max = critical
         this.eventSink = eventSink;
     }
 
@@ -49,8 +49,9 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
             return terminatedReport;
         }
 
-        if (staleSince != null) {
-            Duration staleFor = Duration.between(staleSince, Instant.now(clock));
+        Instant staleSinceSnap = this.staleSince;
+        if (staleSinceSnap != null) {
+            Duration staleFor = Duration.between(staleSinceSnap, Instant.now(clock));
             Status status = initialReplayDuration != null ? classifyStaleness(staleFor) : classifyInitialStaleness(staleFor);
 
             String currentVersionText = currentPosition != null ?  "Currently at version " + currentPosition + "." : "No events processed yet.";
