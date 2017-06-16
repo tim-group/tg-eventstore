@@ -21,6 +21,9 @@ public class DisruptorEventHandlerAdapter<T> implements com.lmax.disruptor.Event
                 eventHandler.apply(eventContainer.event.position(), new DateTime(timestamp.toEpochMilli()), eventContainer.deserializedEvent, endOfBatch);
             }
             processorListener.eventProcessed(eventContainer.event.position());
+
+            eventContainer.event = null;
+            eventContainer.deserializedEvent = null;
         } catch (Exception e) {
             processorListener.eventProcessingFailed(eventContainer.event.position(), e);
             throw e;
