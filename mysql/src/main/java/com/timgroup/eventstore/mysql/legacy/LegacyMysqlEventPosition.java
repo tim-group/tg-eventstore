@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.mysql.legacy;
 
+import java.util.Comparator;
 import java.util.Objects;
 
 import com.timgroup.eventstore.api.Position;
@@ -42,7 +43,8 @@ final class LegacyMysqlEventPosition implements Position {
         return String.valueOf(legacyVersion);
     }
 
-    static final PositionCodec CODEC = PositionCodec.unordered(LegacyMysqlEventPosition.class,
+    static final PositionCodec CODEC = PositionCodec.fromComparator(LegacyMysqlEventPosition.class,
             str -> fromLegacyVersion(Long.parseLong(str)),
-            pos -> Long.toString(pos.legacyVersion));
+            pos -> Long.toString(pos.legacyVersion),
+            Comparator.comparingLong(a -> a.legacyVersion));
 }

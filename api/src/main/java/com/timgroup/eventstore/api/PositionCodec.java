@@ -12,23 +12,6 @@ public interface PositionCodec {
         throw new UnsupportedOperationException();
     }
 
-    static <T extends Position> PositionCodec unordered(
-            Class<T> clazz,
-            Function<String, ? extends T> deserialize,
-            Function<? super T, String> serialize) {
-        return new PositionCodec() {
-            @Override
-            public Position deserializePosition(String string) {
-                return deserialize.apply(string);
-            }
-
-            @Override
-            public String serializePosition(Position position) {
-                return serialize.apply(clazz.cast(position));
-            }
-        };
-    }
-
     static <T extends Position> PositionCodec fromComparator(
             Class<T> clazz,
             Function<String, ? extends T> deserialize,
