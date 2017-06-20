@@ -2,6 +2,8 @@ package com.timgroup.eventstore.merging;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.Arrays;
+import java.util.Objects;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -23,6 +25,20 @@ final class MergedEventReaderPosition implements Position {
         Position[] newPositions = inputPositions.clone();
         newPositions[readerIndex] = position;
         return new MergedEventReaderPosition(names, newPositions);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        MergedEventReaderPosition that = (MergedEventReaderPosition) o;
+        return Arrays.equals(names, that.names) &&
+                Arrays.equals(inputPositions, that.inputPositions);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(names, inputPositions);
     }
 
     @Override
