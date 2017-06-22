@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.api;
 
+import java.util.Optional;
 import java.util.stream.Stream;
 
 public interface EventReader {
@@ -17,5 +18,12 @@ public interface EventReader {
         throw new UnsupportedOperationException("reading backwards is not yet supported");
     }
 
+    default Optional<ResolvedEvent> readOneBackwards() {
+        try (Stream<ResolvedEvent> stream = readAllBackwards()) {
+            return stream.findFirst();
+        }
+    }
+
     Position emptyStorePosition();
+
 }

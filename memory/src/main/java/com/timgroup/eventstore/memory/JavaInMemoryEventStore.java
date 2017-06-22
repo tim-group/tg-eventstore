@@ -1,10 +1,7 @@
 package com.timgroup.eventstore.memory;
 
 import java.time.Clock;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
@@ -59,6 +56,15 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
         List<ResolvedEvent> reversed = new ArrayList<>(events);
         Collections.reverse(reversed);
         return reversed.stream();
+    }
+
+    @Override
+    public Optional<ResolvedEvent> readOneBackwards() {
+        ResolvedEvent lastEvent = null;
+        for (ResolvedEvent event : events) {
+            lastEvent = event;
+        }
+        return Optional.ofNullable(lastEvent);
     }
 
     @Override

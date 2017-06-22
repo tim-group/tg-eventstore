@@ -29,10 +29,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.LongStream.range;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 
 public abstract class JavaEventStoreTest {
     @Rule
@@ -266,6 +263,17 @@ public abstract class JavaEventStoreTest {
                 objectWith(EventRecord::streamId, stream_2).and(EventRecord::eventNumber, 0L),
                 objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 0L)
         ));
+    }
+    @Test
+    public void
+    can_read_single_event_backwards() {
+        eventSource().writeStream().write(stream_1, asList(event_1));
+        eventSource().writeStream().write(stream_2, asList(event_2));
+        eventSource().writeStream().write(stream_3, asList(event_3));
+
+        assertThat(eventSource().readAll().readOneBackwards().map(ResolvedEvent::eventRecord).get(), objectWith(
+                EventRecord::streamId, stream_3).and(EventRecord::eventNumber, 0L)
+        );
     }
 
     @Test
