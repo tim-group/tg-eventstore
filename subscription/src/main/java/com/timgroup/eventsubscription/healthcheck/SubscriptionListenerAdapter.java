@@ -58,17 +58,21 @@ public class SubscriptionListenerAdapter implements ChaserListener, EventProcess
     public void eventDeserialized(Position position) { }
 
     private void checkStaleness() {
-        if (latestFetchedPosition.isPresent() && latestFetchedPosition.equals(latestProcessedPosition)) {
+        //Quick fix - assign them locally to avoid race condition which sometimes can set the position to None which results in exceptions
+        Optional<Position> fetchedPosition = latestFetchedPosition;
+        Optional<Position> processedPosition = latestProcessedPosition;
+
+        if (fetchedPosition.isPresent() && fetchedPosition.equals(processedPosition)) {
             for (SubscriptionListener listener : listeners) {
-                listener.caughtUpAt(latestFetchedPosition.get());
+                listener.caughtUpAt(fetchedPosition.get());
             }
-        } else if (latestFetchedPosition.isPresent() && !latestProcessedPosition.isPresent() && latestFetchedPosition.get().equals(startingPosition)) {
+        } else if (fetchedPosition.isPresent() && !processedPosition.isPresent() && fetchedPosition.get().equals(startingPosition)) {
             for (SubscriptionListener listener : listeners) {
                 listener.caughtUpAt(startingPosition);
             }
-        } else if (latestProcessedPosition.isPresent()) {
+        } else if (processedPosition.isPresent()) {
             for (SubscriptionListener listener : listeners) {
-                listener.staleAtVersion(latestProcessedPosition);
+                listener.staleAtVersion(processedPosition);
             }
         } else {
             for (SubscriptionListener listener : listeners) {
