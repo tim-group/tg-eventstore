@@ -1,8 +1,10 @@
 package com.timgroup.eventstore.mysql;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
+import com.mchange.v2.c3p0.PooledDataSource;
 import com.typesafe.config.Config;
 
+import java.sql.SQLException;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,9 +16,9 @@ public final class StacksConfiguredDataSource implements AutoCloseable {
     private static Map<String, StacksConfiguredDataSource> dataSources = new ConcurrentHashMap<>();
 
     private final String id;
-    public final ComboPooledDataSource dataSource;
+    public final PooledDataSource dataSource;
 
-    private StacksConfiguredDataSource(String id, ComboPooledDataSource dataSource) {
+    private StacksConfiguredDataSource(String id, PooledDataSource dataSource) {
         this.id = id;
         this.dataSource = dataSource;
     }
@@ -24,7 +26,11 @@ public final class StacksConfiguredDataSource implements AutoCloseable {
     @Override
     public void close() {
         dataSources.remove(id);
-        dataSource.close();
+        try {
+            dataSource.close();
+        } catch (SQLException e) {
+            throw new RuntimeException("Unable to close data source", e);
+        }
     }
 
     public static StacksConfiguredDataSource pooledMasterDb(Properties properties, String configPrefix) {
@@ -90,14 +96,14 @@ public final class StacksConfiguredDataSource implements AutoCloseable {
     }
 
     private static StacksConfiguredDataSource pooled(String hostname, int port, String username, String password, String database, String driver) {
-        return dataSources.computeIfAbsent(idFromProperties(hostname, port, username, database, driver), id -> newComboPooledDataSource(id, hostname, port, username, password, database, driver));
+        return dataSources.computeIfAbsent(idFromProperties(hostname, port, username, database, driver), id -> newPooledDataSource(id, hostname, port, username, password, database, driver));
     }
 
     private static String idFromProperties(String hostname, int port, String username, String database, String driver) {
         return hostname + port + username + database + driver;
     }
 
-    private static StacksConfiguredDataSource newComboPooledDataSource(String id, String hostname, int port, String username, String password, String database, String driver) {
+    private static StacksConfiguredDataSource newPooledDataSource(String id, String hostname, int port, String username, String password, String database, String driver) {
         ComboPooledDataSource dataSource = new ComboPooledDataSource();
         dataSource.setJdbcUrl(format("jdbc:mysql://%s:%d/%s?rewriteBatchedStatements=true",
                 hostname,
