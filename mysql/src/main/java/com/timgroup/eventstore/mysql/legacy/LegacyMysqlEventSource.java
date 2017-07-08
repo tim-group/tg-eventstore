@@ -1,22 +1,15 @@
 package com.timgroup.eventstore.mysql.legacy;
 
-import java.util.Collection;
-import java.util.Properties;
-
-import com.mchange.v2.c3p0.ComboPooledDataSource;
-import com.timgroup.eventstore.api.EventCategoryReader;
-import com.timgroup.eventstore.api.EventReader;
-import com.timgroup.eventstore.api.EventSource;
-import com.timgroup.eventstore.api.EventStreamReader;
-import com.timgroup.eventstore.api.EventStreamWriter;
-import com.timgroup.eventstore.api.PositionCodec;
-import com.timgroup.eventstore.api.StreamId;
+import com.timgroup.eventstore.api.*;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
 import com.timgroup.eventstore.mysql.StacksConfiguredDataSource;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.component.DatabaseConnectionComponent;
 import com.typesafe.config.Config;
 import org.slf4j.LoggerFactory;
+
+import java.util.Collection;
+import java.util.Properties;
 
 import static java.util.Collections.singletonList;
 
@@ -131,22 +124,22 @@ public class LegacyMysqlEventSource implements EventSource {
     }
 
 
-    private static LegacyPooledMysqlEventSource pooledEventSource(ComboPooledDataSource dataSource, String tableName, StreamId pretendStreamId, String name, int batchSize) {
+    private static LegacyPooledMysqlEventSource pooledEventSource(StacksConfiguredDataSource stacksConfiguredDataSource, String tableName, StreamId pretendStreamId, String name, int batchSize) {
         try {
-            new LegacyMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
+            new LegacyMysqlEventStoreSetup(stacksConfiguredDataSource.dataSource::getConnection, tableName).lazyCreate();
         } catch (Exception e) {
             LoggerFactory.getLogger(LegacyMysqlEventSource.class).warn("Failed to ensure ES scheme is created", e);
         }
 
-        return new LegacyPooledMysqlEventSource(dataSource, tableName, pretendStreamId, batchSize, name);
+        return new LegacyPooledMysqlEventSource(stacksConfiguredDataSource, tableName, pretendStreamId, batchSize, name);
     }
 
     public static final class LegacyPooledMysqlEventSource extends LegacyMysqlEventSource implements AutoCloseable {
-        private final ComboPooledDataSource dataSource;
+        private final StacksConfiguredDataSource dataSource;
 
-        public LegacyPooledMysqlEventSource(ComboPooledDataSource dataSource, String tableName, StreamId pretendStreamId, int batchSize, String name) {
-            super(dataSource::getConnection, tableName, pretendStreamId, batchSize, name);
-            this.dataSource = dataSource;
+        public LegacyPooledMysqlEventSource(StacksConfiguredDataSource stacksConfiguredDataSource, String tableName, StreamId pretendStreamId, int batchSize, String name) {
+            super(stacksConfiguredDataSource.dataSource::getConnection, tableName, pretendStreamId, batchSize, name);
+            this.dataSource = stacksConfiguredDataSource;
         }
 
         @Override
