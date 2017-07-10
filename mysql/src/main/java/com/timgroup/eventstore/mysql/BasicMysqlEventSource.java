@@ -1,19 +1,13 @@
 package com.timgroup.eventstore.mysql;
 
-import java.util.Collection;
-import java.util.Properties;
-
-import com.mchange.v2.c3p0.ComboPooledDataSource;
-import com.timgroup.eventstore.api.EventCategoryReader;
-import com.timgroup.eventstore.api.EventReader;
-import com.timgroup.eventstore.api.EventSource;
-import com.timgroup.eventstore.api.EventStreamReader;
-import com.timgroup.eventstore.api.EventStreamWriter;
-import com.timgroup.eventstore.api.PositionCodec;
+import com.timgroup.eventstore.api.*;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.component.DatabaseConnectionComponent;
 import com.typesafe.config.Config;
 import org.slf4j.LoggerFactory;
+
+import java.util.Collection;
+import java.util.Properties;
 
 import static java.util.Collections.singletonList;
 
@@ -104,22 +98,22 @@ public class BasicMysqlEventSource implements EventSource {
         return new PooledMysqlEventSource(StacksConfiguredDataSource.pooledReadOnlyDb(properties, configPrefix), tableName, batchSize, name);
     }
 
-    private static PooledMysqlEventSource pooledMasterDbEventSource(ComboPooledDataSource dataSource, String tableName, String name, int batchSize) {
+    private static PooledMysqlEventSource pooledMasterDbEventSource(StacksConfiguredDataSource stacksConfiguredDataSource, String tableName, String name, int batchSize) {
         try {
-            new BasicMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
+            new BasicMysqlEventStoreSetup(stacksConfiguredDataSource.dataSource::getConnection, tableName).lazyCreate();
         } catch (Exception e) {
             LoggerFactory.getLogger(BasicMysqlEventSource.class).warn("Failed to ensure ES scheme is created", e);
         }
 
-        return new PooledMysqlEventSource(dataSource, tableName, batchSize, name);
+        return new PooledMysqlEventSource(stacksConfiguredDataSource, tableName, batchSize, name);
     }
 
     public static final class PooledMysqlEventSource extends BasicMysqlEventSource implements AutoCloseable {
-        private final ComboPooledDataSource dataSource;
+        private final StacksConfiguredDataSource dataSource;
 
-        public PooledMysqlEventSource(ComboPooledDataSource dataSource, String tableName, int defaultBatchSize, String name) {
-            super(dataSource::getConnection, tableName, defaultBatchSize, name);
-            this.dataSource = dataSource;
+        public PooledMysqlEventSource(StacksConfiguredDataSource stacksConfiguredDataSource, String tableName, int defaultBatchSize, String name) {
+            super(stacksConfiguredDataSource.dataSource::getConnection, tableName, defaultBatchSize, name);
+            this.dataSource = stacksConfiguredDataSource;
         }
 
         @Override
