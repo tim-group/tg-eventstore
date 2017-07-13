@@ -1,6 +1,7 @@
 package com.timgroup.eventstore.mysql;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
+import com.mchange.v2.c3p0.PooledDataSource;
 import com.typesafe.config.Config;
 
 import java.util.Properties;
@@ -10,7 +11,7 @@ import static java.lang.String.format;
 public final class StacksConfiguredDataSource {
     private StacksConfiguredDataSource() { /* prevent instantiation */ }
 
-    public static ComboPooledDataSource pooledMasterDb(Properties properties, String configPrefix) {
+    public static PooledDataSource pooledMasterDb(Properties properties, String configPrefix) {
         String prefix = configPrefix;
 
         if (properties.getProperty(prefix + "hostname") == null) {
@@ -30,7 +31,7 @@ public final class StacksConfiguredDataSource {
         );
     }
 
-    public static ComboPooledDataSource pooledReadOnlyDb(Properties properties, String configPrefix) {
+    public static PooledDataSource pooledReadOnlyDb(Properties properties, String configPrefix) {
         String prefix = configPrefix;
 
         if (properties.getProperty(prefix + "read_only_cluster") == null) {
@@ -50,7 +51,7 @@ public final class StacksConfiguredDataSource {
         );
     }
 
-    public static ComboPooledDataSource pooledMasterDb(Config config) {
+    public static PooledDataSource pooledMasterDb(Config config) {
         return pooled(
                 config.getString("hostname"),
                 config.getInt("port"),
@@ -61,7 +62,7 @@ public final class StacksConfiguredDataSource {
         );
     }
 
-    public static ComboPooledDataSource pooledReadOnlyDb(Config config) {
+    public static PooledDataSource pooledReadOnlyDb(Config config) {
         return pooled(
                 config.getString("read_only_cluster"),
                 config.getInt("port"),
@@ -72,7 +73,7 @@ public final class StacksConfiguredDataSource {
         );
     }
 
-    private static ComboPooledDataSource pooled(String hostname, int port, String username, String password, String database, String driver) {
+    private static PooledDataSource pooled(String hostname, int port, String username, String password, String database, String driver) {
         ComboPooledDataSource dataSource = new ComboPooledDataSource();
         dataSource.setJdbcUrl(format("jdbc:mysql://%s:%d/%s?rewriteBatchedStatements=true",
                 hostname,

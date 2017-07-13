@@ -1,19 +1,15 @@
 package com.timgroup.eventstore.mysql;
 
-import java.util.Collection;
-import java.util.Properties;
-
-import com.mchange.v2.c3p0.ComboPooledDataSource;
-import com.timgroup.eventstore.api.EventCategoryReader;
-import com.timgroup.eventstore.api.EventReader;
-import com.timgroup.eventstore.api.EventSource;
-import com.timgroup.eventstore.api.EventStreamReader;
-import com.timgroup.eventstore.api.EventStreamWriter;
-import com.timgroup.eventstore.api.PositionCodec;
+import com.mchange.v2.c3p0.PooledDataSource;
+import com.timgroup.eventstore.api.*;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.component.DatabaseConnectionComponent;
 import com.typesafe.config.Config;
 import org.slf4j.LoggerFactory;
+
+import java.sql.SQLException;
+import java.util.Collection;
+import java.util.Properties;
 
 import static java.util.Collections.singletonList;
 
@@ -104,7 +100,7 @@ public class BasicMysqlEventSource implements EventSource {
         return new PooledMysqlEventSource(StacksConfiguredDataSource.pooledReadOnlyDb(properties, configPrefix), tableName, batchSize, name);
     }
 
-    private static PooledMysqlEventSource pooledMasterDbEventSource(ComboPooledDataSource dataSource, String tableName, String name, int batchSize) {
+    private static PooledMysqlEventSource pooledMasterDbEventSource(PooledDataSource dataSource, String tableName, String name, int batchSize) {
         try {
             new BasicMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
         } catch (Exception e) {
@@ -115,16 +111,20 @@ public class BasicMysqlEventSource implements EventSource {
     }
 
     public static final class PooledMysqlEventSource extends BasicMysqlEventSource implements AutoCloseable {
-        private final ComboPooledDataSource dataSource;
+        private final PooledDataSource dataSource;
 
-        public PooledMysqlEventSource(ComboPooledDataSource dataSource, String tableName, int defaultBatchSize, String name) {
+        public PooledMysqlEventSource(PooledDataSource dataSource, String tableName, int defaultBatchSize, String name) {
             super(dataSource::getConnection, tableName, defaultBatchSize, name);
             this.dataSource = dataSource;
         }
 
         @Override
         public void close() {
-            dataSource.close();
+            try {
+                dataSource.close();
+            } catch (SQLException e) {
+                LoggerFactory.getLogger(PooledMysqlEventSource.class).warn("Failed to close event source", e);
+            }
         }
     }
 }

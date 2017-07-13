@@ -1,22 +1,17 @@
 package com.timgroup.eventstore.mysql.legacy;
 
-import java.util.Collection;
-import java.util.Properties;
-
-import com.mchange.v2.c3p0.ComboPooledDataSource;
-import com.timgroup.eventstore.api.EventCategoryReader;
-import com.timgroup.eventstore.api.EventReader;
-import com.timgroup.eventstore.api.EventSource;
-import com.timgroup.eventstore.api.EventStreamReader;
-import com.timgroup.eventstore.api.EventStreamWriter;
-import com.timgroup.eventstore.api.PositionCodec;
-import com.timgroup.eventstore.api.StreamId;
+import com.mchange.v2.c3p0.PooledDataSource;
+import com.timgroup.eventstore.api.*;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
 import com.timgroup.eventstore.mysql.StacksConfiguredDataSource;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.component.DatabaseConnectionComponent;
 import com.typesafe.config.Config;
 import org.slf4j.LoggerFactory;
+
+import java.sql.SQLException;
+import java.util.Collection;
+import java.util.Properties;
 
 import static java.util.Collections.singletonList;
 
@@ -131,7 +126,7 @@ public class LegacyMysqlEventSource implements EventSource {
     }
 
 
-    private static LegacyPooledMysqlEventSource pooledEventSource(ComboPooledDataSource dataSource, String tableName, StreamId pretendStreamId, String name, int batchSize) {
+    private static LegacyPooledMysqlEventSource pooledEventSource(PooledDataSource dataSource, String tableName, StreamId pretendStreamId, String name, int batchSize) {
         try {
             new LegacyMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
         } catch (Exception e) {
@@ -142,16 +137,20 @@ public class LegacyMysqlEventSource implements EventSource {
     }
 
     public static final class LegacyPooledMysqlEventSource extends LegacyMysqlEventSource implements AutoCloseable {
-        private final ComboPooledDataSource dataSource;
+        private final PooledDataSource dataSource;
 
-        public LegacyPooledMysqlEventSource(ComboPooledDataSource dataSource, String tableName, StreamId pretendStreamId, int batchSize, String name) {
+        public LegacyPooledMysqlEventSource(PooledDataSource dataSource, String tableName, StreamId pretendStreamId, int batchSize, String name) {
             super(dataSource::getConnection, tableName, pretendStreamId, batchSize, name);
             this.dataSource = dataSource;
         }
 
         @Override
         public void close() {
-            dataSource.close();
+            try {
+                dataSource.close();
+            } catch (SQLException e) {
+                LoggerFactory.getLogger(LegacyPooledMysqlEventSource.class).warn("Failed to close event source", e);
+            }
         }
     }
 
