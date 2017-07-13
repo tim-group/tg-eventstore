@@ -100,6 +100,10 @@ public class BasicMysqlEventSource implements EventSource {
         return new PooledMysqlEventSource(StacksConfiguredDataSource.pooledReadOnlyDb(properties, configPrefix), tableName, batchSize, name);
     }
 
+    public static PooledMysqlEventSource pooledMasterDbEventSource(PooledDataSource dataSource, String tableName, String name) {
+        return pooledMasterDbEventSource(dataSource, tableName, name, DefaultBatchSize);
+    }
+
     public static PooledMysqlEventSource pooledMasterDbEventSource(PooledDataSource dataSource, String tableName, String name, int batchSize) {
         try {
             new BasicMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
