@@ -82,8 +82,6 @@ public final class StacksConfiguredDataSource {
         dataSource.setUser(username);
         dataSource.setPassword(password);
         dataSource.setIdleConnectionTestPeriod(60 * 5);
-        dataSource.setMinPoolSize(1);
-        dataSource.setInitialPoolSize(1);
 
         try {
             Class.forName(driver);
