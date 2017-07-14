@@ -87,6 +87,6 @@ val eventstore_subscription = Project(id = "eventstore-subscription", base = fil
       "com.timgroup" % "tim-structured-events" % autobump,
       "com.timgroup" % "tim-structured-events-testing" % autobump % "test",
       "org.mockito" % "mockito-core" % "1.9.5" % "test",
-      "com.youdevise" % "Matchers" % autobump
+      "com.youdevise" % "Matchers" % autobump % "test"
 ))
   .settings(overridePublishSettings)
