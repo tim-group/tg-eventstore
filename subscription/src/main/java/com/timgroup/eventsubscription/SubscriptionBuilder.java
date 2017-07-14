@@ -6,7 +6,6 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
 import com.timgroup.structuredevents.EventSink;
-import com.timgroup.structuredevents.LocalEventSink;
 import com.timgroup.structuredevents.Slf4jEventSink;
 
 import java.time.Clock;

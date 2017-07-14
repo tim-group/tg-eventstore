@@ -85,7 +85,7 @@ val eventstore_subscription = Project(id = "eventstore-subscription", base = fil
     libraryDependencies ++= Seq(
       "com.lmax" % "disruptor" % "3.3.2",
       "com.timgroup" % "tim-structured-events" % autobump,
-      "com.timgroup" % "tim-structured-events-testing" % autobump,
+      "com.timgroup" % "tim-structured-events-testing" % autobump % "test",
       "org.mockito" % "mockito-core" % "1.9.5" % "test",
       "com.youdevise" % "Matchers" % autobump
 ))
