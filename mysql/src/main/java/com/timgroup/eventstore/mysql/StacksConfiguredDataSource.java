@@ -9,9 +9,16 @@ import java.util.Properties;
 import static java.lang.String.format;
 
 public final class StacksConfiguredDataSource {
+
+    public static final int DEFAULT_MAX_POOLSIZE = 15;
+
     private StacksConfiguredDataSource() { /* prevent instantiation */ }
 
     public static PooledDataSource pooledMasterDb(Properties properties, String configPrefix) {
+        return pooledMasterDb(properties, configPrefix, DEFAULT_MAX_POOLSIZE);
+    }
+
+    public static PooledDataSource pooledMasterDb(Properties properties, String configPrefix, int maxPoolSize) {
         String prefix = configPrefix;
 
         if (properties.getProperty(prefix + "hostname") == null) {
@@ -27,7 +34,8 @@ public final class StacksConfiguredDataSource {
                 properties.getProperty(prefix + "username"),
                 properties.getProperty(prefix + "password"),
                 properties.getProperty(prefix + "database"),
-                properties.getProperty(prefix + "driver")
+                properties.getProperty(prefix + "driver"),
+                maxPoolSize
         );
     }
 
@@ -47,7 +55,8 @@ public final class StacksConfiguredDataSource {
                 properties.getProperty(prefix + "username"),
                 properties.getProperty(prefix + "password"),
                 properties.getProperty(prefix + "database"),
-                properties.getProperty(prefix + "driver")
+                properties.getProperty(prefix + "driver"),
+                DEFAULT_MAX_POOLSIZE
         );
     }
 
@@ -58,7 +67,8 @@ public final class StacksConfiguredDataSource {
                 config.getString("username"),
                 config.getString("password"),
                 config.getString("database"),
-                config.getString("driver")
+                config.getString("driver"),
+                DEFAULT_MAX_POOLSIZE
         );
     }
 
@@ -69,11 +79,12 @@ public final class StacksConfiguredDataSource {
                 config.getString("username"),
                 config.getString("password"),
                 config.getString("database"),
-                config.getString("driver")
+                config.getString("driver"),
+                DEFAULT_MAX_POOLSIZE
         );
     }
 
-    private static PooledDataSource pooled(String hostname, int port, String username, String password, String database, String driver) {
+    private static PooledDataSource pooled(String hostname, int port, String username, String password, String database, String driver, int maxPoolsize) {
         ComboPooledDataSource dataSource = new ComboPooledDataSource();
         dataSource.setJdbcUrl(format("jdbc:mysql://%s:%d/%s?rewriteBatchedStatements=true",
                 hostname,
@@ -82,9 +93,10 @@ public final class StacksConfiguredDataSource {
         dataSource.setUser(username);
         dataSource.setPassword(password);
         dataSource.setIdleConnectionTestPeriod(60 * 5);
-        dataSource.setMinPoolSize(1);
-        dataSource.setInitialPoolSize(1);
+        dataSource.setMinPoolSize(3);
+        dataSource.setInitialPoolSize(3);
         dataSource.setAcquireIncrement(1);
+        dataSource.setMaxPoolSize(maxPoolsize);
 
         try {
             Class.forName(driver);
