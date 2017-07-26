@@ -40,6 +40,10 @@ public final class StacksConfiguredDataSource {
     }
 
     public static PooledDataSource pooledReadOnlyDb(Properties properties, String configPrefix) {
+        return pooledReadOnlyDb(properties, configPrefix, DEFAULT_MAX_POOLSIZE);
+    }
+
+    public static PooledDataSource pooledReadOnlyDb(Properties properties, String configPrefix, int maxPoolSize) {
         String prefix = configPrefix;
 
         if (properties.getProperty(prefix + "read_only_cluster") == null) {
@@ -56,11 +60,15 @@ public final class StacksConfiguredDataSource {
                 properties.getProperty(prefix + "password"),
                 properties.getProperty(prefix + "database"),
                 properties.getProperty(prefix + "driver"),
-                DEFAULT_MAX_POOLSIZE
+                maxPoolSize
         );
     }
 
     public static PooledDataSource pooledMasterDb(Config config) {
+        return pooledMasterDb(config, DEFAULT_MAX_POOLSIZE);
+    }
+
+    public static PooledDataSource pooledMasterDb(Config config, int maxPoolSize) {
         return pooled(
                 config.getString("hostname"),
                 config.getInt("port"),
@@ -68,11 +76,16 @@ public final class StacksConfiguredDataSource {
                 config.getString("password"),
                 config.getString("database"),
                 config.getString("driver"),
-                DEFAULT_MAX_POOLSIZE
+                maxPoolSize
         );
     }
 
+
     public static PooledDataSource pooledReadOnlyDb(Config config) {
+        return pooledReadOnlyDb(config, DEFAULT_MAX_POOLSIZE);
+    }
+
+    public static PooledDataSource pooledReadOnlyDb(Config config, int maxPoolSize) {
         return pooled(
                 config.getString("read_only_cluster"),
                 config.getInt("port"),
@@ -80,7 +93,7 @@ public final class StacksConfiguredDataSource {
                 config.getString("password"),
                 config.getString("database"),
                 config.getString("driver"),
-                DEFAULT_MAX_POOLSIZE
+                maxPoolSize
         );
     }
 
