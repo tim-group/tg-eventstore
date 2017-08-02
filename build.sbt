@@ -1,5 +1,3 @@
-import com.timgroup.sbtjavaversion.SbtJavaVersionKeys._
-
 version in ThisBuild := "0.0." + sys.env.getOrElse("BUILD_NUMBER", "0-SNAPSHOT")
 
 organization in ThisBuild := "com.timgroup"
@@ -7,8 +5,6 @@ organization in ThisBuild := "com.timgroup"
 scalaVersion in ThisBuild := "2.11.8"
 
 crossScalaVersions := Seq("2.11.8", "2.12.1")
-
-javaVersion in ThisBuild := "1.8"
 
 javacOptions += "-g"
 javacOptions += "-parameters"
