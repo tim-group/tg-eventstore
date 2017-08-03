@@ -1,6 +1,8 @@
 package com.timgroup.eventsubscription;
 
 import java.util.Arrays;
+import java.util.Objects;
+import java.util.function.Consumer;
 
 import com.timgroup.eventstore.api.Position;
 import org.joda.time.DateTime;
@@ -15,5 +17,21 @@ public interface EventHandler<T> {
     @SafeVarargs
     static <E> EventHandler<E> concat(EventHandler<E>... handlers) {
         return new BroadcastingEventHandler<>(Arrays.asList(handlers));
+    }
+
+    static <E> EventHandler<E> ofConsumer(Consumer<? super E> consumer) {
+        Objects.requireNonNull(consumer);
+
+        return new EventHandler<E>() {
+            @Override
+            public void apply(E deserialized) {
+                consumer.accept(deserialized);
+            }
+
+            @Override
+            public String toString() {
+                return consumer.toString();
+            }
+        };
     }
 }
