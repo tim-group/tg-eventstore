@@ -1,5 +1,17 @@
 package com.timgroup.eventsubscription;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Stream;
+
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.ExceptionHandler;
 import com.lmax.disruptor.dsl.Disruptor;
@@ -18,22 +30,8 @@ import com.timgroup.tucker.info.Health;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Clock;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-import java.util.stream.Stream;
-
 import static com.lmax.disruptor.dsl.ProducerType.SINGLE;
-import static java.util.Collections.emptyList;
 import static java.util.Collections.unmodifiableCollection;
-import static java.util.Collections.unmodifiableList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class EventSubscription<T> {
@@ -51,7 +49,7 @@ public class EventSubscription<T> {
             EventCategoryReader eventReader,
             String category,
             Deserializer<T> deserializer,
-            List<EventHandler<T>> eventHandlers,
+            EventHandler<T> eventHandler,
             Clock clock,
             int bufferSize,
             Duration runFrequency,
@@ -59,14 +57,14 @@ public class EventSubscription<T> {
             Duration maxInitialReplayDuration,
             List<SubscriptionListener> listeners
     ) {
-        this(name, pos -> eventReader.readCategoryForwards(category, pos), deserializer, eventHandlers, clock, bufferSize, runFrequency, startingPosition, maxInitialReplayDuration, listeners, new Slf4jEventSink());
+        this(name, pos -> eventReader.readCategoryForwards(category, pos), deserializer, eventHandler, clock, bufferSize, runFrequency, startingPosition, maxInitialReplayDuration, listeners, new Slf4jEventSink());
     }
 
     public EventSubscription(
             String name,
             EventReader eventReader,
             Deserializer<T> deserializer,
-            List<EventHandler<T>> eventHandlers,
+            EventHandler<T> eventHandler,
             Clock clock,
             int bufferSize,
             Duration runFrequency,
@@ -74,14 +72,14 @@ public class EventSubscription<T> {
             Duration maxInitialReplayDuration,
             List<SubscriptionListener> listeners
     ) {
-        this(name, eventReader::readAllForwards, deserializer, eventHandlers, clock, bufferSize, runFrequency, startingPosition, maxInitialReplayDuration, listeners, new Slf4jEventSink());
+        this(name, eventReader::readAllForwards, deserializer, eventHandler, clock, bufferSize, runFrequency, startingPosition, maxInitialReplayDuration, listeners, new Slf4jEventSink());
     }
 
     EventSubscription(
                 String name,
                 Function<Position, Stream<ResolvedEvent>> eventSource,
                 Deserializer<T> deserializer,
-                List<EventHandler<T>> eventHandlers,
+                EventHandler<T> eventHandler,
                 Clock clock,
                 int bufferSize,
                 Duration runFrequency,
@@ -98,17 +96,6 @@ public class EventSubscription<T> {
         subListeners.add(subscriptionStatus);
         subListeners.addAll(listeners);
         SubscriptionListenerAdapter processorListener = new SubscriptionListenerAdapter(startingPosition, subListeners);
-
-        EventHandler<T> eventHandler;
-        if (eventHandlers.size() == 1) {
-            eventHandler = eventHandlers.iterator().next();
-        }
-        else if (eventHandlers.isEmpty()) {
-            eventHandler = new BroadcastingEventHandler<>(emptyList());
-        }
-        else {
-            eventHandler = new BroadcastingEventHandler<>(unmodifiableList(new ArrayList<>(eventHandlers)));
-        }
 
         chaserExecutor = Executors.newScheduledThreadPool(1, new NamedThreadFactory("EventChaser-" + name));
         eventHandlerExecutor = Executors.newCachedThreadPool(new NamedThreadFactory("EventSubscription-" + name));

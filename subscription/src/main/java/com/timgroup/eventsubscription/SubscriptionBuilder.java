@@ -1,13 +1,5 @@
 package com.timgroup.eventsubscription;
 
-import com.timgroup.eventstore.api.EventCategoryReader;
-import com.timgroup.eventstore.api.EventReader;
-import com.timgroup.eventstore.api.Position;
-import com.timgroup.eventstore.api.ResolvedEvent;
-import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
-import com.timgroup.structuredevents.EventSink;
-import com.timgroup.structuredevents.Slf4jEventSink;
-
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -17,6 +9,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
+
+import com.timgroup.eventstore.api.EventCategoryReader;
+import com.timgroup.eventstore.api.EventReader;
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
+import com.timgroup.structuredevents.EventSink;
+import com.timgroup.structuredevents.Slf4jEventSink;
 
 import static java.util.Objects.requireNonNull;
 
@@ -118,11 +118,22 @@ public class SubscriptionBuilder<T> {
         requireNonNull(startingPosition);
         requireNonNull(deserializer);
 
+        EventHandler<T> eventHandler;
+        if (handlers.isEmpty()) {
+            eventHandler = EventHandler.ofConsumer(e -> {});
+        }
+        else if (handlers.size() == 1) {
+            eventHandler = handlers.iterator().next();
+        }
+        else {
+            eventHandler = new BroadcastingEventHandler<>(handlers);
+        }
+
         return new EventSubscription<T>(
                 name,
                 reader,
                 deserializer,
-                handlers,
+                eventHandler,
                 clock,
                 bufferSize,
                 runFrequency,

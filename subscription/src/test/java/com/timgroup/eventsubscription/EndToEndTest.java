@@ -1,5 +1,20 @@
 package com.timgroup.eventsubscription;
 
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
+import java.util.function.BinaryOperator;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collector;
+
 import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.NewEvent;
@@ -23,21 +38,6 @@ import org.junit.Test;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
 
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
-import java.util.function.BinaryOperator;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collector;
-
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static com.timgroup.eventstore.api.StreamId.streamId;
 import static com.timgroup.tucker.info.Health.State.healthy;
@@ -47,7 +47,6 @@ import static com.timgroup.tucker.info.Status.OK;
 import static java.time.Duration.ofMillis;
 import static java.time.Duration.ofSeconds;
 import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -192,7 +191,7 @@ public class EndToEndTest {
         store.write(streamId("alpha", "2"), Arrays.asList(event3));
         @SuppressWarnings("unchecked")
         EventHandler<DeserialisedEvent> eventHandler = Mockito.mock(EventHandler.class);
-        subscription = new EventSubscription<>("test", store, "alpha", EndToEndTest::deserialize, singletonList(eventHandler), clock, 1024, ofMillis(1L), store.emptyStorePosition(), ofSeconds(320), emptyList());
+        subscription = new EventSubscription<>("test", store, "alpha", EndToEndTest::deserialize, eventHandler, clock, 1024, ofMillis(1L), store.emptyStorePosition(), ofSeconds(320), emptyList());
         subscription.start();
 
         eventually(() -> {
