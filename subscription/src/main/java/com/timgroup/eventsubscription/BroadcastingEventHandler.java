@@ -1,20 +1,20 @@
 package com.timgroup.eventsubscription;
 
+import java.util.List;
+
 import com.timgroup.eventstore.api.Position;
 import org.joda.time.DateTime;
 
-import java.util.List;
-
 public class BroadcastingEventHandler<T> implements EventHandler<T> {
-    private final List<EventHandler<T>> handlers;
+    private final List<EventHandler<? super T>> handlers;
 
-    public BroadcastingEventHandler(List<EventHandler<T>> handlers) {
+    public BroadcastingEventHandler(List<EventHandler<? super T>> handlers) {
         this.handlers = handlers;
     }
 
     @Override
     public void apply(Position position, DateTime timestamp, T deserialized, boolean endOfBatch) {
-        for (EventHandler<T> handler : handlers) {
+        for (EventHandler<? super T> handler : handlers) {
             handler.apply(position, timestamp, deserialized, endOfBatch);
         }
     }

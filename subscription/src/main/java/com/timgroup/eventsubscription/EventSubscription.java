@@ -48,8 +48,8 @@ public class EventSubscription<T> {
             String name,
             EventCategoryReader eventReader,
             String category,
-            Deserializer<T> deserializer,
-            EventHandler<T> eventHandler,
+            Deserializer<? extends T> deserializer,
+            EventHandler<? super T> eventHandler,
             Clock clock,
             int bufferSize,
             Duration runFrequency,
@@ -63,8 +63,8 @@ public class EventSubscription<T> {
     public EventSubscription(
             String name,
             EventReader eventReader,
-            Deserializer<T> deserializer,
-            EventHandler<T> eventHandler,
+            Deserializer<? extends T> deserializer,
+            EventHandler<? super T> eventHandler,
             Clock clock,
             int bufferSize,
             Duration runFrequency,
@@ -78,8 +78,8 @@ public class EventSubscription<T> {
     EventSubscription(
                 String name,
                 Function<Position, Stream<ResolvedEvent>> eventSource,
-                Deserializer<T> deserializer,
-                EventHandler<T> eventHandler,
+                Deserializer<? extends T> deserializer,
+                EventHandler<? super T> eventHandler,
                 Clock clock,
                 int bufferSize,
                 Duration runFrequency,
@@ -128,7 +128,7 @@ public class EventSubscription<T> {
         disruptor.handleEventsWithWorkerPool(
                 new DisruptorDeserializationAdapter<>(deserializer, processorListener),
                 new DisruptorDeserializationAdapter<>(deserializer, processorListener)
-        ).then(new DisruptorEventHandlerAdapter(eventHandler, processorListener));
+        ).then(new DisruptorEventHandlerAdapter<>(eventHandler, processorListener));
 
         ChaserListener chaserListener = new BroadcastingChaserListener(chaserHealth, processorListener);
         EventContainer.Translator<T> translator = new EventContainer.Translator<>();

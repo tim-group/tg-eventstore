@@ -26,7 +26,7 @@ public class SubscriptionBuilder<T> {
     private Duration runFrequency = Duration.ofSeconds(1);
     private Duration maxInitialReplayDuration = Duration.ofSeconds(1);
     private int bufferSize = 1024;
-    private List<EventHandler<T>> handlers = Collections.emptyList();
+    private List<EventHandler<? super T>> handlers = Collections.emptyList();
     private List<SubscriptionListener> listeners = Collections.emptyList();
 
     private Function<Position, Stream<ResolvedEvent>> reader = null;
@@ -118,7 +118,7 @@ public class SubscriptionBuilder<T> {
         requireNonNull(startingPosition);
         requireNonNull(deserializer);
 
-        EventHandler<T> eventHandler;
+        EventHandler<? super T> eventHandler;
         if (handlers.isEmpty()) {
             eventHandler = EventHandler.ofConsumer(e -> {});
         }
@@ -129,7 +129,7 @@ public class SubscriptionBuilder<T> {
             eventHandler = new BroadcastingEventHandler<>(handlers);
         }
 
-        return new EventSubscription<T>(
+        return new EventSubscription<>(
                 name,
                 reader,
                 deserializer,

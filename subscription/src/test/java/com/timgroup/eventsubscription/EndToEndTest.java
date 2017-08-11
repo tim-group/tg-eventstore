@@ -60,7 +60,6 @@ public class EndToEndTest {
     private final JavaInMemoryEventStore store = new JavaInMemoryEventStore(clock);
 
     private final LocalEventSink eventSink = new LocalEventSink();
-    private final Deserializer<DeserialisedEvent> deserializer = event -> deserialize(event);
 
     private EventSubscription<DeserialisedEvent> subscription;
 
@@ -74,7 +73,7 @@ public class EndToEndTest {
     public void reports_ill_during_initial_replay() throws Exception {
         BlockingEventHandler eventProcessing = new BlockingEventHandler();
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
-        subscription = subscription(deserializer, eventProcessing);
+        subscription = subscription(EndToEndTest::deserialize, eventProcessing);
         subscription.start();
 
         eventually(() -> {
@@ -100,7 +99,7 @@ public class EndToEndTest {
     @Test
     public void reports_warning_if_event_store_was_not_polled_recently() throws Exception {
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
-        subscription = subscription(deserializer, failingHandler(() -> new RuntimeException("failure")));
+        subscription = subscription(EndToEndTest::deserialize, failingHandler(() -> new RuntimeException("failure")));
         subscription.start();
 
         eventually(() -> {
@@ -113,7 +112,7 @@ public class EndToEndTest {
     public void does_not_continue_processing_events_if_event_processing_failed_on_a_previous_event() throws Exception {
         store.write(stream, Arrays.asList(newEvent(), newEvent()));
         AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = subscription(deserializer, handler(e -> {
+        subscription = subscription(EndToEndTest::deserialize, handler(e -> {
             eventsProcessed.incrementAndGet();
             if (e.event.eventNumber() == 0) {
                 throw new RuntimeException("failure");
@@ -161,7 +160,7 @@ public class EndToEndTest {
         store.write(stream, Arrays.asList(event1, event2));
         @SuppressWarnings("unchecked")
         EventHandler<DeserialisedEvent> eventHandler = Mockito.mock(EventHandler.class);
-        subscription = subscription(deserializer, eventHandler);
+        subscription = subscription(EndToEndTest::deserialize, eventHandler);
         subscription.start();
 
         eventually(() -> {
@@ -216,7 +215,7 @@ public class EndToEndTest {
     @Test
     public void starts_up_healthy_when_there_are_no_events() throws Exception {
         AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = subscription(deserializer, handler(e -> {eventsProcessed.incrementAndGet(); }));
+        subscription = subscription(EndToEndTest::deserialize, handler(e -> {eventsProcessed.incrementAndGet(); }));
         subscription.start();
 
         eventually(() -> {
@@ -230,7 +229,7 @@ public class EndToEndTest {
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
         Position lastPosition = store.readAllForwards().map(ResolvedEvent::position).collect(last()).get();
         AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = subscription(deserializer, handler(e -> eventsProcessed.incrementAndGet()), lastPosition);
+        subscription = subscription(EndToEndTest::deserialize, handler(e -> eventsProcessed.incrementAndGet()), lastPosition);
         subscription.start();
 
         eventually(() -> {

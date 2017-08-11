@@ -3,10 +3,10 @@ package com.timgroup.eventsubscription;
 import com.lmax.disruptor.WorkHandler;
 
 public class DisruptorDeserializationAdapter<T> implements WorkHandler<EventContainer<T>> {
-    private final Deserializer<T> deserializer;
+    private final Deserializer<? extends T> deserializer;
     private final EventProcessorListener processorListener;
 
-    public DisruptorDeserializationAdapter(Deserializer<T> deserializer, EventProcessorListener processorListener) {
+    public DisruptorDeserializationAdapter(Deserializer<? extends T> deserializer, EventProcessorListener processorListener) {
         this.deserializer = deserializer;
         this.processorListener = processorListener;
     }

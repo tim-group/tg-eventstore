@@ -1,14 +1,14 @@
 package com.timgroup.eventsubscription;
 
-import org.joda.time.DateTime;
-
 import java.time.Instant;
 
+import org.joda.time.DateTime;
+
 public class DisruptorEventHandlerAdapter<T> implements com.lmax.disruptor.EventHandler<EventContainer<T>> {
-    private final EventHandler<T> eventHandler;
+    private final EventHandler<? super T> eventHandler;
     private final EventProcessorListener processorListener;
 
-    public DisruptorEventHandlerAdapter(EventHandler<T> eventHandler, EventProcessorListener processorListener) {
+    public DisruptorEventHandlerAdapter(EventHandler<? super T> eventHandler, EventProcessorListener processorListener) {
         this.eventHandler = eventHandler;
         this.processorListener = processorListener;
     }
