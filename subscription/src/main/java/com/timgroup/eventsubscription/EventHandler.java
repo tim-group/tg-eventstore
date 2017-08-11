@@ -34,4 +34,8 @@ public interface EventHandler<T> {
             }
         };
     }
+
+    static <E> EventHandler<E> discard() {
+        return ofConsumer(e -> {});
+    }
 }
