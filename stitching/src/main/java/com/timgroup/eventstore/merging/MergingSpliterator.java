@@ -6,11 +6,9 @@ import java.util.Spliterator;
 import java.util.function.Consumer;
 
 import com.google.common.collect.PeekingIterator;
-import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
 import static com.google.common.collect.Iterators.peekingIterator;
-import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static java.lang.Long.MAX_VALUE;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
@@ -39,18 +37,7 @@ final class MergingSpliterator<T extends Comparable<T>> implements Spliterator<R
         ResolvedEvent nextInputEvent = iterator.next();
         currentPosition = currentPosition.withNextPosition(iterator.index, nextInputEvent.position());
 
-        EventRecord record = nextInputEvent.eventRecord();
-        consumer.accept(new ResolvedEvent(
-                currentPosition,
-                eventRecord(
-                        record.timestamp(),
-                        record.streamId(),
-                        record.eventNumber(),
-                        record.eventType(),
-                        record.data(),
-                        record.metadata()
-                )
-        ));
+        consumer.accept(nextInputEvent.eventRecord().toResolvedEvent(currentPosition));
 
         return true;
     }
