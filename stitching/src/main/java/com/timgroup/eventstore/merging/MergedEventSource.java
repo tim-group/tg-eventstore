@@ -1,26 +1,25 @@
 package com.timgroup.eventstore.merging;
 
-import com.timgroup.eventstore.api.EventCategoryReader;
-import com.timgroup.eventstore.api.EventReader;
-import com.timgroup.eventstore.api.EventSource;
-import com.timgroup.eventstore.api.EventStreamReader;
-import com.timgroup.eventstore.api.EventStreamWriter;
-import com.timgroup.eventstore.api.PositionCodec;
-import com.timgroup.eventstore.merging.MergedEventReaderPosition.MergedEventReaderPositionCodec;
-import com.timgroup.tucker.info.Component;
-
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.stream.Stream;
 
+import com.timgroup.eventstore.api.EventCategoryReader;
+import com.timgroup.eventstore.api.EventReader;
+import com.timgroup.eventstore.api.EventSource;
+import com.timgroup.eventstore.api.EventStreamReader;
+import com.timgroup.eventstore.api.EventStreamWriter;
+import com.timgroup.eventstore.api.PositionCodec;
+import com.timgroup.tucker.info.Component;
+
 import static com.google.common.base.Preconditions.checkArgument;
 
 public final class MergedEventSource<T extends Comparable<T>> implements EventSource {
 
     private final MergedEventReader<T> eventReader;
-    private final MergedEventReaderPositionCodec mergedEventReaderPositionCodec;
+    private final PositionCodec mergedEventReaderPositionCodec;
 
     @SuppressWarnings("WeakerAccess")
     public MergedEventSource(Clock clock, MergingStrategy<T> mergingStrategy, NamedReaderWithCodec... namedReaders) {
@@ -30,7 +29,7 @@ public final class MergedEventSource<T extends Comparable<T>> implements EventSo
         );
 
         this.eventReader = new MergedEventReader<>(clock, mergingStrategy, namedReaders);
-        this.mergedEventReaderPositionCodec = new MergedEventReaderPositionCodec(namedReaders);
+        this.mergedEventReaderPositionCodec = MergedEventReaderPosition.codecFor(namedReaders);
     }
 
     public static MergedEventSource<Instant> effectiveTimestampMergedEventSource(Clock clock, NamedReaderWithCodec... namedReaders) {

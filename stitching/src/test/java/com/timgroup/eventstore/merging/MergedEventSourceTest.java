@@ -27,7 +27,9 @@ import static java.util.Collections.singleton;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThan;
 
 public final class MergedEventSourceTest {
 
@@ -342,6 +344,32 @@ public final class MergedEventSourceTest {
         } catch (IllegalArgumentException e) {
             assertThat(e.getMessage(), equalTo("Bad position, containing unexpected keys {\"a\":\"0\",\"b\":\"0\"}"));
         }
+    }
+
+    @Test public void
+    position_ordering() throws Exception {
+        JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
+        JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
+        MergedEventSource<Integer> eventSource1 = MergedEventSource.streamOrderMergedEventSource(
+                clock,
+                new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC),
+                new NamedReaderWithCodec("b", input2, JavaInMemoryEventStore.CODEC)
+        );
+
+        Position emptyStorePosition = eventSource1.readAll().emptyStorePosition();
+        inputEventArrived(input1, streamId("all", "all"), "CoolenessAdded");
+        Position a1 = eventSource1.readAll().readAllForwards().map(ResolvedEvent::position).reduce(emptyStorePosition, (cur, next) -> next);
+        clock.bump(Duration.ofMinutes(1));
+        inputEventArrived(input2, streamId("all", "all"), "MoreCoolenessAdded");
+        Position b1 = eventSource1.readAll().readAllForwards().map(ResolvedEvent::position).reduce(emptyStorePosition, (cur, next) -> next);
+
+        assertThat(eventSource1.positionCodec().comparePositions(emptyStorePosition, emptyStorePosition), equalTo(0));
+        assertThat(eventSource1.positionCodec().comparePositions(emptyStorePosition, a1), lessThan(0));
+        assertThat(eventSource1.positionCodec().comparePositions(a1, emptyStorePosition), greaterThan(0));
+        assertThat(eventSource1.positionCodec().comparePositions(b1, a1), greaterThan(0));
+        assertThat(eventSource1.positionCodec().comparePositions(b1, emptyStorePosition), greaterThan(0));
+        assertThat(a1.toString(), equalTo("a:1;b:0"));
+        assertThat(b1.toString(), equalTo("a:1;b:1"));
     }
 
     private static void inputEventArrived(EventStreamWriter input, String eventType) {
