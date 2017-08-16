@@ -28,4 +28,12 @@ public class EventContainer<T> {
             eventContainer.event = currentEvent;
         }
     }
+
+    @Override
+    public String toString() {
+        return "EventContainer{" +
+                "event=" + event +
+                ", deserializedEvent=" + deserializedEvent +
+                '}';
+    }
 }
