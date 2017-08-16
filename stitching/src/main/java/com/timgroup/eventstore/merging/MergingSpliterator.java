@@ -1,14 +1,13 @@
 package com.timgroup.eventstore.merging;
 
+import java.util.Iterator;
+import java.util.List;
+import java.util.Spliterator;
+import java.util.function.Consumer;
+
 import com.google.common.collect.PeekingIterator;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.ResolvedEvent;
-
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
-import java.util.Spliterator;
-import java.util.function.Consumer;
 
 import static com.google.common.collect.Iterators.peekingIterator;
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
@@ -31,32 +30,34 @@ final class MergingSpliterator<T extends Comparable<T>> implements Spliterator<R
 
     @Override
     public boolean tryAdvance(Consumer<? super ResolvedEvent> consumer) {
-        Optional<IdentifiedPeekingResolvedEventIterator> iteratorWhoseHeadIsNext = getIteratorWhoseHeadIsNext();
+        IdentifiedPeekingResolvedEventIterator iterator = getIteratorWhoseHeadIsNext();
 
-        iteratorWhoseHeadIsNext.ifPresent(iterator -> {
-            ResolvedEvent nextInputEvent = iterator.next();
-            currentPosition = currentPosition.withNextPosition(iterator.index, nextInputEvent.position());
+        if (iterator == null) {
+            return false;
+        }
 
-            EventRecord record = nextInputEvent.eventRecord();
-            consumer.accept(new ResolvedEvent(
-                    currentPosition,
-                    eventRecord(
-                            record.timestamp(),
-                            record.streamId(),
-                            record.eventNumber(),
-                            record.eventType(),
-                            record.data(),
-                            record.metadata()
-                    )
-            ));
-        });
+        ResolvedEvent nextInputEvent = iterator.next();
+        currentPosition = currentPosition.withNextPosition(iterator.index, nextInputEvent.position());
 
-        return iteratorWhoseHeadIsNext.isPresent();
+        EventRecord record = nextInputEvent.eventRecord();
+        consumer.accept(new ResolvedEvent(
+                currentPosition,
+                eventRecord(
+                        record.timestamp(),
+                        record.streamId(),
+                        record.eventNumber(),
+                        record.eventType(),
+                        record.data(),
+                        record.metadata()
+                )
+        ));
+
+        return true;
     }
 
-    private Optional<IdentifiedPeekingResolvedEventIterator> getIteratorWhoseHeadIsNext() {
-        Optional<IdentifiedPeekingResolvedEventIterator> iteratorWhoseHeadIsNext = Optional.empty();
-        Optional<T> iteratorWhoseHeadIsNextOrderingValue = Optional.empty();
+    private IdentifiedPeekingResolvedEventIterator getIteratorWhoseHeadIsNext() {
+        IdentifiedPeekingResolvedEventIterator iteratorWhoseHeadIsNext = null;
+        T iteratorWhoseHeadIsNextOrderingValue = null;
 
         Iterator<IdentifiedPeekingResolvedEventIterator> streams = underlying.iterator();
         while (streams.hasNext()) {
@@ -64,9 +65,9 @@ final class MergingSpliterator<T extends Comparable<T>> implements Spliterator<R
 
             if (candidate.hasNext()) {
                 T candidateOrderingValue = mergingStrategy.toComparable(candidate.peek());
-                if (!iteratorWhoseHeadIsNext.isPresent() || candidateOrderingValue.compareTo(iteratorWhoseHeadIsNextOrderingValue.get()) < 0) {
-                    iteratorWhoseHeadIsNext = Optional.of(candidate);
-                    iteratorWhoseHeadIsNextOrderingValue = Optional.of(candidateOrderingValue);
+                if (iteratorWhoseHeadIsNext == null || candidateOrderingValue.compareTo(iteratorWhoseHeadIsNextOrderingValue) < 0) {
+                    iteratorWhoseHeadIsNext = candidate;
+                    iteratorWhoseHeadIsNextOrderingValue = candidateOrderingValue;
                 }
             } else {
                 streams.remove();
