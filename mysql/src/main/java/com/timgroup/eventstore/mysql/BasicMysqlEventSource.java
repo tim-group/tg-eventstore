@@ -104,11 +104,11 @@ public class BasicMysqlEventSource implements EventSource {
         return new PooledMysqlEventSource(StacksConfiguredDataSource.pooledReadOnlyDb(properties, configPrefix), tableName, batchSize, name);
     }
 
-    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(PooledDataSource dataSource, String configPrefix, String tableName, String name) {
+    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(PooledDataSource dataSource, String tableName, String name) {
         return new PooledMysqlEventSource(dataSource, tableName, DefaultBatchSize, name);
     }
 
-    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(PooledDataSource dataSource, String configPrefix, String tableName, String name, int batchSize) {
+    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(PooledDataSource dataSource, String tableName, String name, int batchSize) {
         return new PooledMysqlEventSource(dataSource, tableName, batchSize, name);
     }
 
