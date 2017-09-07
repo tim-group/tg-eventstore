@@ -84,6 +84,10 @@ public class BasicMysqlEventSource implements EventSource {
         return pooledMasterDbEventSource(StacksConfiguredDataSource.pooledMasterDb(properties, configPrefix), tableName, name, batchSize);
     }
 
+    public static PooledMysqlEventSource pooledMasterDbEventSource(PooledDataSource dataSource, String tableName, String name) {
+        return pooledMasterDbEventSource(dataSource, tableName, name, DefaultBatchSize);
+    }
+
     public static PooledMysqlEventSource pooledReadOnlyDbEventSource(Config config, String tableName, String name) {
         return pooledReadOnlyDbEventSource(config, tableName, name, DefaultBatchSize);
     }
@@ -100,8 +104,12 @@ public class BasicMysqlEventSource implements EventSource {
         return new PooledMysqlEventSource(StacksConfiguredDataSource.pooledReadOnlyDb(properties, configPrefix), tableName, batchSize, name);
     }
 
-    public static PooledMysqlEventSource pooledMasterDbEventSource(PooledDataSource dataSource, String tableName, String name) {
-        return pooledMasterDbEventSource(dataSource, tableName, name, DefaultBatchSize);
+    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(PooledDataSource dataSource, String configPrefix, String tableName, String name) {
+        return new PooledMysqlEventSource(dataSource, tableName, DefaultBatchSize, name);
+    }
+
+    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(PooledDataSource dataSource, String configPrefix, String tableName, String name, int batchSize) {
+        return new PooledMysqlEventSource(dataSource, tableName, batchSize, name);
     }
 
     public static PooledMysqlEventSource pooledMasterDbEventSource(PooledDataSource dataSource, String tableName, String name, int batchSize) {
