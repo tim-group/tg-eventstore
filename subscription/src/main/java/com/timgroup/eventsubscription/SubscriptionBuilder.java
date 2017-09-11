@@ -1,5 +1,13 @@
 package com.timgroup.eventsubscription;
 
+import com.timgroup.eventstore.api.EventCategoryReader;
+import com.timgroup.eventstore.api.EventReader;
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
+import com.timgroup.structuredevents.EventSink;
+import com.timgroup.structuredevents.Slf4jEventSink;
+
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -9,14 +17,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
-
-import com.timgroup.eventstore.api.EventCategoryReader;
-import com.timgroup.eventstore.api.EventReader;
-import com.timgroup.eventstore.api.Position;
-import com.timgroup.eventstore.api.ResolvedEvent;
-import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
-import com.timgroup.structuredevents.EventSink;
-import com.timgroup.structuredevents.Slf4jEventSink;
 
 import static java.util.Objects.requireNonNull;
 
@@ -82,7 +82,7 @@ public class SubscriptionBuilder<T> {
     }
 
     public SubscriptionBuilder<T> readingFrom(EventCategoryReader categoryReader, String category, Position startingPosition) {
-        this.reader = pos -> categoryReader.readCategoryForwards(category, startingPosition);
+        this.reader = pos -> categoryReader.readCategoryForwards(category, pos);
         this.startingPosition = startingPosition;
         return this;
     }
