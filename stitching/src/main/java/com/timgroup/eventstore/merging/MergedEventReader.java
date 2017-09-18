@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.merging;
 
+import com.google.common.collect.AbstractIterator;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
@@ -12,7 +13,6 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static com.google.common.collect.ImmutableList.copyOf;
-import static com.google.common.collect.Iterators.filter;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
@@ -36,14 +36,27 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
         List<Stream<ResolvedEvent>> data = range(0, readers.size())
                 .mapToObj(i -> readers.get(i).reader.readAllForwards(mergedPosition.inputPositions[i])).collect(toList());
 
-        @SuppressWarnings("ConstantConditions")
-        List<Iterator<ResolvedEvent>> snappedData = data.stream().map(eventStream ->
-                filter(eventStream.iterator(), er ->
-                        !er.eventRecord().timestamp().isAfter(snapTimestamp)
-                )).collect(toList());
+        List<Iterator<ResolvedEvent>> snappedData = data.stream()
+                .map(eventStream -> takeWhileBefore(snapTimestamp, eventStream.iterator()))
+                .collect(toList());
 
         return StreamSupport.stream(new MergingSpliterator<>(mergingStrategy, mergedPosition, snappedData), false)
                 .onClose(() -> data.forEach(Stream::close));
+    }
+
+    private static Iterator<ResolvedEvent> takeWhileBefore(Instant snapTimestamp, Iterator<ResolvedEvent> eventStream) {
+        return new AbstractIterator<ResolvedEvent>() {
+            @Override
+            protected ResolvedEvent computeNext() {
+                if (eventStream.hasNext()) {
+                    ResolvedEvent event = eventStream.next();
+                    if (!event.eventRecord().timestamp().isAfter(snapTimestamp)) {
+                        return event;
+                    }
+                }
+                return endOfData();
+            }
+        };
     }
 
     @Override

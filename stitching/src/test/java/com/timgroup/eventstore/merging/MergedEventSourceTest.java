@@ -1,12 +1,6 @@
 package com.timgroup.eventstore.merging;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.util.Iterator;
-import java.util.List;
-import java.util.stream.Collectors;
-
+import com.google.common.collect.ImmutableList;
 import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventRecord;
@@ -19,10 +13,20 @@ import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.Iterator;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static com.timgroup.eventstore.api.EventRecordMatcher.anEventRecord;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.eventstore.api.StreamId.streamId;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.time.Duration.ofSeconds;
 import static java.util.Collections.singleton;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -75,6 +79,31 @@ public final class MergedEventSourceTest {
                         new byte[0]
                 )
         ));
+    }
+
+    @Test public void
+    does_not_skip_newer_events_for_out_of_order_older_events_when_applying_a_delay() throws Exception {
+        Instant event1Instant = clock.instant();
+        Instant event2Instant = event1Instant.minusSeconds(1L);
+
+        EventReader input = new EventReader() {
+            @Override
+            public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
+                return ImmutableList.of(
+                        new ResolvedEvent(new Position() { }, eventRecord(event1Instant, streamId("a", "1"), 1L, "X", new byte[0], new byte[0])),
+                        new ResolvedEvent(new Position() { }, eventRecord(event2Instant, streamId("b", "1"), 1L, "X", new byte[0], new byte[0]))
+                ).stream();
+            }
+
+            @Override public Position emptyStorePosition() { return null; }
+        };
+
+        EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(clock, ofSeconds(1L), new NamedReaderWithCodec("a", input, JavaInMemoryEventStore.CODEC)).readAll();
+
+        assertThat(outputReader.readAllForwards().count(), is(0L));
+
+        clock.bump(ofSeconds(1L));
+        assertThat(outputReader.readAllForwards().count(), is(2L));
     }
 
     @Test public void
