@@ -91,3 +91,15 @@ val eventstore_subscription = Project(id = "eventstore-subscription", base = fil
       "com.youdevise" % "Matchers" % autobump % "test"
 ))
   .settings(overridePublishSettings)
+
+val eventstore_diffing = Project(id = "eventstore-diffing", base = file("diffing"))
+  .dependsOn(
+    eventstore_api % "compile->compile; test->test",
+    eventstore_memory % "test"
+  )
+  .settings(compatibleScalaTestDependency)
+  .settings(overridePublishSettings)
+  .settings(libraryDependencies ++= Seq(
+      "com.google.guava" % "guava" % "19.0"
+  )
+)
