@@ -1,13 +1,5 @@
 package com.timgroup.eventsubscription;
 
-import com.timgroup.eventstore.api.EventCategoryReader;
-import com.timgroup.eventstore.api.EventReader;
-import com.timgroup.eventstore.api.Position;
-import com.timgroup.eventstore.api.ResolvedEvent;
-import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
-import com.timgroup.structuredevents.EventSink;
-import com.timgroup.structuredevents.Slf4jEventSink;
-
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -17,6 +9,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
+
+import com.timgroup.eventstore.api.EventCategoryReader;
+import com.timgroup.eventstore.api.EventReader;
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
+import com.timgroup.structuredevents.EventSink;
+import com.timgroup.structuredevents.Slf4jEventSink;
 
 import static java.util.Objects.requireNonNull;
 
@@ -31,7 +31,7 @@ public class SubscriptionBuilder<T> {
 
     private Function<Position, Stream<ResolvedEvent>> reader = null;
     private Position startingPosition = null;
-    private Deserializer<T> deserializer = null;
+    private Deserializer<? extends T> deserializer = null;
     private EventSink eventSink = new Slf4jEventSink();
 
     private SubscriptionBuilder(String name) {
@@ -39,10 +39,10 @@ public class SubscriptionBuilder<T> {
     }
 
     public static <T> SubscriptionBuilder<T> eventSubscription(String name) {
-        return new SubscriptionBuilder<T>(name);
+        return new SubscriptionBuilder<>(name);
     }
 
-    public SubscriptionBuilder<T> deserializingUsing(Deserializer<T> deserializer) {
+    public SubscriptionBuilder<T> deserializingUsing(Deserializer<? extends T> deserializer) {
         this.deserializer = deserializer;
         return this;
     }
