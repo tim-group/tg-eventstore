@@ -15,17 +15,17 @@ public final class EventStreamDiffer {
     }
 
     public void diff(Stream<ResolvedEvent> streamA, Stream<ResolvedEvent> streamB) {
-        PeekingIterator<ResolvedEvent> iteratorA = Iterators.peekingIterator(streamA.iterator());
-        PeekingIterator<ResolvedEvent> iteratorB = Iterators.peekingIterator(streamB.iterator());
+        PeekingIterator<DiffEvent> iteratorA = Iterators.peekingIterator(streamA.map(DiffEvent::from).iterator());
+        PeekingIterator<DiffEvent> iteratorB = Iterators.peekingIterator(streamB.map(DiffEvent::from).iterator());
 
         while (iteratorA.hasNext() && iteratorB.hasNext()) {
-            DiffEvent diffEventA = DiffEvent.from(iteratorA.peek().eventRecord());
-            DiffEvent diffEventB = DiffEvent.from(iteratorB.peek().eventRecord());
+            DiffEvent diffEventA = iteratorA.peek();
+            DiffEvent diffEventB = iteratorB.peek();
 
             if (diffEventA.equals(diffEventB)) {
                 listener.onMatchingEvents(iteratorA.next(), iteratorB.next());
             } else if (diffEventA.equalsExceptBody(diffEventB)) {
-                listener.onDifferingEvents(iteratorA.next(), iteratorB.next());
+                listener.onSimilarEvents(iteratorA.next(), iteratorB.next());
             } else if (diffEventA.isEffectiveOnOrBefore(diffEventB)){
                 listener.onUnmatchedEventInStreamA(iteratorA.next());
             } else {

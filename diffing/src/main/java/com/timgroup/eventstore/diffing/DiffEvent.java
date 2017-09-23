@@ -1,6 +1,7 @@
 package com.timgroup.eventstore.diffing;
 
 import com.timgroup.eventstore.api.EventRecord;
+import com.timgroup.eventstore.api.ResolvedEvent;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -15,15 +16,18 @@ final class DiffEvent {
     public final String effectiveTimestamp;
     public final String type;
     public final byte[] body;
+    public final ResolvedEvent underlyingEvent;
 
-    private DiffEvent(String effectiveTimestamp, String type, byte[] body) {
+    DiffEvent(String effectiveTimestamp, String type, byte[] body, ResolvedEvent underlyingEvent) {
         this.effectiveTimestamp = effectiveTimestamp;
         this.type = type;
         this.body = body;
+        this.underlyingEvent = underlyingEvent;
     }
 
-    public static DiffEvent from(EventRecord event) {
-        return new DiffEvent(effectiveTimestampOf(event), event.eventType(), event.data());
+    public static DiffEvent from(ResolvedEvent event) {
+        EventRecord eventRecord = event.eventRecord();
+        return new DiffEvent(effectiveTimestampOf(eventRecord), eventRecord.eventType(), eventRecord.data(), event);
     }
 
     public boolean equalsExceptBody(DiffEvent other) {
@@ -57,4 +61,6 @@ final class DiffEvent {
     @Override public int hashCode() {
         return Objects.hash(effectiveTimestamp, type, body);
     }
+
+    @Override public String toString() { return "DiffEvent{underlyingEvent=" + underlyingEvent + '}'; }
 }

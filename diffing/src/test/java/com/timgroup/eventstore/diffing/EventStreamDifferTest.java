@@ -1,23 +1,19 @@
 package com.timgroup.eventstore.diffing;
 
 import com.google.common.collect.ImmutableList;
-import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.NewEvent;
-import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Test;
 
 import java.time.Clock;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
-import static com.timgroup.eventstore.api.EventRecordMatcher.anEventRecord;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.empty;
 
 public class EventStreamDifferTest {
 
@@ -27,8 +23,8 @@ public class EventStreamDifferTest {
     private final StreamId streamA = StreamId.streamId("test", "streamA");
     private final StreamId streamB = StreamId.streamId("test", "streamB");
 
-    private final CapturingDiffListener diffResults = new CapturingDiffListener();
-    private final EventStreamDiffer differ = new EventStreamDiffer(diffResults);
+    private final CapturingDiffListener capturingListener = new CapturingDiffListener();
+    private final EventStreamDiffer differ = new EventStreamDiffer(capturingListener);
 
     @Test public void
     reports_events_with_equal_type_and_effectiveTimestamp_and_data_as_matching() {
@@ -45,21 +41,15 @@ public class EventStreamDifferTest {
 
         differ.diff(eventStoreA.readAllForwards(), eventStoreB.readAllForwards());
 
-        assertThat(diffResults.matchingEvents, contains(
-            anEventRecord(streamA, 0, "type1", "data1", "{\"effective_timestamp\":\"TS1\",\"foo\":1}"),
-            anEventRecord(streamB, 0, "type1", "data1", "{\"effective_timestamp\":\"TS1\",\"foo\":666}"),
-            anEventRecord(streamA, 1, "type2", "data2", "{\"bar\":2,\"effective_timestamp\":\"TS2\"}"),
-            anEventRecord(streamB, 1, "type2", "data2", "{\"effective_timestamp\":\"TS2\"}"),
-            anEventRecord(streamA, 2, "type3", "data3", "{\"baz\":3}"),
-            anEventRecord(streamB, 2, "type3", "data3", "")
+        assertThat(capturingListener.results, contains(
+            matching("type1", "data1", "TS1"),
+            matching("type2", "data2", "TS2"),
+            matching("type3", "data3", "")
         ));
-        assertThat(diffResults.differingEvents, empty());
-        assertThat(diffResults.unmatchedEventsInA, empty());
-        assertThat(diffResults.unmatchedEventsInB, empty());
     }
 
     @Test public void
-    reports_events_with_equal_type_and_effectiveTimestamp_but_different_data_as_differing() {
+    reports_events_with_equal_type_and_effectiveTimestamp_but_different_data_as_similar() {
         eventStoreA.write(streamA, ImmutableList.of(
                 event("type1", "data1.1", "{\"effective_timestamp\":\"TS1\"}"),
                 event("type2", "data2.1", "no timestamp")
@@ -71,15 +61,12 @@ public class EventStreamDifferTest {
 
         differ.diff(eventStoreA.readAllForwards(), eventStoreB.readAllForwards());
 
-        assertThat(diffResults.differingEvents, contains(
-                anEventRecord(streamA, 0, "type1", "data1.1", "{\"effective_timestamp\":\"TS1\"}"),
-                anEventRecord(streamB, 0, "type1", "data1.2", "{\"effective_timestamp\":\"TS1\"}"),
-                anEventRecord(streamA, 1, "type2", "data2.1", "no timestamp"),
-                anEventRecord(streamB, 1, "type2", "data2.2", "no timestamp either")
+        assertThat(capturingListener.results, contains(
+                similar("type1", "data1.1", "TS1",
+                                       "data1.2", "TS1"),
+                similar("type2", "data2.1", "",
+                                       "data2.2", "")
         ));
-        assertThat(diffResults.matchingEvents, empty());
-        assertThat(diffResults.unmatchedEventsInA, empty());
-        assertThat(diffResults.unmatchedEventsInB, empty());
     }
 
     @Test public void
@@ -95,16 +82,12 @@ public class EventStreamDifferTest {
 
         differ.diff(eventStoreA.readAllForwards(), eventStoreB.readAllForwards());
 
-        assertThat(diffResults.unmatchedEventsInA, contains(
-                anEventRecord(streamA, 0, "type1", "data", "{\"effective_timestamp\":\"TS1.1\"}"),
-                anEventRecord(streamA, 1, "type2.1", "data", "{\"effective_timestamp\":\"TS2\"}")
+        assertThat(capturingListener.results, contains(
+                unmatchedInA("type1", "data", "TS1.1"),
+                unmatchedInB("type1", "data", "TS1.2"),
+                unmatchedInA("type2.1", "data", "TS2"),
+                unmatchedInB("type2.2", "data", "TS2")
         ));
-        assertThat(diffResults.unmatchedEventsInB, contains(
-                anEventRecord(streamB, 0, "type1", "data", "{\"effective_timestamp\":\"TS1.2\"}"),
-                anEventRecord(streamB, 1, "type2.2", "data", "{\"effective_timestamp\":\"TS2\"}")
-        ));
-        assertThat(diffResults.matchingEvents, empty());
-        assertThat(diffResults.differingEvents, empty());
     }
 
     @Test public void
@@ -120,16 +103,11 @@ public class EventStreamDifferTest {
 
         differ.diff(eventStoreA.readAllForwards(), eventStoreB.readAllForwards());
 
-        assertThat(diffResults.matchingEvents, contains(
-                anEventRecord(streamA, 0, "common", "common", ""),
-                anEventRecord(streamB, 0, "common", "common", "")
+        assertThat(capturingListener.results, contains(
+                matching("common", "common", ""),
+                unmatchedInA("additional1", "additional1", ""),
+                unmatchedInA( "additional2", "additional2", "")
         ));
-        assertThat(diffResults.differingEvents, empty());
-        assertThat(diffResults.unmatchedEventsInA, contains(
-                anEventRecord(streamA, 1, "additional1", "additional1", ""),
-                anEventRecord(streamA, 2, "additional2", "additional2", "")
-        ));
-        assertThat(diffResults.unmatchedEventsInB, empty());
     }
 
     @Test public void
@@ -145,15 +123,10 @@ public class EventStreamDifferTest {
 
         differ.diff(eventStoreA.readAllForwards(), eventStoreB.readAllForwards());
 
-        assertThat(diffResults.matchingEvents, contains(
-                anEventRecord(streamA, 0, "common", "common", ""),
-                anEventRecord(streamB, 0, "common", "common", "")
-        ));
-        assertThat(diffResults.differingEvents, empty());
-        assertThat(diffResults.unmatchedEventsInA, empty());
-        assertThat(diffResults.unmatchedEventsInB, contains(
-                anEventRecord(streamB, 1, "additional1", "additional1", ""),
-                anEventRecord(streamB, 2, "additional2", "additional2", "")
+        assertThat(capturingListener.results, contains(
+                matching( "common", "common", ""),
+                unmatchedInB("additional1", "additional1", ""),
+                unmatchedInB("additional2", "additional2", "")
         ));
     }
 
@@ -171,16 +144,10 @@ public class EventStreamDifferTest {
 
         differ.diff(eventStoreA.readAllForwards(), eventStoreB.readAllForwards());
 
-        assertThat(diffResults.matchingEvents, contains(
-                anEventRecord(streamA, 0, "common1", "common1", "{\"effective_timestamp\":\"TS1\"}"),
-                anEventRecord(streamB, 0, "common1", "common1", "{\"effective_timestamp\":\"TS1\"}"),
-                anEventRecord(streamA, 1, "common2", "common2", "{\"effective_timestamp\":\"TS3\"}"),
-                anEventRecord(streamB, 2, "common2", "common2", "{\"effective_timestamp\":\"TS3\"}")
-        ));
-        assertThat(diffResults.differingEvents, empty());
-        assertThat(diffResults.unmatchedEventsInA, empty());
-        assertThat(diffResults.unmatchedEventsInB, contains(
-                anEventRecord(streamB, 1, "additional1", "additional1", "{\"effective_timestamp\":\"TS2\"}")
+        assertThat(capturingListener.results, contains(
+                matching("common1", "common1", "TS1"),
+                unmatchedInB("additional1", "additional1", "TS2"),
+                matching("common2", "common2", "TS3")
         ));
     }
 
@@ -197,41 +164,112 @@ public class EventStreamDifferTest {
 
         differ.diff(eventStoreA.readAllForwards(), eventStoreB.readAllForwards());
 
-        assertThat(diffResults.matchingEvents, contains(
-                anEventRecord(streamA, 0, "common-later", "data", "{\"effective_timestamp\":\"TS2\"}"),
-                anEventRecord(streamB, 1, "common-later", "data", "{\"effective_timestamp\":\"TS2\"}")
-        ));
-        assertThat(diffResults.differingEvents, empty());
-        assertThat(diffResults.unmatchedEventsInA, contains(
-                anEventRecord(streamA, 1, "common-earlier", "data", "{\"effective_timestamp\":\"TS1\"}")
-        ));
-        assertThat(diffResults.unmatchedEventsInB, contains(
-                anEventRecord(streamB, 0, "common-earlier", "data", "{\"effective_timestamp\":\"TS1\"}")
+        assertThat(capturingListener.results, contains(
+                unmatchedInB("common-earlier", "data", "TS1"),
+                matching("common-later", "data", "TS2"),
+                unmatchedInA("common-earlier", "data", "TS1")
         ));
     }
 
     private static NewEvent event(String type, String data, String metadata) {
         return NewEvent.newEvent(type, data.getBytes(UTF_8), metadata.getBytes(UTF_8));
     }
+    private static CapturedMatching matching(String type, String data, String timestamp) {
+        DiffEvent matchedEvent = new DiffEvent(timestamp, type, data.getBytes(UTF_8), null);
+        return new CapturedMatching(matchedEvent, matchedEvent);
+    }
+    private static CapturedSimilar similar(String type, String data1, String timestamp1, String data2, String timestamp2) {
+        DiffEvent similar1 = new DiffEvent(timestamp1, type, data1.getBytes(UTF_8), null);
+        DiffEvent similar2 = new DiffEvent(timestamp2, type, data2.getBytes(UTF_8), null);
+        return new CapturedSimilar(similar1, similar2);
+    }
+    private static CapturedUnmatchedInA unmatchedInA(String type, String data, String timestamp) {
+        return new CapturedUnmatchedInA(new DiffEvent(timestamp, type, data.getBytes(UTF_8), null));
+    }
+    private static CapturedUnmatchedInB unmatchedInB(String type, String data, String timestamp) {
+        return new CapturedUnmatchedInB(new DiffEvent(timestamp, type, data.getBytes(UTF_8), null));
+    }
 
 
     private static final class CapturingDiffListener implements DiffListener {
-        public final List<EventRecord> matchingEvents = new ArrayList<>();
-        public final List<EventRecord> differingEvents = new ArrayList<>();
-        public final List<EventRecord> unmatchedEventsInA = new ArrayList<>();
-        public final List<EventRecord> unmatchedEventsInB = new ArrayList<>();
+        public final List<CapturedCallback> results = new ArrayList<>();
 
-        @Override public void onMatchingEvents(ResolvedEvent eventInStreamA, ResolvedEvent eventInStreamB) {
-            matchingEvents.addAll(Arrays.asList(eventInStreamA.eventRecord(), eventInStreamB.eventRecord()));
+        @Override public void onMatchingEvents(DiffEvent eventInStreamA, DiffEvent eventInStreamB) {
+            results.add(new CapturedMatching(eventInStreamA, eventInStreamB));
         }
-        @Override public void onDifferingEvents(ResolvedEvent eventInStreamA, ResolvedEvent eventInStreamB) {
-            differingEvents.addAll(Arrays.asList(eventInStreamA.eventRecord(), eventInStreamB.eventRecord()));
+        @Override public void onSimilarEvents(DiffEvent eventInStreamA, DiffEvent eventInStreamB) {
+            results.add(new CapturedSimilar(eventInStreamA, eventInStreamB));
         }
-        @Override public void onUnmatchedEventInStreamA(ResolvedEvent eventInStreamA) {
-            unmatchedEventsInA.add(eventInStreamA.eventRecord());
+        @Override public void onUnmatchedEventInStreamA(DiffEvent eventInStreamA) {
+            results.add(new CapturedUnmatchedInA(eventInStreamA));
         }
-        @Override public void onUnmatchedEventInStreamB(ResolvedEvent eventInStreamB) {
-            unmatchedEventsInB.add(eventInStreamB.eventRecord());
+        @Override public void onUnmatchedEventInStreamB(DiffEvent eventInStreamB) {
+            results.add(new CapturedUnmatchedInB(eventInStreamB));
         }
+    }
+    private interface CapturedCallback {}
+    private static final class CapturedMatching implements CapturedCallback {
+        private final DiffEvent fromA;
+        private final DiffEvent fromB;
+        CapturedMatching(DiffEvent fromA, DiffEvent fromB) {
+            this.fromA = fromA;
+            this.fromB = fromB;
+        }
+        @Override public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            CapturedMatching that = (CapturedMatching) o;
+            return Objects.equals(fromA, that.fromA) &&
+                    Objects.equals(fromB, that.fromB);
+        }
+        @Override public int hashCode() { return Objects.hash(fromA, fromB); }
+        @Override public String toString() { return "matching - " + fromA + " / " + fromB; }
+    }
+    private static final class CapturedSimilar implements CapturedCallback {
+        private final DiffEvent fromA;
+        private final DiffEvent fromB;
+        CapturedSimilar(DiffEvent fromA, DiffEvent fromB) {
+            this.fromA = fromA;
+            this.fromB = fromB;
+        }
+        @Override public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            CapturedSimilar that = (CapturedSimilar) o;
+            return Objects.equals(fromA, that.fromA) &&
+                    Objects.equals(fromB, that.fromB);
+        }
+        @Override public int hashCode() { return Objects.hash(fromA, fromB); }
+        @Override public String toString() { return "similar - " + fromA + " / " + fromB; }
+    }
+    private static final class CapturedUnmatchedInA implements CapturedCallback {
+        private final DiffEvent fromA;
+        CapturedUnmatchedInA(DiffEvent fromA) {
+            this.fromA = fromA;
+        }
+
+        @Override public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            CapturedUnmatchedInA that = (CapturedUnmatchedInA) o;
+            return Objects.equals(fromA, that.fromA);
+        }
+        @Override public int hashCode() { return Objects.hash(fromA); }
+        @Override public String toString() { return "unmatched in B - " + fromA; }
+    }
+    private static final class CapturedUnmatchedInB implements CapturedCallback {
+        private final DiffEvent fromB;
+        CapturedUnmatchedInB(DiffEvent fromB) {
+            this.fromB = fromB;
+        }
+
+        @Override public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            CapturedUnmatchedInB that = (CapturedUnmatchedInB) o;
+            return Objects.equals(fromB, that.fromB);
+        }
+        @Override public int hashCode() { return Objects.hash(fromB); }
+        @Override public String toString() { return "unmatched in B - " + fromB; }
     }
 }
