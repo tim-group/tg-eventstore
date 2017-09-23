@@ -29,11 +29,15 @@ final class DiffEvent {
         EventRecord eventRecord = event.eventRecord();
         return new DiffEvent(effectiveTimestampOf(eventRecord), eventRecord.eventType(), eventRecord.data(), event);
     }
+    static DiffEvent diffEvent(String effectiveTimestamp, String type, String body) {
+        return new DiffEvent(effectiveTimestamp, type, body.getBytes(UTF_8), null);
+    }
 
-    public boolean equalsExceptBody(DiffEvent other) {
-        return this.effectiveTimestamp.equals(other.effectiveTimestamp)
-                && this.type.equals(other.type)
-                && !Arrays.equals(this.body, other.body);
+    public boolean isSimilarTo(DiffEvent other) {
+        int numberOfEqualProperties = (this.effectiveTimestamp.equals(other.effectiveTimestamp) ? 1 : 0)
+                + (this.type.equals(other.type) ? 1 : 0)
+                + (Arrays.equals(this.body, other.body) ? 1 : 0);
+        return numberOfEqualProperties == 2;
     }
 
     public boolean isEffectiveOnOrBefore(DiffEvent other) {

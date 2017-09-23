@@ -24,7 +24,7 @@ public final class EventStreamDiffer {
 
             if (diffEventA.equals(diffEventB)) {
                 listener.onMatchingEvents(iteratorA.next(), iteratorB.next());
-            } else if (diffEventA.equalsExceptBody(diffEventB)) {
+            } else if (diffEventA.isSimilarTo(diffEventB)) {
                 listener.onSimilarEvents(iteratorA.next(), iteratorB.next());
             } else if (diffEventA.isEffectiveOnOrBefore(diffEventB)){
                 listener.onUnmatchedEventInStreamA(iteratorA.next());
