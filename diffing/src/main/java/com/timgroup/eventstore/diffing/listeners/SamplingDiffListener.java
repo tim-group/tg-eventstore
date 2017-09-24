@@ -33,6 +33,15 @@ public final class SamplingDiffListener implements DiffListener {
         this.maxSamplesPerCategory = maxSamplesPerCategory;
     }
 
+    SamplingDiffListener(
+            PrintWriter similarInASampleWriter,
+            PrintWriter similarInBSampleWriter,
+            PrintWriter unmatchedInASampleWriter,
+            PrintWriter unmatchedInBSampleWriter)
+    {
+        this(similarInASampleWriter, similarInBSampleWriter, unmatchedInASampleWriter, unmatchedInBSampleWriter, 1000);
+    }
+
     @Override public void onSimilarEvents(DiffEvent eventInStreamA, DiffEvent eventInStreamB) {
         maybePrintSample(similarInASamples++, similarInASampleWriter, eventInStreamA);
         maybePrintSample(similarInBSamples++, similarInBSampleWriter, eventInStreamB);

@@ -76,4 +76,29 @@ public final class SamplingDiffListenerTest {
         ));
     }
 
+    @Test public void
+    writes_up_to_1000_samples_per_category_by_default() {
+        final SamplingDiffListener underTest = new SamplingDiffListener(
+                new PrintWriter(similarInA),
+                new PrintWriter(similarInB),
+                new PrintWriter(unmatchedInA),
+                new PrintWriter(unmatchedInB)
+        );
+        for (int i = 0; i < 1010; i++) {
+            underTest.onSimilarEvents(
+                    diffEvent("2017-01-01", "type1", "body1", i),
+                    diffEvent("2017-02-01", "type1", "body1", i)
+            );
+            underTest.onUnmatchedEventInStreamA(diffEvent("2017-03-01", "type3", "body3", i));
+            underTest.onUnmatchedEventInStreamB(diffEvent("2017-04-01", "type4", "body4", i));
+        }
+        assertThat(numberOfLinesIn(similarInA), equalTo(1000));
+        assertThat(numberOfLinesIn(similarInB), equalTo(1000));
+        assertThat(numberOfLinesIn(unmatchedInA), equalTo(1000));
+        assertThat(numberOfLinesIn(unmatchedInB), equalTo(1000));
+    }
+
+    private static int numberOfLinesIn(StringWriter results) {
+        return results.toString().split("\n").length;
+    }
 }
