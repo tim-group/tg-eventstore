@@ -29,9 +29,6 @@ final class DiffEvent {
         EventRecord eventRecord = event.eventRecord();
         return new DiffEvent(effectiveTimestampOf(eventRecord), eventRecord.eventType(), eventRecord.data(), event);
     }
-    static DiffEvent diffEvent(String effectiveTimestamp, String type, String body) {
-        return new DiffEvent(effectiveTimestamp, type, body.getBytes(UTF_8), null);
-    }
 
     public boolean isSimilarTo(DiffEvent other) {
         int numberOfEqualProperties = (this.effectiveTimestamp.equals(other.effectiveTimestamp) ? 1 : 0)
@@ -47,10 +44,7 @@ final class DiffEvent {
     private static String effectiveTimestampOf(EventRecord event) {
         String metadata = new String(event.metadata(), UTF_8);
         Matcher matcher = EFFECTIVE_TIMESTAMP_PATTERN.matcher(metadata);
-        if (matcher.find()) {
-            return matcher.group(1);
-        }
-        return "";
+        return matcher.find() ? matcher.group(1) : "";
     }
 
     @Override public boolean equals(Object o) {

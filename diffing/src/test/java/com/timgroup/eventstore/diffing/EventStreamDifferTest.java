@@ -11,12 +11,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import static com.timgroup.eventstore.diffing.DiffEvent.diffEvent;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 
-public class EventStreamDifferTest {
+public final class EventStreamDifferTest {
 
     private final JavaInMemoryEventStore eventStoreA = new JavaInMemoryEventStore(Clock.systemUTC());
     private final JavaInMemoryEventStore eventStoreB = new JavaInMemoryEventStore(Clock.systemUTC());
@@ -177,6 +176,10 @@ public class EventStreamDifferTest {
 
     private static NewEvent event(String type, String data, String metadata) {
         return NewEvent.newEvent(type, data.getBytes(UTF_8), metadata.getBytes(UTF_8));
+    }
+
+    private static DiffEvent diffEvent(String effectiveTimestamp, String type, String body) {
+        return new DiffEvent(effectiveTimestamp, type, body.getBytes(UTF_8), null);
     }
 
     private static final class CapturingDiffListener implements DiffListener {
