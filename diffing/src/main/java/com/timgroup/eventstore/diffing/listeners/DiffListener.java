@@ -1,6 +1,7 @@
-package com.timgroup.eventstore.diffing;
+package com.timgroup.eventstore.diffing.listeners;
 
 import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.diffing.DiffEvent;
 
 public interface DiffListener {
     default void onMatchingEvents(DiffEvent eventInStreamA, DiffEvent eventInStreamB) {}

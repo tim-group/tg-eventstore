@@ -1,7 +1,8 @@
-package com.timgroup.eventstore.diffing;
+package com.timgroup.eventstore.diffing.listeners;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
+import com.timgroup.eventstore.diffing.DiffEvent;
 
 import java.io.PrintWriter;
 import java.util.HashMap;
@@ -11,33 +12,15 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 
-public final class EventTypeCountingDiffListener implements DiffListener {
+public final class SummarisingDiffListener implements DiffListener {
     private final PrintWriter summaryWriter;
-    private final PrintWriter similarInASampleWriter;
-    private final PrintWriter similarInBSampleWriter;
-    private final PrintWriter unmatchedInASampleWriter;
-    private final PrintWriter unmatchedInBSampleWriter;
-    private final int maxSamplesPerCategory;
 
     private final InterestingEventsPair matching = new InterestingEventsPair();
     private final InterestingEventsPair similar = new InterestingEventsPair();
     private final InterestingEventsPair unmatched = new InterestingEventsPair();
-    private final Map<String, Integer> numSamplesPerCategory = new HashMap<>();
 
-    EventTypeCountingDiffListener(
-            PrintWriter summaryWriter,
-            PrintWriter similarInASampleWriter,
-            PrintWriter similarInBSampleWriter,
-            PrintWriter unmatchedInASampleWriter,
-            PrintWriter unmatchedInBSampleWriter,
-            int maxSamplesPerCategory)
-    {
+    SummarisingDiffListener(PrintWriter summaryWriter) {
         this.summaryWriter = summaryWriter;
-        this.similarInASampleWriter = similarInASampleWriter;
-        this.similarInBSampleWriter = similarInBSampleWriter;
-        this.unmatchedInASampleWriter = unmatchedInASampleWriter;
-        this.unmatchedInBSampleWriter = unmatchedInBSampleWriter;
-        this.maxSamplesPerCategory = maxSamplesPerCategory;
     }
 
     @Override public void onMatchingEvents(DiffEvent eventInStreamA, DiffEvent eventInStreamB) {
@@ -46,18 +29,14 @@ public final class EventTypeCountingDiffListener implements DiffListener {
 
     @Override public void onSimilarEvents(DiffEvent eventInStreamA, DiffEvent eventInStreamB) {
         similar.updateWith(eventInStreamA, eventInStreamB);
-        printSample("similarInA", similarInASampleWriter, eventInStreamA);
-        printSample("similarInB", similarInBSampleWriter, eventInStreamB);
     }
 
     @Override public void onUnmatchedEventInStreamA(DiffEvent eventInStreamA) {
         unmatched.eventsFromA.updateWith(eventInStreamA);
-        printSample("unmatchedInA", unmatchedInASampleWriter, eventInStreamA);
     }
 
     @Override public void onUnmatchedEventInStreamB(DiffEvent eventInStreamB) {
         unmatched.eventsFromB.updateWith(eventInStreamB);
-        printSample("unmatchedInB", unmatchedInBSampleWriter, eventInStreamB);
     }
 
     // TODO on thresholdReached -> printReport
@@ -89,14 +68,6 @@ public final class EventTypeCountingDiffListener implements DiffListener {
                 new String(event.body, UTF_8),
                 event.underlyingEvent.locator()
         );
-    }
-
-    private void printSample(String category, PrintWriter writer, DiffEvent event) {
-        int currentSamples = numSamplesPerCategory.getOrDefault(category, 0);
-        if (currentSamples < maxSamplesPerCategory) {
-            writer.println(Joiner.on('\t').join(event.effectiveTimestamp, event.type, new String(event.body, UTF_8), event.underlyingEvent.locator()));
-            numSamplesPerCategory.put(category, currentSamples + 1);
-        }
     }
 
     private static final class InterestingEventsPair {

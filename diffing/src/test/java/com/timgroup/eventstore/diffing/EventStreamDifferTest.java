@@ -3,6 +3,7 @@ package com.timgroup.eventstore.diffing;
 import com.google.common.collect.ImmutableList;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.StreamId;
+import com.timgroup.eventstore.diffing.listeners.DiffListener;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Test;
 

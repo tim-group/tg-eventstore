@@ -3,6 +3,7 @@ package com.timgroup.eventstore.diffing;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.diffing.listeners.DiffListener;
 
 import java.util.stream.Stream;
 
