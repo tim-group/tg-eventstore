@@ -1,10 +1,10 @@
 package com.timgroup.eventstore.mysql;
 
-import java.util.Properties;
-
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 import com.mchange.v2.c3p0.PooledDataSource;
 import com.typesafe.config.Config;
+
+import java.util.Properties;
 
 import static java.lang.String.format;
 
@@ -19,21 +19,7 @@ public final class StacksConfiguredDataSource {
     }
 
     public static PooledDataSource pooledMasterDb(Properties properties, String configPrefix, int maxPoolSize) {
-        String hostname = properties.getProperty(configPrefix + "hostname");
-
-        if (hostname == null) {
-            throw new IllegalArgumentException("No " + configPrefix + "hostname property available to configure data source");
-        }
-
-        return pooled(
-                hostname,
-                Integer.parseInt(properties.getProperty(configPrefix + "port")),
-                properties.getProperty(configPrefix + "username"),
-                properties.getProperty(configPrefix + "password"),
-                properties.getProperty(configPrefix + "database"),
-                properties.getProperty(configPrefix + "driver"),
-                maxPoolSize
-        );
+        return getPooledDataSource(properties, configPrefix, "hostname", maxPoolSize);
     }
 
     public static PooledDataSource pooledReadOnlyDb(Properties properties, String configPrefix) {
@@ -41,25 +27,30 @@ public final class StacksConfiguredDataSource {
     }
 
     public static PooledDataSource pooledReadOnlyDb(Properties properties, String configPrefix, int maxPoolSize) {
-        String hostnameList = properties.getProperty(configPrefix + "read_only_cluster");
+        return getPooledDataSource(properties, configPrefix, "read_only_cluster", maxPoolSize);
+    }
 
-        if (hostnameList == null) {
-            hostnameList = properties.getProperty(configPrefix + "hostname");
-            if (hostnameList == null) {
-                throw new IllegalArgumentException("Neither " + configPrefix+"read_only_cluster nor " + configPrefix + "hostname property available to configure data source");
+    private static PooledDataSource getPooledDataSource(Properties properties, String configPrefix, String host_propertyname, int maxPoolSize) {
+        String prefix = configPrefix;
+
+        if (properties.getProperty(prefix + host_propertyname) == null) {
+            prefix = "db." + prefix + ".";
+            if (properties.getProperty(prefix) == null) {
+                throw new IllegalArgumentException("No " + configPrefix + host_propertyname + " property available to configure data source");
             }
         }
 
         return pooled(
-                hostnameList,
-                Integer.parseInt(properties.getProperty(configPrefix + "port")),
-                properties.getProperty(configPrefix + "username"),
-                properties.getProperty(configPrefix + "password"),
-                properties.getProperty(configPrefix + "database"),
-                properties.getProperty(configPrefix + "driver"),
+                properties.getProperty(prefix + host_propertyname),
+                Integer.parseInt(properties.getProperty(prefix + "port")),
+                properties.getProperty(prefix + "username"),
+                properties.getProperty(prefix + "password"),
+                properties.getProperty(prefix + "database"),
+                properties.getProperty(prefix + "driver"),
                 maxPoolSize
         );
     }
+
 
     public static PooledDataSource pooledMasterDb(Config config) {
         return pooledMasterDb(config, DEFAULT_MAX_POOLSIZE);
@@ -76,7 +67,6 @@ public final class StacksConfiguredDataSource {
                 maxPoolSize
         );
     }
-
 
     public static PooledDataSource pooledReadOnlyDb(Config config) {
         return pooledReadOnlyDb(config, DEFAULT_MAX_POOLSIZE);
