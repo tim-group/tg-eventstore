@@ -35,7 +35,7 @@ public final class StacksConfiguredDataSource {
 
         if (properties.getProperty(prefix + host_propertyname) == null) {
             prefix = "db." + prefix + ".";
-            if (properties.getProperty(prefix) == null) {
+            if (properties.getProperty(prefix + host_propertyname) == null) {
                 throw new IllegalArgumentException("No " + configPrefix + host_propertyname + " property available to configure data source");
             }
         }
