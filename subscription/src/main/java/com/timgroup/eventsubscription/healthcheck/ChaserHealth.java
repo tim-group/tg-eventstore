@@ -1,9 +1,5 @@
 package com.timgroup.eventsubscription.healthcheck;
 
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventsubscription.ChaserListener;
 import com.timgroup.tucker.info.Component;
@@ -11,6 +7,11 @@ import com.timgroup.tucker.info.Report;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.timgroup.tucker.info.Status.CRITICAL;
 import static com.timgroup.tucker.info.Status.INFO;
 import static com.timgroup.tucker.info.Status.OK;
@@ -33,10 +34,20 @@ public class ChaserHealth extends Component implements ChaserListener {
     }
 
     public ChaserHealth(String name, Clock clock, Duration subscriptionRunFrequency) {
+        this(name,
+                clock,
+                max(MIN_WARNING_THRESHOLD, subscriptionRunFrequency.multipliedBy(5)),
+                max(MIN_CRITICAL_THRESHOLD, subscriptionRunFrequency.multipliedBy(10))
+        );
+    }
+
+    public ChaserHealth(String name, Clock clock, Duration warningThreshold, Duration criticalThreshold)  {
         super("event-store-chaser-" + name, "Eventstore chaser health (" + name + ")");
+        checkArgument(criticalThreshold.compareTo(warningThreshold) > 0,
+                format("Critical Threshold (%s) must be greater than warning Threshold (%s).", criticalThreshold, warningThreshold));
         this.clock = clock;
-        this.warningThreshold = max(MIN_WARNING_THRESHOLD, subscriptionRunFrequency.multipliedBy(5));
-        this.criticalThreshold = max(MIN_CRITICAL_THRESHOLD, subscriptionRunFrequency.multipliedBy(10));
+        this.warningThreshold = warningThreshold;
+        this.criticalThreshold = criticalThreshold;
     }
 
     @Override

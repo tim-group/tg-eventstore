@@ -90,4 +90,42 @@ public class ChaserHealthTest {
         assertThat(slowChaserHealth.getReport().getStatus(), is(INFO));
     }
 
+    @Test public void
+    reports_OK_if_chaser_polled_within_specified_time() {
+        final ChaserHealth chaserHealth = new ChaserHealth("", clock, Duration.ofSeconds(200), Duration.ofSeconds(300));
+        chaserHealth.chaserUpToDate(new TestPosition(123));
+
+        clock.bumpSeconds(199);
+
+        assertThat(chaserHealth.getReport().getStatus(), is(OK));
+        assertThat(chaserHealth.getReport().getValue().toString(), containsString("Current version: 123"));
+    }
+
+    @Test public void
+    reports_WARNING_if_chaser_did_not_poll_within_specfied_warning_time() {
+        final ChaserHealth chaserHealth = new ChaserHealth("", clock, Duration.ofSeconds(200), Duration.ofSeconds(300));
+        chaserHealth.chaserUpToDate(new TestPosition(123));
+
+        clock.bumpSeconds(299);
+
+        assertThat(chaserHealth.getReport().getStatus(), is(WARNING));
+    }
+
+    @Test public void
+    reports_CRITICAL_if_chaser_did_not_poll_within_specfied_critical_time() {
+        final ChaserHealth chaserHealth = new ChaserHealth("", clock,Duration.ofSeconds(200), Duration.ofSeconds(300));
+        chaserHealth.chaserUpToDate(new TestPosition(123));
+
+        clock.bumpSeconds(301);
+
+        assertThat(chaserHealth.getReport().getStatus(), is(CRITICAL));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void
+    blows_up_if_critical_threshold_below_warning_threshold() {
+        new ChaserHealth("", clock,Duration.ofSeconds(200), Duration.ofSeconds(100));
+    }
+
+
 }
