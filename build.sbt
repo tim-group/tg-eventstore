@@ -74,6 +74,11 @@ val eventstore_ges_http = Project(id = "eventstore-ges-http", base = file("ges-h
   .settings(publishArtifact in (Compile, packageDoc) := false)
   .settings(overridePublishSettings)
 
+val eventstore_filesystem = Project(id = "eventstore-filesystem", base = file("filesystem"))
+  .dependsOn(eventstore_api % "compile->compile; test->test")
+  .settings(publishArtifact in (Compile, packageDoc) := false)
+  .settings(overridePublishSettings)
+
 val eventstore_subscription = Project(id = "eventstore-subscription", base = file("subscription"))
   .dependsOn(eventstore_api, eventstore_memory % "compile->test")
   .settings(
