@@ -95,11 +95,13 @@ val eventstore_subscription = Project(id = "eventstore-subscription", base = fil
 val eventstore_diffing = Project(id = "eventstore-diffing", base = file("diffing"))
   .dependsOn(
     eventstore_api % "compile->compile; test->test",
+    eventstore_mysql % "compile->compile",
     eventstore_memory % "test"
   )
   .settings(compatibleScalaTestDependency)
   .settings(overridePublishSettings)
   .settings(libraryDependencies ++= Seq(
-      "com.google.guava" % "guava" % "19.0"
+      "com.google.guava" % "guava" % "19.0",
+      "mysql" % "mysql-connector-java" % "5.1.20"
   )
 )

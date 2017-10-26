@@ -19,7 +19,7 @@ public final class SamplingDiffListener implements DiffListener {
     private int unmatchedInASamples = 0;
     private int unmatchedInBSamples = 0;
 
-    SamplingDiffListener(
+    public SamplingDiffListener(
             PrintWriter similarInASampleWriter,
             PrintWriter similarInBSampleWriter,
             PrintWriter unmatchedInASampleWriter,
@@ -33,7 +33,7 @@ public final class SamplingDiffListener implements DiffListener {
         this.maxSamplesPerCategory = maxSamplesPerCategory;
     }
 
-    SamplingDiffListener(
+    public SamplingDiffListener(
             PrintWriter similarInASampleWriter,
             PrintWriter similarInBSampleWriter,
             PrintWriter unmatchedInASampleWriter,

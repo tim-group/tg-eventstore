@@ -14,8 +14,7 @@ import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static com.timgroup.eventstore.api.StreamId.streamId;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.isEmptyOrNullString;
+import static org.hamcrest.Matchers.*;
 
 public final class SummarisingDiffListenerTest {
 
@@ -25,8 +24,7 @@ public final class SummarisingDiffListenerTest {
     @Test public void
     does_not_output_empty_sections_in_report() {
         underTest.printReport();
-
-        assertThat(summary.toString(), isEmptyOrNullString());
+        assertThat(summary.toString().trim(), endsWith(" starting to diff"));
    }
 
     @Test public void
@@ -46,7 +44,7 @@ public final class SummarisingDiffListenerTest {
 
         underTest.printReport();
 
-        assertThat(summary.toString(), equalTo("\n" +
+        assertThat(summary.toString(), endsWith("\n" +
                 "3 matching pairs of events\n" +
                 "--------------------------\n" +
                 "\n" +
@@ -73,7 +71,7 @@ public final class SummarisingDiffListenerTest {
 
         underTest.printReport();
 
-        assertThat(summary.toString(), equalTo("\n" +
+        assertThat(summary.toString(), endsWith("\n" +
                 "3 similar events in stream A\n" +
                 "----------------------------\n" +
                 "\n" +
@@ -98,7 +96,7 @@ public final class SummarisingDiffListenerTest {
 
         underTest.printReport();
 
-        assertThat(summary.toString(), equalTo("\n" +
+        assertThat(summary.toString(), endsWith("\n" +
                 "2 unmatched events in stream A\n" +
                 "------------------------------\n" +
                 "\n" +
@@ -113,6 +111,30 @@ public final class SummarisingDiffListenerTest {
                 "earliest: 2017-02-02 body2 @2<all/all/1>(type2)\n" +
                 "latest:   2017-02-02 body2 @2<all/all/1>(type2)\n"
         ));
+    }
+
+    @Test public void
+    prints_intermediate_reports_in_configured_interval() {
+        final SummarisingDiffListener listener = new SummarisingDiffListener(
+                new PrintWriter(summary),
+                3
+        );
+        listener.onMatchingEvents(
+                diffEvent("2017-09-01", "type1", "body1", 1),
+                diffEvent("2017-09-01", "type1", "body1", 1)
+        );
+        listener.onSimilarEvents(
+                diffEvent("2017-09-02", "type2", "body2a", 2),
+                diffEvent("2017-09-02", "type2", "body2b", 2)
+        );
+        listener.onUnmatchedEventInStreamA(diffEvent("2017-09-03", "type3", "body3", 3));
+        listener.onMatchingEvents(
+                diffEvent("2017-09-04", "type4", "body4", 4),
+                diffEvent("2017-09-04", "type4", "body4", 3)
+        );
+
+        assertThat(summary.toString(), containsString("intermediate diffing results after 4 processed events"));
+        assertThat(summary.toString(), containsString("intermediate diffing results after 7 processed events"));
     }
 
     static DiffEvent diffEvent(String timestamp, String type, String body, int position) {
