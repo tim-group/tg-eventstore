@@ -12,6 +12,7 @@ import com.timgroup.eventstore.diffing.utils.PrintWriters;
 import com.timgroup.eventstore.mysql.BasicMysqlEventSource;
 
 import java.io.*;
+import java.time.Instant;
 import java.util.Properties;
 
 public final class DiffForkApp {
@@ -37,9 +38,11 @@ public final class DiffForkApp {
         String streamCategoryArg = args.length > 3 ? args[3] : "all";
         String streamIdArg = args.length > 4 ? args[4] : "all_1";
 
-        EventSource eventSource = BasicMysqlEventSource.pooledReadOnlyDbEventSource(properties, dbKeyArg, dbTableArg, dbKeyArg + "->" + dbTableArg);
+        System.out.println(Instant.now() + " locating start of fork...");
+        EventSource eventSourceReadMany = BasicMysqlEventSource.pooledReadOnlyDbEventSource(properties, dbKeyArg, dbTableArg, dbKeyArg + "->" + dbTableArg, 50000);
+        EventSource eventSourceReadOne = BasicMysqlEventSource.pooledReadOnlyDbEventSource(properties, dbKeyArg, dbTableArg, dbKeyArg + "->" + dbTableArg + "(batchSize 1)", 1);
         StreamId forkStreamId = StreamId.streamId(streamCategoryArg, streamIdArg);
-        StreamPair<ResolvedEvent> streamPair = ForkedStreamsLocator.locateForkedStreams(eventSource, forkStreamId);
+        StreamPair<ResolvedEvent> streamPair = ForkedStreamsLocator.locateForkedStreams(eventSourceReadOne, eventSourceReadMany, forkStreamId);
 
         SummarisingDiffListener summarizingListener = new SummarisingDiffListener(PrintWriters.newTeeWriter("diffForkSummary.md"));
         EventStreamDiffer differ = new EventStreamDiffer(new BroadcastingDiffListener(

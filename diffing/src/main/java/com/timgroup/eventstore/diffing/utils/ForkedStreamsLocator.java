@@ -15,9 +15,8 @@ public final class ForkedStreamsLocator {
     // sample body: "oldStream":{"category":"all","id":"all"},"lastWrittenEventNumber":1,
     private static final Pattern STREAM_FORKED_BODY_PATTERN = Pattern.compile("\"category\":\"([^\"]+)\",\"id\":\"([^\"]+)\"},\"lastWrittenEventNumber\":([0-9]+),");
 
-    public static StreamPair<ResolvedEvent> locateForkedStreams(EventSource eventSource, StreamId forkStreamId) throws Throwable {
-        // TODO this reads 100k events although we are just interested in one
-        ResolvedEvent streamForkedEvent = eventSource.readStream().readStreamForwards(forkStreamId).findFirst().orElseThrow(
+    public static StreamPair<ResolvedEvent> locateForkedStreams(EventSource eventSourceRead1, EventSource eventSource, StreamId forkStreamId) throws Throwable {
+        ResolvedEvent streamForkedEvent = eventSourceRead1.readStream().readStreamForwards(forkStreamId).findFirst().orElseThrow(
                 (Supplier<Throwable>) () -> new IllegalArgumentException(forkStreamId + " contains no elements")
         );
         if (!"IdempotentStreamForked".equals(streamForkedEvent.eventRecord().eventType())) {

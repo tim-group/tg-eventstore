@@ -47,7 +47,6 @@ public final class SummarisingDiffListenerTest {
         assertThat(summary.toString(), endsWith("\n" +
                 "3 matching pairs of events\n" +
                 "--------------------------\n" +
-                "\n" +
                 "per type: 1 type1, 2 type2\n" +
                 "earliest: 2017-09-01 body1 @123<all/all/122>(type1)\n" +
                 "latest:   2017-09-03 body3 @333<all/all/332>(type2)\n"
@@ -74,14 +73,12 @@ public final class SummarisingDiffListenerTest {
         assertThat(summary.toString(), endsWith("\n" +
                 "3 similar events in stream A\n" +
                 "----------------------------\n" +
-                "\n" +
                 "per type: 2 type1, 1 type2\n" +
                 "earliest: 2017-10-01 body1.1 @123<all/all/122>(type1)\n" +
                 "latest:   2017-10-03 body3 @333<all/all/332>(type2)\n" +
                 "\n" +
                 "3 similar events in stream B\n" +
                 "----------------------------\n" +
-                "\n" +
                 "per type: 1 type1, 2 type2\n" +
                 "earliest: 2017-10-01 body1.2 @456<all/all/455>(type1)\n" +
                 "latest:   2017-11-29 body3 @499<all/all/498>(type2)\n"
@@ -99,14 +96,12 @@ public final class SummarisingDiffListenerTest {
         assertThat(summary.toString(), endsWith("\n" +
                 "2 unmatched events in stream A\n" +
                 "------------------------------\n" +
-                "\n" +
                 "per type: 2 type1\n" +
                 "earliest: 2017-01-01 body1 @1<all/all/0>(type1)\n" +
                 "latest:   2017-03-03 body3 @3<all/all/2>(type1)\n" +
                 "\n" +
                 "1 unmatched events in stream B\n" +
                 "------------------------------\n" +
-                "\n" +
                 "per type: 1 type2\n" +
                 "earliest: 2017-02-02 body2 @2<all/all/1>(type2)\n" +
                 "latest:   2017-02-02 body2 @2<all/all/1>(type2)\n"

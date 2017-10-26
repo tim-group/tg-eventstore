@@ -43,7 +43,7 @@ public class ForkedStreamsLocatorTest {
                 event("fork3", "fork3")
         ));
 
-        StreamPair<ResolvedEvent> streams = ForkedStreamsLocator.locateForkedStreams(eventSource, FORK_ID);
+        StreamPair<ResolvedEvent> streams = ForkedStreamsLocator.locateForkedStreams(eventSource, eventSource, FORK_ID);
         List<String> origEvents = streams.originalStream.map(e -> e.eventRecord().eventType()).collect(toList());
         List<String> forkEvents = streams.forkedStream.map(e -> e.eventRecord().eventType()).collect(toList());
 

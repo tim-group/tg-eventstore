@@ -14,7 +14,7 @@ import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 
 public final class SummarisingDiffListener implements DiffListener {
-    private static final int DEFAULT_INTERMEDIATE_REPORT_EVENT_FREQUENCY = 250000;
+    private static final int DEFAULT_INTERMEDIATE_REPORT_EVENT_FREQUENCY = 500000;
 
     private final PrintWriter summaryWriter;
     private final int intermediateReportEventFrequency;
@@ -34,6 +34,7 @@ public final class SummarisingDiffListener implements DiffListener {
         this.summaryWriter = summaryWriter;
         this.intermediateReportEventFrequency = intermediateReportEventFrequency;
         header(Instant.now() + " starting to diff", ' ');
+        summaryWriter.flush();
     }
 
     @Override public void onMatchingEvents(DiffEvent eventInStreamA, DiffEvent eventInStreamB) {
@@ -63,11 +64,18 @@ public final class SummarisingDiffListener implements DiffListener {
 
     void maybePrintIntermediateReport(int additionalEvents) {
         eventsProcessed += additionalEvents;
-        if (eventsProcessed - lastIntermediateReportEventCount >= intermediateReportEventFrequency) {
+        if (hasNewTypeOfDiff() || isOverReportingThreshold()) {
             lastIntermediateReportEventCount = eventsProcessed;
             header(Instant.now() + " intermediate diffing results after " + eventsProcessed + " processed events", '=');
             printReport();
         }
+    }
+
+    private boolean hasNewTypeOfDiff() {
+        return similar.eventsFromA.totalCount == 1 || unmatched.eventsFromA.totalCount == 1 || unmatched.eventsFromB.totalCount == 1;
+    }
+    private boolean isOverReportingThreshold() {
+        return eventsProcessed - lastIntermediateReportEventCount >= intermediateReportEventFrequency;
     }
 
     void printReport() {
@@ -83,7 +91,6 @@ public final class SummarisingDiffListener implements DiffListener {
         summaryWriter.println();
         summaryWriter.println(text);
         summaryWriter.println(Strings.repeat(underline.toString(), text.length()));
-        summaryWriter.println();
     }
 
     private void section(String title, InterestingEvents events) {
