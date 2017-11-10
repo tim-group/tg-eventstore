@@ -18,18 +18,18 @@ Modules
 Usage
 =====
 ```java
- java.sql.Datasource db = //your db source;
- String tableName = "Event";
- new BasicMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
- 
- EventSource eventstore = new BasicMysqlEventSource(dataSource::getConnection, tableName);
- 
- eventstore.writeStream().write(
-     StreamId.streamId("pets", "dog-412"),
-     NewEvent.newEvent("AnimalBorn", "{\"dob\":\"2017-03-06\"}".getBytes(UTF8), new byte[0])
- );
- 
- Stream<ResolvedEvent> eventStream = eventstore.readAll().readAllForwards();
+java.sql.Datasource db = //your db source;
+String tableName = "Event";
+new BasicMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
+
+EventSource eventstore = new BasicMysqlEventSource(dataSource::getConnection, tableName);
+
+eventstore.writeStream().write(
+    StreamId.streamId("pets", "dog-412"),
+    Arrays.asList(NewEvent.newEvent("AnimalBorn", "{\"dob\":\"2017-03-06\"}".getBytes("UTF-8")))
+);
+
+Stream<ResolvedEvent> eventStream = eventstore.readAll().readAllForwards();
 ```
 
 Legacy
