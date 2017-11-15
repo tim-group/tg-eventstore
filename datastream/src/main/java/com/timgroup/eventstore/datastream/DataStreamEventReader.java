@@ -15,7 +15,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Optional;
@@ -24,6 +23,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import static java.lang.Long.MAX_VALUE;
 import static java.util.stream.StreamSupport.stream;
@@ -33,7 +34,7 @@ public class DataStreamEventReader implements EventReader {
     private final PositionCodec positionCodec;
     private final Path cacheDirectory;
 
-    private static String cacheFileName = "cache";
+    private static String cacheFileName = "cache.gz";
 
     public DataStreamEventReader(EventReader underlying, PositionCodec positionCodec, Path cacheDirectory) {
         this.underlying = underlying;
@@ -44,63 +45,61 @@ public class DataStreamEventReader implements EventReader {
     @Override
     public Stream<ResolvedEvent> readAllForwards() {
         Stream<ResolvedEvent> cachedEvents = readAllCachedEvents();
-        try {
-            File tmpOutputFile = File.createTempFile("cache", "inprogess", cacheDirectory.toFile());
-            DataOutputStream output = new DataOutputStream(new FileOutputStream(tmpOutputFile));
-            AtomicReference<Position> lastPosition = new AtomicReference(underlying.emptyStorePosition());
+        AtomicReference<Position> lastPosition = new AtomicReference(underlying.emptyStorePosition());
 
-            Spliterator<ResolvedEvent> wrappedSpliterator = new Spliterator<ResolvedEvent>() {
+        Spliterator<ResolvedEvent> wrappedSpliterator = new Spliterator<ResolvedEvent>() {
+            private DataOutputStream output;
+            private File tmpOutputFile;
+            private Spliterator<ResolvedEvent> underlyingSpliterator;
 
-                Spliterator<ResolvedEvent> underlyingSpliterator;
-                @Override
-                public boolean tryAdvance(Consumer<? super ResolvedEvent> action) {
-                    if (underlyingSpliterator == null) {
+            @Override
+            public boolean tryAdvance(Consumer<? super ResolvedEvent> action) {
+                if (underlyingSpliterator == null) {
+                    try {
+                        tmpOutputFile = File.createTempFile("cache", ".inprogess", cacheDirectory.toFile());
+                        output = new DataOutputStream(new GZIPOutputStream(new FileOutputStream(tmpOutputFile)));
                         underlyingSpliterator = underlying.readAllForwards(lastPosition.get()).spliterator();
+                    } catch (IOException e) {
+                        e.printStackTrace(); // todo
                     }
-                    boolean advanced = underlyingSpliterator.tryAdvance(event -> {
-                        writeEvent(output, event);
-                        action.accept(event);
-                    });
+                }
+                boolean advanced = underlyingSpliterator.tryAdvance(event -> {
+                    writeEvent(output, event);
+                    action.accept(event);
+                });
 
-                    if (!advanced) {
-                        try {
-                            output.close();
-                            File dest = cacheDirectory.resolve(cacheFileName).toFile();
-                            if (!dest.exists()) {
-                                tmpOutputFile.renameTo(dest); // todo don't ignore rename
-                            }
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            // todo
+                if (!advanced) {
+                    try {
+                        output.close();
+                        File dest = cacheDirectory.resolve(cacheFileName).toFile();
+                        if (!dest.exists()) {
+                            tmpOutputFile.renameTo(dest); // todo don't ignore rename
                         }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        // todo
                     }
-
-                    return advanced;
                 }
 
-                @Override
-                public Spliterator<ResolvedEvent> trySplit() {
-                    return null;
-                }
+                return advanced;
+            }
 
-                @Override
-                public long estimateSize() {
-                    return MAX_VALUE;
-                }
+            @Override
+            public Spliterator<ResolvedEvent> trySplit() {
+                return null;
+            }
 
-                @Override
-                public int characteristics() {
-                    return ORDERED | NONNULL | DISTINCT;
-                }
-            };
-            return Stream.concat(cachedEvents.peek(resolvedEvent -> lastPosition.set(resolvedEvent.position())), StreamSupport.stream(wrappedSpliterator, false));
-        } catch (FileNotFoundException e) {
-            e.printStackTrace(); // todo
-            throw new RuntimeException("Error reading cache", e);
-        } catch (IOException e) {
-            e.printStackTrace(); // todo
-            throw new RuntimeException("Error reading cache", e);
-        }
+            @Override
+            public long estimateSize() {
+                return MAX_VALUE;
+            }
+
+            @Override
+            public int characteristics() {
+                return ORDERED | NONNULL | DISTINCT;
+            }
+        };
+        return Stream.concat(cachedEvents.peek(resolvedEvent -> lastPosition.set(resolvedEvent.position())), StreamSupport.stream(wrappedSpliterator, false));
     }
 
     private void writeEvent(DataOutputStream output, ResolvedEvent resolvedEvent) {
@@ -134,8 +133,10 @@ public class DataStreamEventReader implements EventReader {
                 if (current == null && cachedFiles.isPresent()) {
                     cachedFiles.ifPresent(path -> {
                         try {
-                            current = new DataInputStream(new FileInputStream(path.toFile()));
+                            current = new DataInputStream(new GZIPInputStream(new FileInputStream(path.toFile())));
                         } catch (FileNotFoundException e) {
+                            e.printStackTrace(); // todo
+                        } catch (IOException e) {
                             e.printStackTrace(); // todo
                         }
                     });
@@ -189,17 +190,8 @@ public class DataStreamEventReader implements EventReader {
                 return ORDERED | NONNULL | DISTINCT;
             }
 
-        };
-        return stream(spliterator, false);
-    }
+        };return stream(spliterator, false);
 
-    private Stream<Path> findAllCachedFiles() {
-        try {
-            return Files.find(cacheDirectory, 1, (file, attributes) -> true);
-        } catch (IOException e) {
-            e.printStackTrace(); // todo
-            throw new RuntimeException("Error finding cache files", e);
-        }
     }
 
     @Override
