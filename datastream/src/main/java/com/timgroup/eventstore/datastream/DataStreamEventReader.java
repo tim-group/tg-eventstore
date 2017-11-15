@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.Spliterator;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -35,14 +36,53 @@ public class DataStreamEventReader implements EventReader {
         try {
             File tmpOutputFile = File.createTempFile("cache", "inprogess", cacheDirectory.toFile());
             DataOutputStream output = new DataOutputStream(new FileOutputStream(tmpOutputFile));
-            return Stream.concat(cachedEvents, underlying.readAllForwards().peek(resolvedEvent -> writeEvent(output, resolvedEvent)).onClose(() -> {
-                try {
-                    output.close();
-                    tmpOutputFile.renameTo(cacheDirectory.resolve(cacheFileName).toFile()); // todo don't ignore rename
-                } catch (IOException e) {
-                    e.printStackTrace(); // todo
+            AtomicReference<Position> lastPosition = new AtomicReference(underlying.emptyStorePosition());
+
+            Spliterator<ResolvedEvent> wrappedSpliterator = new Spliterator<ResolvedEvent>() {
+
+                Spliterator<ResolvedEvent> underlyingSpliterator;
+                @Override
+                public boolean tryAdvance(Consumer<? super ResolvedEvent> action) {
+                    if (underlyingSpliterator == null) {
+                        underlyingSpliterator = underlying.readAllForwards(lastPosition.get()).spliterator();
+                    }
+                    boolean advanced = underlyingSpliterator.tryAdvance(event -> {
+                        writeEvent(output, event);
+                        action.accept(event);
+                    });
+
+                    if (!advanced) {
+                        try {
+                            output.close();
+                            File dest = cacheDirectory.resolve(cacheFileName).toFile();
+                            if (!dest.exists()) {
+                                tmpOutputFile.renameTo(dest); // todo don't ignore rename
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            // todo
+                        }
+                    }
+
+                    return advanced;
                 }
-            }));
+
+                @Override
+                public Spliterator<ResolvedEvent> trySplit() {
+                    return null;
+                }
+
+                @Override
+                public long estimateSize() {
+                    return MAX_VALUE;
+                }
+
+                @Override
+                public int characteristics() {
+                    return ORDERED | NONNULL | DISTINCT;
+                }
+            };
+            return Stream.concat(cachedEvents.peek(resolvedEvent -> lastPosition.set(resolvedEvent.position())), StreamSupport.stream(wrappedSpliterator, false));
         } catch (FileNotFoundException e) {
             e.printStackTrace(); // todo
             throw new RuntimeException("Error reading cache", e);

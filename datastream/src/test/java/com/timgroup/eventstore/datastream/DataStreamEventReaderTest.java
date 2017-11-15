@@ -74,7 +74,6 @@ public class DataStreamEventReaderTest {
 
         Stream<ResolvedEvent> resolvedEventStream = dataStreamEventReader.readAllForwards();
         assertThat(resolvedEventStream.collect(toList()), hasSize(1));
-        resolvedEventStream.close();
 
         DataStreamEventReader newDataStreamEventReader = new DataStreamEventReader(new JavaInMemoryEventStore(Clock.systemUTC()),  JavaInMemoryEventStore.CODEC, cacheDirectory);
 
