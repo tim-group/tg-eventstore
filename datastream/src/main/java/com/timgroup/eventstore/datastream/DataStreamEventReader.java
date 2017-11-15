@@ -10,13 +10,12 @@ public class DataStreamEventReader implements EventReader {
     private final EventReader underlying;
 
     public DataStreamEventReader(EventReader underlying) {
-
         this.underlying = underlying;
     }
 
     @Override
     public Stream<ResolvedEvent> readAllForwards() {
-        return Stream.empty();
+        return underlying.readAllForwards();
     }
 
     @Override
