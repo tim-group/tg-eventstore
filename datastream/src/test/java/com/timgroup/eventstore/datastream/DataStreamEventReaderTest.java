@@ -1,6 +1,9 @@
 package com.timgroup.eventstore.datastream;
 
-import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.EventReader;
+import com.timgroup.eventstore.api.NewEvent;
+import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.hamcrest.Matchers;
 import org.junit.Before;
@@ -21,7 +24,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 
@@ -80,6 +82,22 @@ public class DataStreamEventReaderTest {
         assertThat(newDataStreamEventReader.readAllForwards().collect(toList()), hasSize(1));
 
         assertThat(newDataStreamEventReader.readAllForwards().collect(toList()),
+                equalTo(eventStore.readAllForwards().collect(toList())));
+    }
+
+    @Test
+    public void
+    givenReadingFromEmptyStorePosition_readsFromTheCache() {
+        eventStore.write(stream_1, asList(event_1));
+
+        Stream<ResolvedEvent> resolvedEventStream = dataStreamEventReader.readAllForwards(eventStore.emptyStorePosition());
+        assertThat(resolvedEventStream.collect(toList()), hasSize(1));
+
+        DataStreamEventReader newDataStreamEventReader = new DataStreamEventReader(new JavaInMemoryEventStore(Clock.systemUTC()),  JavaInMemoryEventStore.CODEC, cacheDirectory);
+
+        assertThat(newDataStreamEventReader.readAllForwards(eventStore.emptyStorePosition()).collect(toList()), hasSize(1));
+
+        assertThat(newDataStreamEventReader.readAllForwards(eventStore.emptyStorePosition()).collect(toList()),
                 equalTo(eventStore.readAllForwards().collect(toList())));
     }
 

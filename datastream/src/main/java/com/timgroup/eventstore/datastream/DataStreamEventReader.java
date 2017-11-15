@@ -204,7 +204,11 @@ public class DataStreamEventReader implements EventReader {
 
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-        return underlying.readAllForwards(positionExclusive);
+        if (positionExclusive.equals(emptyStorePosition())) {
+            return readAllForwards();
+        } else {
+            return underlying.readAllForwards(positionExclusive);
+        }
     }
 
     @Override
