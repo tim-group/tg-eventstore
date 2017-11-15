@@ -1,4 +1,4 @@
-package com.timgroup.eventstore.datastream;
+package com.timgroup.eventstore.cache;
 
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventRecord;

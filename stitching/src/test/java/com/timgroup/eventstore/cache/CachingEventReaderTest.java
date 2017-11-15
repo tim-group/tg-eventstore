@@ -1,4 +1,4 @@
-package com.timgroup.eventstore.datastream;
+package com.timgroup.eventstore.cache;
 
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.NewEvent;
@@ -63,7 +63,7 @@ public class CachingEventReaderTest {
         underlyingEventStore.write(stream_1, singletonList(event_1));
 
         assertThat(readAllToList(cachingEventReader), hasSize(1));
-        assertThat(readAllToList(cachingEventReader), equalTo(underlyingEventStore.readAllForwards().collect(toList())));
+        assertThat(readAllToList(cachingEventReader), equalTo(readAllToList(underlyingEventStore)));
     }
 
     @Test
@@ -76,7 +76,7 @@ public class CachingEventReaderTest {
 
         CachingEventReader newCachingEventReader = new CachingEventReader(new JavaInMemoryEventStore(Clock.systemUTC()),  CODEC, cacheDirectory);
         assertThat(readAllToList(newCachingEventReader), hasSize(1));
-        assertThat(readAllToList(newCachingEventReader), equalTo(underlyingEventStore.readAllForwards().collect(toList())));
+        assertThat(readAllToList(newCachingEventReader), equalTo(readAllToList(underlyingEventStore)));
     }
 
     private List<ResolvedEvent> readAllFromEmpty(EventReader eventReader) {
@@ -91,7 +91,7 @@ public class CachingEventReaderTest {
 
         CachingEventReader newCachingEventReader = new CachingEventReader(new JavaInMemoryEventStore(Clock.systemUTC()),  CODEC, cacheDirectory);
         assertThat(readAllFromEmpty(newCachingEventReader), hasSize(1));
-        assertThat(readAllFromEmpty(newCachingEventReader), equalTo(underlyingEventStore.readAllForwards().collect(toList())));
+        assertThat(readAllFromEmpty(newCachingEventReader), equalTo(readAllToList(underlyingEventStore)));
     }
 
     private static NewEvent anEvent() {
