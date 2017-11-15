@@ -29,14 +29,14 @@ import java.util.zip.GZIPOutputStream;
 import static java.lang.Long.MAX_VALUE;
 import static java.util.stream.StreamSupport.stream;
 
-public class DataStreamEventReader implements EventReader {
+public class CachingEventReader implements EventReader {
     private final EventReader underlying;
     private final PositionCodec positionCodec;
     private final Path cacheDirectory;
 
     private static String cacheFileName = "cache.gz";
 
-    public DataStreamEventReader(EventReader underlying, PositionCodec positionCodec, Path cacheDirectory) {
+    public CachingEventReader(EventReader underlying, PositionCodec positionCodec, Path cacheDirectory) {
         this.underlying = underlying;
         this.positionCodec = positionCodec;
         this.cacheDirectory = cacheDirectory;

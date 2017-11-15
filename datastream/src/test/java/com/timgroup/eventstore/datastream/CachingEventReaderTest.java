@@ -27,12 +27,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 
-public class DataStreamEventReaderTest {
+public class CachingEventReaderTest {
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
     Path cacheDirectory;
 
-    DataStreamEventReader dataStreamEventReader;
+    CachingEventReader cachingEventReader;
 
     JavaInMemoryEventStore eventStore = new JavaInMemoryEventStore(Clock.systemUTC());
     EventReader underlying = eventStore;
@@ -43,19 +43,19 @@ public class DataStreamEventReaderTest {
 
     private final NewEvent event_1 = anEvent();
 
-    public DataStreamEventReaderTest() {
+    public CachingEventReaderTest() {
     }
 
     @Before public void init() throws IOException {
         temporaryFolder.create();
         cacheDirectory = temporaryFolder.getRoot().toPath();
-        dataStreamEventReader = new DataStreamEventReader(underlying, JavaInMemoryEventStore.CODEC, cacheDirectory);
+        cachingEventReader = new CachingEventReader(underlying, JavaInMemoryEventStore.CODEC, cacheDirectory);
     }
 
     @Test
     public void
     givenNoDataInUnderlying_returnsNothing() {
-        assertThat(dataStreamEventReader.readAllForwards().collect(Collectors.toList()), Matchers.empty());
+        assertThat(cachingEventReader.readAllForwards().collect(Collectors.toList()), Matchers.empty());
     }
 
     @Test
@@ -63,9 +63,9 @@ public class DataStreamEventReaderTest {
     givenAnEventDataInUnderlying_returnsThatEvent() {
         eventStore.write(stream_1, asList(event_1));
 
-        assertThat(dataStreamEventReader.readAllForwards().collect(toList()), hasSize(1));
+        assertThat(cachingEventReader.readAllForwards().collect(toList()), hasSize(1));
 
-        assertThat(dataStreamEventReader.readAllForwards().collect(toList()),
+        assertThat(cachingEventReader.readAllForwards().collect(toList()),
                 equalTo(eventStore.readAllForwards().collect(toList())));
     }
 
@@ -74,14 +74,14 @@ public class DataStreamEventReaderTest {
     givenAlreadyReadAllOnce_readsFromTheCache() {
         eventStore.write(stream_1, asList(event_1));
 
-        Stream<ResolvedEvent> resolvedEventStream = dataStreamEventReader.readAllForwards();
+        Stream<ResolvedEvent> resolvedEventStream = cachingEventReader.readAllForwards();
         assertThat(resolvedEventStream.collect(toList()), hasSize(1));
 
-        DataStreamEventReader newDataStreamEventReader = new DataStreamEventReader(new JavaInMemoryEventStore(Clock.systemUTC()),  JavaInMemoryEventStore.CODEC, cacheDirectory);
+        CachingEventReader newCachingEventReader = new CachingEventReader(new JavaInMemoryEventStore(Clock.systemUTC()),  JavaInMemoryEventStore.CODEC, cacheDirectory);
 
-        assertThat(newDataStreamEventReader.readAllForwards().collect(toList()), hasSize(1));
+        assertThat(newCachingEventReader.readAllForwards().collect(toList()), hasSize(1));
 
-        assertThat(newDataStreamEventReader.readAllForwards().collect(toList()),
+        assertThat(newCachingEventReader.readAllForwards().collect(toList()),
                 equalTo(eventStore.readAllForwards().collect(toList())));
     }
 
@@ -90,14 +90,14 @@ public class DataStreamEventReaderTest {
     givenReadingFromEmptyStorePosition_readsFromTheCache() {
         eventStore.write(stream_1, asList(event_1));
 
-        Stream<ResolvedEvent> resolvedEventStream = dataStreamEventReader.readAllForwards(eventStore.emptyStorePosition());
+        Stream<ResolvedEvent> resolvedEventStream = cachingEventReader.readAllForwards(eventStore.emptyStorePosition());
         assertThat(resolvedEventStream.collect(toList()), hasSize(1));
 
-        DataStreamEventReader newDataStreamEventReader = new DataStreamEventReader(new JavaInMemoryEventStore(Clock.systemUTC()),  JavaInMemoryEventStore.CODEC, cacheDirectory);
+        CachingEventReader newCachingEventReader = new CachingEventReader(new JavaInMemoryEventStore(Clock.systemUTC()),  JavaInMemoryEventStore.CODEC, cacheDirectory);
 
-        assertThat(newDataStreamEventReader.readAllForwards(eventStore.emptyStorePosition()).collect(toList()), hasSize(1));
+        assertThat(newCachingEventReader.readAllForwards(eventStore.emptyStorePosition()).collect(toList()), hasSize(1));
 
-        assertThat(newDataStreamEventReader.readAllForwards(eventStore.emptyStorePosition()).collect(toList()),
+        assertThat(newCachingEventReader.readAllForwards(eventStore.emptyStorePosition()).collect(toList()),
                 equalTo(eventStore.readAllForwards().collect(toList())));
     }
 
