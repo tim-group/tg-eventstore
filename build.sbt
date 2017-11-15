@@ -79,6 +79,12 @@ val eventstore_filesystem = Project(id = "eventstore-filesystem", base = file("f
   .settings(publishArtifact in (Compile, packageDoc) := false)
   .settings(overridePublishSettings)
 
+val eventstore_datastream = Project(id = "eventstore-datastream", base = file("datastream"))
+  .dependsOn(eventstore_api % "compile->compile; test->test")
+  .dependsOn(eventstore_memory % "test->test")
+  .settings(publishArtifact in (Compile, packageDoc) := false)
+  .settings(overridePublishSettings)
+
 val eventstore_subscription = Project(id = "eventstore-subscription", base = file("subscription"))
   .dependsOn(eventstore_api, eventstore_memory % "compile->test")
   .settings(
