@@ -29,6 +29,10 @@ import java.util.zip.GZIPOutputStream;
 import static java.lang.Long.MAX_VALUE;
 import static java.util.stream.StreamSupport.stream;
 
+/**
+ * Reads events from an underylying event reader and then stores in locally
+ * on the file system. Note that the files are compressed via GZip.
+ */
 public class CachingEventReader implements EventReader {
     private final EventReader underlying;
     private final PositionCodec positionCodec;
@@ -190,8 +194,8 @@ public class CachingEventReader implements EventReader {
                 return ORDERED | NONNULL | DISTINCT;
             }
 
-        };return stream(spliterator, false);
-
+        };
+        return stream(spliterator, false);
     }
 
     @Override

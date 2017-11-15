@@ -1,6 +1,5 @@
 package com.timgroup.eventstore.datastream;
 
-import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
@@ -34,8 +33,7 @@ public class CachingEventReaderTest {
 
     CachingEventReader cachingEventReader;
 
-    JavaInMemoryEventStore eventStore = new JavaInMemoryEventStore(Clock.systemUTC());
-    EventReader underlying = eventStore;
+    JavaInMemoryEventStore underlyingEventStore = new JavaInMemoryEventStore(Clock.systemUTC());
 
     private final String category_1 = randomCategory();
 
@@ -43,13 +41,10 @@ public class CachingEventReaderTest {
 
     private final NewEvent event_1 = anEvent();
 
-    public CachingEventReaderTest() {
-    }
-
     @Before public void init() throws IOException {
         temporaryFolder.create();
         cacheDirectory = temporaryFolder.getRoot().toPath();
-        cachingEventReader = new CachingEventReader(underlying, JavaInMemoryEventStore.CODEC, cacheDirectory);
+        cachingEventReader = new CachingEventReader(underlyingEventStore, JavaInMemoryEventStore.CODEC, cacheDirectory);
     }
 
     @Test
@@ -61,18 +56,18 @@ public class CachingEventReaderTest {
     @Test
     public void
     givenAnEventDataInUnderlying_returnsThatEvent() {
-        eventStore.write(stream_1, asList(event_1));
+        underlyingEventStore.write(stream_1, asList(event_1));
 
         assertThat(cachingEventReader.readAllForwards().collect(toList()), hasSize(1));
 
         assertThat(cachingEventReader.readAllForwards().collect(toList()),
-                equalTo(eventStore.readAllForwards().collect(toList())));
+                equalTo(underlyingEventStore.readAllForwards().collect(toList())));
     }
 
     @Test
     public void
     givenAlreadyReadAllOnce_readsFromTheCache() {
-        eventStore.write(stream_1, asList(event_1));
+        underlyingEventStore.write(stream_1, asList(event_1));
 
         Stream<ResolvedEvent> resolvedEventStream = cachingEventReader.readAllForwards();
         assertThat(resolvedEventStream.collect(toList()), hasSize(1));
@@ -82,23 +77,23 @@ public class CachingEventReaderTest {
         assertThat(newCachingEventReader.readAllForwards().collect(toList()), hasSize(1));
 
         assertThat(newCachingEventReader.readAllForwards().collect(toList()),
-                equalTo(eventStore.readAllForwards().collect(toList())));
+                equalTo(underlyingEventStore.readAllForwards().collect(toList())));
     }
 
     @Test
     public void
     givenReadingFromEmptyStorePosition_readsFromTheCache() {
-        eventStore.write(stream_1, asList(event_1));
+        underlyingEventStore.write(stream_1, asList(event_1));
 
-        Stream<ResolvedEvent> resolvedEventStream = cachingEventReader.readAllForwards(eventStore.emptyStorePosition());
+        Stream<ResolvedEvent> resolvedEventStream = cachingEventReader.readAllForwards(underlyingEventStore.emptyStorePosition());
         assertThat(resolvedEventStream.collect(toList()), hasSize(1));
 
         CachingEventReader newCachingEventReader = new CachingEventReader(new JavaInMemoryEventStore(Clock.systemUTC()),  JavaInMemoryEventStore.CODEC, cacheDirectory);
 
-        assertThat(newCachingEventReader.readAllForwards(eventStore.emptyStorePosition()).collect(toList()), hasSize(1));
+        assertThat(newCachingEventReader.readAllForwards(underlyingEventStore.emptyStorePosition()).collect(toList()), hasSize(1));
 
-        assertThat(newCachingEventReader.readAllForwards(eventStore.emptyStorePosition()).collect(toList()),
-                equalTo(eventStore.readAllForwards().collect(toList())));
+        assertThat(newCachingEventReader.readAllForwards(underlyingEventStore.emptyStorePosition()).collect(toList()),
+                equalTo(underlyingEventStore.readAllForwards().collect(toList())));
     }
 
 
