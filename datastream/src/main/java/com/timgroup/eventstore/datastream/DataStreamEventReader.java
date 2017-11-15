@@ -1,9 +1,20 @@
 package com.timgroup.eventstore.datastream;
 
-import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.EventReader;
+import com.timgroup.eventstore.api.EventRecord;
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
+import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.api.StreamId;
 
-import java.io.*;
-import java.nio.file.FileVisitOption;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.EOFException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -193,11 +204,11 @@ public class DataStreamEventReader implements EventReader {
 
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-        return null;
+        return underlying.readAllForwards(positionExclusive);
     }
 
     @Override
     public Position emptyStorePosition() {
-        return null;
+        return underlying.emptyStorePosition();
     }
 }
