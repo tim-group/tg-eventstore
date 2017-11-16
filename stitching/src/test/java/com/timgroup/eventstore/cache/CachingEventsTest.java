@@ -10,11 +10,14 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.List;
 import java.util.stream.Stream;
+import java.util.zip.GZIPOutputStream;
 
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.eventstore.api.StreamId.streamId;
@@ -29,12 +32,12 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 
-public class CachingEventReaderTest {
+public class CachingEventsTest {
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
     Path cacheDirectory;
 
-    CachingEventReader cachingEventReader;
+    CacheEventReader cacheEventReader;
 
     JavaInMemoryEventStore underlyingEventStore = new JavaInMemoryEventStore(Clock.systemUTC());
 
@@ -44,39 +47,45 @@ public class CachingEventReaderTest {
     @Before public void init() throws IOException {
         temporaryFolder.create();
         cacheDirectory = temporaryFolder.getRoot().toPath();
-        cachingEventReader = new CachingEventReader(underlyingEventStore, CODEC, cacheDirectory);
+        cacheEventReader = new CacheEventReader(underlyingEventStore, CODEC, cacheDirectory);
     }
 
     private List<ResolvedEvent> readAllToList(EventReader eventReader) {
         return eventReader.readAllForwards().collect(toList());
     }
 
+    private void saveAllToCache() throws Exception {
+        try (OutputStream outputStream = new GZIPOutputStream(new FileOutputStream(cacheDirectory.resolve("cache.gz").toFile()));
+             CacheEventWriter cacheEventWriter = new CacheEventWriter(outputStream, CODEC)){
+            underlyingEventStore.readAllForwards().forEach(cacheEventWriter::write);
+        }
+    }
+
     @Test
     public void
     givenNoDataInUnderlying_returnsNothing() {
-        assertThat(readAllToList(cachingEventReader), is(empty()));
+        assertThat(readAllToList(cacheEventReader), is(empty()));
     }
 
     @Test
     public void
-    givenAnEventDataInUnderlying_returnsThatEvent() {
+    givenAnEventDataInUnderlying_returnsThatEvent() throws Exception {
         underlyingEventStore.write(stream_1, singletonList(event_1));
+        saveAllToCache();
 
-        assertThat(readAllToList(cachingEventReader), hasSize(1));
-        assertThat(readAllToList(cachingEventReader), equalTo(readAllToList(underlyingEventStore)));
+        assertThat(readAllToList(cacheEventReader), hasSize(1));
+        assertThat(readAllToList(cacheEventReader), equalTo(readAllToList(underlyingEventStore)));
     }
 
     @Test
     public void
-    givenAlreadyReadAllOnce_readsFromTheCache() {
+    givenCachePopulated_readsFromTheCache() throws Exception {
         underlyingEventStore.write(stream_1, singletonList(event_1));
+        saveAllToCache();
 
-        Stream<ResolvedEvent> resolvedEventStream = cachingEventReader.readAllForwards();
-        assertThat(resolvedEventStream.collect(toList()), hasSize(1));
-
-        CachingEventReader newCachingEventReader = new CachingEventReader(new JavaInMemoryEventStore(Clock.systemUTC()),  CODEC, cacheDirectory);
-        assertThat(readAllToList(newCachingEventReader), hasSize(1));
-        assertThat(readAllToList(newCachingEventReader), equalTo(readAllToList(underlyingEventStore)));
+        CacheEventReader newCacheEventReader = new CacheEventReader(new JavaInMemoryEventStore(Clock.systemUTC()),  CODEC, cacheDirectory);
+        assertThat(readAllToList(newCacheEventReader), hasSize(1));
+        assertThat(readAllToList(newCacheEventReader), equalTo(readAllToList(underlyingEventStore)));
     }
 
     private List<ResolvedEvent> readAllFromEmpty(EventReader eventReader) {
@@ -85,13 +94,15 @@ public class CachingEventReaderTest {
 
     @Test
     public void
-    givenReadingFromEmptyStorePosition_readsFromTheCache() {
+    givenReadingFromEmptyStorePosition_readsFromTheCache() throws Exception {
         underlyingEventStore.write(stream_1, singletonList(event_1));
-        assertThat(readAllFromEmpty(cachingEventReader), hasSize(1));
+        saveAllToCache();
 
-        CachingEventReader newCachingEventReader = new CachingEventReader(new JavaInMemoryEventStore(Clock.systemUTC()),  CODEC, cacheDirectory);
-        assertThat(readAllFromEmpty(newCachingEventReader), hasSize(1));
-        assertThat(readAllFromEmpty(newCachingEventReader), equalTo(readAllToList(underlyingEventStore)));
+        assertThat(readAllFromEmpty(cacheEventReader), hasSize(1));
+
+        CacheEventReader newCacheEventReader = new CacheEventReader(new JavaInMemoryEventStore(Clock.systemUTC()),  CODEC, cacheDirectory);
+        assertThat(readAllFromEmpty(newCacheEventReader), hasSize(1));
+        assertThat(readAllFromEmpty(newCacheEventReader), equalTo(readAllToList(underlyingEventStore)));
     }
 
     private static NewEvent anEvent() {
