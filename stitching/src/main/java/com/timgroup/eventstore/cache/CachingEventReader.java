@@ -190,13 +190,18 @@ public class CachingEventReader implements EventReader {
                 });
             }
             if (current != null) {
-                return readNextEvent(action);
+                try {
+                    return readNextEvent(action);
+                } catch (IOException e) {
+                    e.printStackTrace(); // todo
+                    return false;
+                }
             } else {
                 return false;
             }
         }
 
-        private boolean readNextEvent(Consumer<? super ResolvedEvent> action) {
+        private boolean readNextEvent(Consumer<? super ResolvedEvent> action) throws IOException {
             try {
                 ResolvedEvent resolvedEvent = new ResolvedEvent(positionCodec.deserializePosition(current.readUTF()),
                         EventRecord.eventRecord(Instant.ofEpochMilli(current.readLong()),
@@ -208,10 +213,8 @@ public class CachingEventReader implements EventReader {
                 action.accept(resolvedEvent);
                 return true;
             } catch (EOFException e) {
+                current.close();
                 // todo: this should only be OK if throw from first read (position reading)
-                return false;
-            } catch (IOException e) {
-                e.printStackTrace(); // todo
                 return false;
             }
         }
