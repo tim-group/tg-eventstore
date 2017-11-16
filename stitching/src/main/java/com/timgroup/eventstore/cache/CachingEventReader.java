@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -53,13 +52,15 @@ public class CachingEventReader implements EventReader {
         Stream<ResolvedEvent> cachedEvents = readAllCachedEvents();
         AtomicReference<Position> lastPosition = new AtomicReference(underlying.emptyStorePosition());
 
-        Spliterator<ResolvedEvent> wrappedSpliterator = new WriteToCacheSpliterator(lastPosition::get);
+        Spliterator<ResolvedEvent> wrappedSpliterator = new WriteToCacheSpliterator(
+                () -> underlying.readAllForwards(lastPosition.get()).spliterator(),
+                () -> cacheDirectory.resolve(cacheFileName).toFile(), positionCodec);
         return concat(cachedEvents
                         .peek(resolvedEvent -> lastPosition.set(resolvedEvent.position())),
                 stream(wrappedSpliterator, false));
     }
 
-    private void writeEvent(DataOutputStream output, ResolvedEvent resolvedEvent) {
+    private static void writeEvent(DataOutputStream output, PositionCodec positionCodec, ResolvedEvent resolvedEvent) {
         try {
             output.writeUTF(positionCodec.serializePosition(resolvedEvent.position()));
             EventRecord eventRecord = resolvedEvent.eventRecord();
@@ -82,7 +83,7 @@ public class CachingEventReader implements EventReader {
         Path cachePath = cacheDirectory.resolve(cacheFileName);
         File cacheFile = cachePath.toFile();
         Optional<Path> cachedFiles = cacheFile.exists() ? Optional.of(cacheFile.toPath()) : Optional.empty();
-        return stream(new ReadCacheSpliterator(cachedFiles), false);
+        return stream(new ReadCacheSpliterator(positionCodec, cachedFiles), false);
     }
 
     @Override
@@ -99,36 +100,42 @@ public class CachingEventReader implements EventReader {
         return underlying.emptyStorePosition();
     }
 
-    private class WriteToCacheSpliterator implements Spliterator<ResolvedEvent> {
-        private final Supplier<Position> lastPosition;
+    private static class WriteToCacheSpliterator implements Spliterator<ResolvedEvent> {
+        private final Supplier<Spliterator<ResolvedEvent>> spliteratorSupplier;
+        private final Supplier<File> outputFileSupplier;
         private DataOutputStream output;
         private File tmpOutputFile;
         private Spliterator<ResolvedEvent> underlyingSpliterator;
+        private PositionCodec positionCodec;
 
-        public WriteToCacheSpliterator(Supplier<Position> lastPosition) {
-            this.lastPosition = lastPosition;
+        public WriteToCacheSpliterator(Supplier<Spliterator<ResolvedEvent>> spliteratorSupplier,
+                                       Supplier<File> outputFileSupplier,
+                                       PositionCodec positionCodec) {
+            this.spliteratorSupplier = spliteratorSupplier;
+            this.outputFileSupplier = outputFileSupplier;
+            this.positionCodec = positionCodec;
         }
 
         @Override
         public boolean tryAdvance(Consumer<? super ResolvedEvent> action) {
             if (underlyingSpliterator == null) {
                 try {
-                    tmpOutputFile = File.createTempFile("cache", ".inprogess", cacheDirectory.toFile());
+                    tmpOutputFile = File.createTempFile("cache", ".inprogess", outputFileSupplier.get().getParentFile());
                     output = new DataOutputStream(new GZIPOutputStream(new FileOutputStream(tmpOutputFile)));
-                    underlyingSpliterator = underlying.readAllForwards(lastPosition.get()).spliterator();
+                    underlyingSpliterator = spliteratorSupplier.get();
                 } catch (IOException e) {
                     e.printStackTrace(); // todo
                 }
             }
             boolean advanced = underlyingSpliterator.tryAdvance(event -> {
-                writeEvent(output, event);
+                writeEvent(output, positionCodec, event);
                 action.accept(event);
             });
 
             if (!advanced) {
                 try {
                     output.close();
-                    File dest = cacheDirectory.resolve(cacheFileName).toFile();
+                    File dest = outputFileSupplier.get();
                     if (!dest.exists()) {
                         tmpOutputFile.renameTo(dest); // todo don't ignore rename
                     }
@@ -157,13 +164,16 @@ public class CachingEventReader implements EventReader {
         }
     }
 
-    private class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
+    private static class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
+        private final PositionCodec positionCodec;
         private final Optional<Path> cachedFiles;
+
         private DataInputStream current;
 
-        public ReadCacheSpliterator(Optional<Path> cachedFiles) {
+        public ReadCacheSpliterator(PositionCodec positionCodec, Optional<Path> cachedFiles) {
+            this.positionCodec = positionCodec;
             this.cachedFiles = cachedFiles;
-            current = null;
+            this.current = null;
         }
 
         @Override
