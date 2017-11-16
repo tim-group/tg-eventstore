@@ -21,12 +21,14 @@ import java.util.Optional;
 import java.util.Spliterator;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import static java.lang.Long.MAX_VALUE;
+import static java.util.stream.Stream.concat;
 import static java.util.stream.StreamSupport.stream;
 
 /**
@@ -51,59 +53,10 @@ public class CachingEventReader implements EventReader {
         Stream<ResolvedEvent> cachedEvents = readAllCachedEvents();
         AtomicReference<Position> lastPosition = new AtomicReference(underlying.emptyStorePosition());
 
-        Spliterator<ResolvedEvent> wrappedSpliterator = new Spliterator<ResolvedEvent>() {
-            private DataOutputStream output;
-            private File tmpOutputFile;
-            private Spliterator<ResolvedEvent> underlyingSpliterator;
-
-            @Override
-            public boolean tryAdvance(Consumer<? super ResolvedEvent> action) {
-                if (underlyingSpliterator == null) {
-                    try {
-                        tmpOutputFile = File.createTempFile("cache", ".inprogess", cacheDirectory.toFile());
-                        output = new DataOutputStream(new GZIPOutputStream(new FileOutputStream(tmpOutputFile)));
-                        underlyingSpliterator = underlying.readAllForwards(lastPosition.get()).spliterator();
-                    } catch (IOException e) {
-                        e.printStackTrace(); // todo
-                    }
-                }
-                boolean advanced = underlyingSpliterator.tryAdvance(event -> {
-                    writeEvent(output, event);
-                    action.accept(event);
-                });
-
-                if (!advanced) {
-                    try {
-                        output.close();
-                        File dest = cacheDirectory.resolve(cacheFileName).toFile();
-                        if (!dest.exists()) {
-                            tmpOutputFile.renameTo(dest); // todo don't ignore rename
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        // todo
-                    }
-                }
-
-                return advanced;
-            }
-
-            @Override
-            public Spliterator<ResolvedEvent> trySplit() {
-                return null;
-            }
-
-            @Override
-            public long estimateSize() {
-                return MAX_VALUE;
-            }
-
-            @Override
-            public int characteristics() {
-                return ORDERED | NONNULL | DISTINCT;
-            }
-        };
-        return Stream.concat(cachedEvents.peek(resolvedEvent -> lastPosition.set(resolvedEvent.position())), StreamSupport.stream(wrappedSpliterator, false));
+        Spliterator<ResolvedEvent> wrappedSpliterator = new WriteToCacheSpliterator(lastPosition::get);
+        return concat(cachedEvents
+                        .peek(resolvedEvent -> lastPosition.set(resolvedEvent.position())),
+                stream(wrappedSpliterator, false));
     }
 
     private void writeEvent(DataOutputStream output, ResolvedEvent resolvedEvent) {
@@ -129,73 +82,7 @@ public class CachingEventReader implements EventReader {
         Path cachePath = cacheDirectory.resolve(cacheFileName);
         File cacheFile = cachePath.toFile();
         Optional<Path> cachedFiles = cacheFile.exists() ? Optional.of(cacheFile.toPath()) : Optional.empty();
-        Spliterator<ResolvedEvent> spliterator = new Spliterator<ResolvedEvent>() {
-            private DataInputStream current = null;
-
-            @Override
-            public boolean tryAdvance(Consumer<? super ResolvedEvent> action) {
-                if (current == null && cachedFiles.isPresent()) {
-                    cachedFiles.ifPresent(path -> {
-                        try {
-                            current = new DataInputStream(new GZIPInputStream(new FileInputStream(path.toFile())));
-                        } catch (FileNotFoundException e) {
-                            e.printStackTrace(); // todo
-                        } catch (IOException e) {
-                            e.printStackTrace(); // todo
-                        }
-                    });
-                }
-                if (current != null) {
-                    return readNextEvent(action);
-                } else {
-                    return false;
-                }
-            }
-
-            private boolean readNextEvent(Consumer<? super ResolvedEvent> action) {
-                try {
-                    ResolvedEvent resolvedEvent = new ResolvedEvent(positionCodec.deserializePosition(current.readUTF()),
-                            EventRecord.eventRecord(Instant.ofEpochMilli(current.readLong()),
-                                    StreamId.streamId(current.readUTF(), current.readUTF()),
-                                    current.readLong(),
-                                    current.readUTF(),
-                                    readByteArray(current),
-                                    readByteArray(current)));
-                    action.accept(resolvedEvent);
-                    return true;
-                } catch (EOFException e) {
-                    // todo: this should only be OK if throw from first read (position reading)
-                    return false;
-                } catch (IOException e) {
-                    e.printStackTrace(); // todo
-                    return false;
-                }
-            }
-
-            private byte[] readByteArray(DataInputStream current) throws IOException {
-                int size = current.readInt();
-                byte[] buffer = new byte[size];
-                current.readFully(buffer);
-                return buffer;
-            }
-
-            @Override
-            public Spliterator<ResolvedEvent> trySplit() {
-                return null;
-            }
-
-            @Override
-            public long estimateSize() {
-                return MAX_VALUE;
-            }
-
-            @Override
-            public int characteristics() {
-                return ORDERED | NONNULL | DISTINCT;
-            }
-
-        };
-        return stream(spliterator, false);
+        return stream(new ReadCacheSpliterator(cachedFiles), false);
     }
 
     @Override
@@ -210,5 +97,136 @@ public class CachingEventReader implements EventReader {
     @Override
     public Position emptyStorePosition() {
         return underlying.emptyStorePosition();
+    }
+
+    private class WriteToCacheSpliterator implements Spliterator<ResolvedEvent> {
+        private final Supplier<Position> lastPosition;
+        private DataOutputStream output;
+        private File tmpOutputFile;
+        private Spliterator<ResolvedEvent> underlyingSpliterator;
+
+        public WriteToCacheSpliterator(Supplier<Position> lastPosition) {
+            this.lastPosition = lastPosition;
+        }
+
+        @Override
+        public boolean tryAdvance(Consumer<? super ResolvedEvent> action) {
+            if (underlyingSpliterator == null) {
+                try {
+                    tmpOutputFile = File.createTempFile("cache", ".inprogess", cacheDirectory.toFile());
+                    output = new DataOutputStream(new GZIPOutputStream(new FileOutputStream(tmpOutputFile)));
+                    underlyingSpliterator = underlying.readAllForwards(lastPosition.get()).spliterator();
+                } catch (IOException e) {
+                    e.printStackTrace(); // todo
+                }
+            }
+            boolean advanced = underlyingSpliterator.tryAdvance(event -> {
+                writeEvent(output, event);
+                action.accept(event);
+            });
+
+            if (!advanced) {
+                try {
+                    output.close();
+                    File dest = cacheDirectory.resolve(cacheFileName).toFile();
+                    if (!dest.exists()) {
+                        tmpOutputFile.renameTo(dest); // todo don't ignore rename
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    // todo
+                }
+            }
+
+            return advanced;
+        }
+
+        @Override
+        public Spliterator<ResolvedEvent> trySplit() {
+            return null;
+        }
+
+        @Override
+        public long estimateSize() {
+            return MAX_VALUE;
+        }
+
+        @Override
+        public int characteristics() {
+            return ORDERED | NONNULL | DISTINCT;
+        }
+    }
+
+    private class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
+        private final Optional<Path> cachedFiles;
+        private DataInputStream current;
+
+        public ReadCacheSpliterator(Optional<Path> cachedFiles) {
+            this.cachedFiles = cachedFiles;
+            current = null;
+        }
+
+        @Override
+        public boolean tryAdvance(Consumer<? super ResolvedEvent> action) {
+            if (current == null && cachedFiles.isPresent()) {
+                cachedFiles.ifPresent(path -> {
+                    try {
+                        current = new DataInputStream(new GZIPInputStream(new FileInputStream(path.toFile())));
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace(); // todo
+                    } catch (IOException e) {
+                        e.printStackTrace(); // todo
+                    }
+                });
+            }
+            if (current != null) {
+                return readNextEvent(action);
+            } else {
+                return false;
+            }
+        }
+
+        private boolean readNextEvent(Consumer<? super ResolvedEvent> action) {
+            try {
+                ResolvedEvent resolvedEvent = new ResolvedEvent(positionCodec.deserializePosition(current.readUTF()),
+                        EventRecord.eventRecord(Instant.ofEpochMilli(current.readLong()),
+                                StreamId.streamId(current.readUTF(), current.readUTF()),
+                                current.readLong(),
+                                current.readUTF(),
+                                readByteArray(current),
+                                readByteArray(current)));
+                action.accept(resolvedEvent);
+                return true;
+            } catch (EOFException e) {
+                // todo: this should only be OK if throw from first read (position reading)
+                return false;
+            } catch (IOException e) {
+                e.printStackTrace(); // todo
+                return false;
+            }
+        }
+
+        private byte[] readByteArray(DataInputStream current) throws IOException {
+            int size = current.readInt();
+            byte[] buffer = new byte[size];
+            current.readFully(buffer);
+            return buffer;
+        }
+
+        @Override
+        public Spliterator<ResolvedEvent> trySplit() {
+            return null;
+        }
+
+        @Override
+        public long estimateSize() {
+            return MAX_VALUE;
+        }
+
+        @Override
+        public int characteristics() {
+            return ORDERED | NONNULL | DISTINCT;
+        }
+
     }
 }
