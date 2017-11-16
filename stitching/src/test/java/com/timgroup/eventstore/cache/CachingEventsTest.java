@@ -2,6 +2,7 @@ package com.timgroup.eventstore.cache;
 
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.NewEvent;
+import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
@@ -10,13 +11,14 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.List;
-import java.util.stream.Stream;
+import java.util.Optional;
 import java.util.zip.GZIPOutputStream;
 
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
@@ -55,10 +57,14 @@ public class CachingEventsTest {
     }
 
     private void saveAllToCache() throws Exception {
-        try (OutputStream outputStream = new GZIPOutputStream(new FileOutputStream(cacheDirectory.resolve("cache.gz").toFile()));
+        try (OutputStream outputStream = new GZIPOutputStream(new FileOutputStream(getCacheFile()));
              CacheEventWriter cacheEventWriter = new CacheEventWriter(outputStream, CODEC)){
             underlyingEventStore.readAllForwards().forEach(cacheEventWriter::write);
         }
+    }
+
+    private File getCacheFile() {
+        return cacheDirectory.resolve("cache.gz").toFile();
     }
 
     @Test
@@ -75,6 +81,23 @@ public class CachingEventsTest {
 
         assertThat(readAllToList(cacheEventReader), hasSize(1));
         assertThat(readAllToList(cacheEventReader), equalTo(readAllToList(underlyingEventStore)));
+    }
+
+    @Test
+    public void
+    givenEmptyCache_returnsEmptyLastPosition() throws Exception {
+        assertThat(CacheEventReader.findLastPosition(getCacheFile().toPath(), CODEC), is(Optional.empty()));
+    }
+
+    @Test
+    public void
+    givenAnEventsWrittenToCache_returnsTheLastPosition() throws Exception {
+        underlyingEventStore.write(stream_1, singletonList(event_1));
+        underlyingEventStore.write(stream_1, singletonList(event_1));
+        saveAllToCache();
+
+        Position currentPosition = underlyingEventStore.readAllBackwards().findFirst().get().position();
+        assertThat(CacheEventReader.findLastPosition(getCacheFile().toPath(), CODEC).get(), is(currentPosition));
     }
 
     @Test
