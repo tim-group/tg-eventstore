@@ -64,6 +64,8 @@ public class CacheEventReader implements EventReader {
     }
 
     private static class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
+        private static final int ONE_MEGABYTE = 1024 * 1024;
+
         private final EventReader underlying;
         private final PositionCodec positionCodec;
         private final Optional<Path> cachedFiles;
@@ -105,7 +107,7 @@ public class CacheEventReader implements EventReader {
             if (cache == null) {
                 cachedFiles.ifPresent(path -> {
                     try {
-                        cache = new DataInputStream(new GZIPInputStream(new FileInputStream(path.toFile())));
+                        cache = new DataInputStream(new GZIPInputStream(new FileInputStream(path.toFile()), ONE_MEGABYTE));
                         cacheMayHaveMoreData = true;
                     } catch (FileNotFoundException e) {
                         e.printStackTrace(); // todo
