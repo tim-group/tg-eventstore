@@ -4,6 +4,7 @@ import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.cache.ReadCacheSpliterator.CacheNotFoundException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -73,8 +74,12 @@ public class CacheEventReader implements EventReader {
     public static Optional<Position> findLastPosition(Path cacheFile, PositionCodec positionCodec) {
         ReadCacheSpliterator spliterator = new ReadCacheSpliterator(positionCodec, singletonList(cacheFile), ignore -> Stream.empty());
         AtomicReference<Position> lastPosition = new AtomicReference<>(null);
-        spliterator.forEachRemaining(r -> lastPosition.set(r.position()));
-        return Optional.ofNullable(lastPosition.get());
+        try {
+            spliterator.forEachRemaining(r -> lastPosition.set(r.position()));
+            return Optional.ofNullable(lastPosition.get());
+        } catch (CacheNotFoundException e) {
+            return Optional.empty();
+        }
     }
 
     public static class CacheReadingException extends RuntimeException {

@@ -98,6 +98,13 @@ public class CachingEventsTest {
     @Test
     public void
     givenEmptyCache_returnsEmptyLastPosition() throws Exception {
+        saveAllToCache(getCacheFile("cache.gz"));
+        assertThat(CacheEventReader.findLastPosition(getCacheFile("cache.gz").toPath(), CODEC), is(Optional.empty()));
+    }
+
+    @Test
+    public void
+    givenNonExistentCache_returnsEmptyLastPosition() throws Exception {
         assertThat(CacheEventReader.findLastPosition(getCacheFile("cache.gz").toPath(), CODEC), is(Optional.empty()));
     }
 

@@ -9,7 +9,6 @@ import com.timgroup.eventstore.api.StreamId;
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -26,10 +25,9 @@ import static java.lang.Long.MAX_VALUE;
 
 class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
     private final PositionCodec positionCodec;
-    private final List<Path> cachedFiles;
+    private final LinkedList<Path> cachedFiles;
     private final Function<Optional<Position>, Stream<ResolvedEvent>> nextSupplier;
 
-    private LinkedList<DataInputStream> caches = null;
     private DataInputStream currentCache = null;
     private boolean cacheMayHaveMoreData = false;
     private Position lastPosition;
@@ -40,12 +38,12 @@ class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
                                 Function<Optional<Position>, Stream<ResolvedEvent>> nextSupplier) {
         this.nextSupplier = nextSupplier;
         this.positionCodec = positionCodec;
-        this.cachedFiles = cachedFiles;
+        this.cachedFiles = new LinkedList<>(cachedFiles);
     }
 
     @Override
     public boolean tryAdvance(Consumer<? super ResolvedEvent> action) {
-        loadCaches();
+        loadNextCache();
         if (cacheMayHaveMoreData) {
             try {
                 ResolvedEvent resolvedEvent = readNextEvent();
@@ -68,26 +66,14 @@ class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
         }
     }
 
-    private void loadCaches() {
-        if (caches == null) {
-            caches = new LinkedList<>();
-            cachedFiles.forEach(path -> {
-                try {
-                    DataInputStream cache = new DataInputStream(new GZIPInputStream(new FileInputStream(path.toFile())));
-                    caches.add(cache);
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace(); // todo
-                } catch (IOException e) {
-                    e.printStackTrace(); // todo
-                }
-            });
-        }
-        loadNextCache();
-    }
-
     private void loadNextCache() {
-        if (currentCache == null && !caches.isEmpty()) {
-            currentCache = caches.removeFirst();
+        if (currentCache == null && !cachedFiles.isEmpty()) {
+            Path path = cachedFiles.removeFirst();
+            try {
+                currentCache = new DataInputStream(new GZIPInputStream(new FileInputStream(path.toFile())));
+            } catch (IOException e) {
+                throw new CacheNotFoundException(path, e);
+            }
             cacheMayHaveMoreData = true;
         }
     }
@@ -108,10 +94,10 @@ class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
                 try {
                     currentCache.close();
                 } catch (IOException swallowed) {
-                    // ignore this as we need to continue processing the other caches
+                    // ignore this as we need to continue processing the other cachedFiles
                 }
                 currentCache = null;
-                if (!caches.isEmpty()) {
+                if (!cachedFiles.isEmpty()) {
                     loadNextCache();
                 }
             }
@@ -140,6 +126,12 @@ class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
     @Override
     public int characteristics() {
         return ORDERED | NONNULL | DISTINCT;
+    }
+
+    public static class CacheNotFoundException extends RuntimeException {
+        public CacheNotFoundException(Path path, Exception cause) {
+            super("Unable to load cache from " + path, cause);
+        }
     }
 
 }
