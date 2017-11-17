@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPOutputStream;
 
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
@@ -29,6 +30,7 @@ import static java.util.Collections.singletonList;
 import static java.util.UUID.randomUUID;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
@@ -46,25 +48,35 @@ public class CachingEventsTest {
     private final StreamId stream_1 = streamId(randomCategory(), "1");
     private final NewEvent event_1 = anEvent();
 
-    @Before public void init() throws IOException {
+    @Before
+    public void init() throws IOException {
         temporaryFolder.create();
         cacheDirectory = temporaryFolder.getRoot().toPath();
-        cacheEventReader = new CacheEventReader(underlyingEventStore, CODEC, cacheDirectory);
+        cacheEventReader = new CacheEventReader(underlyingEventStore, CODEC, cacheDirectory, "cache");
     }
 
     private List<ResolvedEvent> readAllToList(EventReader eventReader) {
         return eventReader.readAllForwards().collect(toList());
     }
 
-    private void saveAllToCache() throws Exception {
-        try (OutputStream outputStream = new GZIPOutputStream(new FileOutputStream(getCacheFile()));
-             CacheEventWriter cacheEventWriter = new CacheEventWriter(outputStream, CODEC)){
-            underlyingEventStore.readAllForwards().forEach(cacheEventWriter::write);
-        }
+    private Position saveAllToCache(File cacheFile) throws Exception {
+        return saveAllToCache(cacheFile, underlyingEventStore.emptyStorePosition());
     }
 
-    private File getCacheFile() {
-        return cacheDirectory.resolve("cache.gz").toFile();
+    private Position saveAllToCache(File cacheFile, Position position) throws Exception {
+        AtomicReference<Position> lastPosition = new AtomicReference<>();
+        try (OutputStream outputStream = new GZIPOutputStream(new FileOutputStream(cacheFile));
+             CacheEventWriter cacheEventWriter = new CacheEventWriter(outputStream, CODEC)) {
+            underlyingEventStore.readAllForwards(position).forEach(resolvedEvent -> {
+                cacheEventWriter.write(resolvedEvent);
+                lastPosition.set(resolvedEvent.position());
+            });
+        }
+        return lastPosition.get();
+    }
+
+    private File getCacheFile(String cacheFileName) {
+        return cacheDirectory.resolve(cacheFileName).toFile();
     }
 
     @Test
@@ -77,7 +89,7 @@ public class CachingEventsTest {
     public void
     givenAnEventDataInUnderlying_returnsThatEvent() throws Exception {
         underlyingEventStore.write(stream_1, singletonList(event_1));
-        saveAllToCache();
+        saveAllToCache(getCacheFile("cache.gz"));
 
         assertThat(readAllToList(cacheEventReader), hasSize(1));
         assertThat(readAllToList(cacheEventReader), equalTo(readAllToList(underlyingEventStore)));
@@ -86,7 +98,7 @@ public class CachingEventsTest {
     @Test
     public void
     givenEmptyCache_returnsEmptyLastPosition() throws Exception {
-        assertThat(CacheEventReader.findLastPosition(getCacheFile().toPath(), CODEC), is(Optional.empty()));
+        assertThat(CacheEventReader.findLastPosition(getCacheFile("cache.gz").toPath(), CODEC), is(Optional.empty()));
     }
 
     @Test
@@ -94,19 +106,19 @@ public class CachingEventsTest {
     givenAnEventsWrittenToCache_returnsTheLastPosition() throws Exception {
         underlyingEventStore.write(stream_1, singletonList(event_1));
         underlyingEventStore.write(stream_1, singletonList(event_1));
-        saveAllToCache();
+        saveAllToCache(getCacheFile("cache.gz"));
 
         Position currentPosition = underlyingEventStore.readAllBackwards().findFirst().get().position();
-        assertThat(CacheEventReader.findLastPosition(getCacheFile().toPath(), CODEC).get(), is(currentPosition));
+        assertThat(CacheEventReader.findLastPosition(getCacheFile("cache.gz").toPath(), CODEC).get(), is(currentPosition));
     }
 
     @Test
     public void
     givenCachePopulated_readsFromTheCache() throws Exception {
         underlyingEventStore.write(stream_1, singletonList(event_1));
-        saveAllToCache();
+        saveAllToCache(getCacheFile("cache.gz"));
 
-        CacheEventReader newCacheEventReader = new CacheEventReader(new JavaInMemoryEventStore(Clock.systemUTC()),  CODEC, cacheDirectory);
+        CacheEventReader newCacheEventReader = new CacheEventReader(new JavaInMemoryEventStore(Clock.systemUTC()), CODEC, cacheDirectory, "cache");
         assertThat(readAllToList(newCacheEventReader), hasSize(1));
         assertThat(readAllToList(newCacheEventReader), equalTo(readAllToList(underlyingEventStore)));
     }
@@ -119,13 +131,31 @@ public class CachingEventsTest {
     public void
     givenReadingFromEmptyStorePosition_readsFromTheCache() throws Exception {
         underlyingEventStore.write(stream_1, singletonList(event_1));
-        saveAllToCache();
+        saveAllToCache(getCacheFile("cache.gz"));
 
         assertThat(readAllFromEmpty(cacheEventReader), hasSize(1));
 
-        CacheEventReader newCacheEventReader = new CacheEventReader(new JavaInMemoryEventStore(Clock.systemUTC()),  CODEC, cacheDirectory);
+        CacheEventReader newCacheEventReader = new CacheEventReader(new JavaInMemoryEventStore(Clock.systemUTC()), CODEC, cacheDirectory, "cache");
         assertThat(readAllFromEmpty(newCacheEventReader), hasSize(1));
         assertThat(readAllFromEmpty(newCacheEventReader), equalTo(readAllToList(underlyingEventStore)));
+    }
+
+    @Test
+    public void
+    givenMultipleCacheFilesInCacheDirectory_allReadInOrder() throws Exception {
+        underlyingEventStore.write(stream_1, singletonList(event_1));
+        Position firstPosition = saveAllToCache(getCacheFile("cache_1.gz"));
+
+        underlyingEventStore.write(stream_1, singletonList(event_1));
+        Position secondPosition = saveAllToCache(getCacheFile("cache_2.gz"), firstPosition);
+
+        underlyingEventStore.write(stream_1, singletonList(event_1));
+        Position thirdPosition = saveAllToCache(getCacheFile("cache_3.gz"), secondPosition);
+
+        CacheEventReader newCacheEventReader = new CacheEventReader(new JavaInMemoryEventStore(Clock.systemUTC()), CODEC, cacheDirectory, "cache");
+        List<ResolvedEvent> resolvedEvents = readAllFromEmpty(newCacheEventReader);
+        assertThat(resolvedEvents, hasSize(3));
+        assertThat(resolvedEvents.stream().map(ResolvedEvent::position).collect(toList()), contains(firstPosition, secondPosition, thirdPosition));
     }
 
     private static NewEvent anEvent() {

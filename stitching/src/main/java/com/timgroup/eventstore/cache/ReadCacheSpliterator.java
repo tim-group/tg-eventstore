@@ -13,6 +13,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Spliterator;
 import java.util.function.Consumer;
@@ -24,16 +26,17 @@ import static java.lang.Long.MAX_VALUE;
 
 class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
     private final PositionCodec positionCodec;
-    private final Optional<Path> cachedFiles;
+    private final List<Path> cachedFiles;
     private final Function<Optional<Position>, Stream<ResolvedEvent>> nextSupplier;
 
-    private DataInputStream cache = null;
+    private LinkedList<DataInputStream> caches = null;
+    private DataInputStream currentCache = null;
     private boolean cacheMayHaveMoreData = false;
     private Position lastPosition;
     private Spliterator<ResolvedEvent> underlyingSpliterator;
 
     public ReadCacheSpliterator(PositionCodec positionCodec,
-                                Optional<Path> cachedFiles,
+                                List<Path> cachedFiles,
                                 Function<Optional<Position>, Stream<ResolvedEvent>> nextSupplier) {
         this.nextSupplier = nextSupplier;
         this.positionCodec = positionCodec;
@@ -60,11 +63,12 @@ class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
     }
 
     private void loadCache() {
-        if (cache == null) {
-            cachedFiles.ifPresent(path -> {
+        if (caches == null) {
+            caches = new LinkedList<>();
+            cachedFiles.forEach(path -> {
                 try {
-                    cache = new DataInputStream(new GZIPInputStream(new FileInputStream(path.toFile())));
-                    cacheMayHaveMoreData = true;
+                    DataInputStream cache = new DataInputStream(new GZIPInputStream(new FileInputStream(path.toFile())));
+                    caches.add(cache);
                 } catch (FileNotFoundException e) {
                     e.printStackTrace(); // todo
                 } catch (IOException e) {
@@ -72,24 +76,33 @@ class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
                 }
             });
         }
+        if (currentCache == null && !caches.isEmpty()) {
+            currentCache = caches.removeFirst();
+            cacheMayHaveMoreData = true;
+        }
     }
 
     private boolean readNextEvent(Consumer<? super ResolvedEvent> action) throws IOException {
         try {
-            ResolvedEvent resolvedEvent = new ResolvedEvent(positionCodec.deserializePosition(cache.readUTF()),
-                    EventRecord.eventRecord(Instant.ofEpochMilli(cache.readLong()),
-                            StreamId.streamId(cache.readUTF(), cache.readUTF()),
-                            cache.readLong(),
-                            cache.readUTF(),
-                            readByteArray(cache),
-                            readByteArray(cache)));
+            ResolvedEvent resolvedEvent = new ResolvedEvent(positionCodec.deserializePosition(currentCache.readUTF()),
+                    EventRecord.eventRecord(Instant.ofEpochMilli(currentCache.readLong()),
+                            StreamId.streamId(currentCache.readUTF(), currentCache.readUTF()),
+                            currentCache.readLong(),
+                            currentCache.readUTF(),
+                            readByteArray(currentCache),
+                            readByteArray(currentCache)));
             action.accept(resolvedEvent);
             lastPosition = resolvedEvent.position();
             return true;
         } catch (EOFException e) {
-            cache.close();
+            currentCache.close();
+            currentCache = null;
             // todo: this should only be OK if throw from first read (position reading)
-            return false;
+            if (!caches.isEmpty()) {
+                return tryAdvance(action);
+            } else {
+                return false;
+            }
         }
     }
 
