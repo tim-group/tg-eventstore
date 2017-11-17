@@ -102,10 +102,10 @@ public class CachingEventsTest {
         assertThat(CacheEventReader.findLastPosition(getCacheFile("cache.gz").toPath(), CODEC), is(Optional.empty()));
     }
 
-    @Test
+    @Test(expected = ReadCacheSpliterator.CacheNotFoundException.class)
     public void
-    givenNonExistentCache_returnsEmptyLastPosition() throws Exception {
-        assertThat(CacheEventReader.findLastPosition(getCacheFile("cache.gz").toPath(), CODEC), is(Optional.empty()));
+    givenNonExistentCache_throwsNonExistentCacheException() throws Exception {
+        CacheEventReader.findLastPosition(getCacheFile("NON_EXISTENT_FOO").toPath(), CODEC);
     }
 
     @Test

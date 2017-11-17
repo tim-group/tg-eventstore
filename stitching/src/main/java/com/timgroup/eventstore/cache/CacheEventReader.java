@@ -71,15 +71,11 @@ public class CacheEventReader implements EventReader {
         return underlying.emptyStorePosition();
     }
 
-    public static Optional<Position> findLastPosition(Path cacheFile, PositionCodec positionCodec) {
+    public static Optional<Position> findLastPosition(Path cacheFile, PositionCodec positionCodec) throws CacheNotFoundException {
         ReadCacheSpliterator spliterator = new ReadCacheSpliterator(positionCodec, singletonList(cacheFile), ignore -> Stream.empty());
         AtomicReference<Position> lastPosition = new AtomicReference<>(null);
-        try {
-            spliterator.forEachRemaining(r -> lastPosition.set(r.position()));
-            return Optional.ofNullable(lastPosition.get());
-        } catch (CacheNotFoundException e) {
-            return Optional.empty();
-        }
+        spliterator.forEachRemaining(r -> lastPosition.set(r.position()));
+        return Optional.ofNullable(lastPosition.get());
     }
 
     public static class CacheReadingException extends RuntimeException {
