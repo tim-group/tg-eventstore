@@ -45,11 +45,17 @@ class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
 
     @Override
     public boolean tryAdvance(Consumer<? super ResolvedEvent> action) {
-        loadCache();
+        loadCaches();
         if (cacheMayHaveMoreData) {
             try {
-                cacheMayHaveMoreData = readNextEvent(action);
-                return cacheMayHaveMoreData;
+                ResolvedEvent resolvedEvent = readNextEvent();
+                if (resolvedEvent != null) {
+                    action.accept(resolvedEvent);
+                    this.lastPosition = resolvedEvent.position();
+                } else {
+                    this.cacheMayHaveMoreData = false;
+                }
+                return this.cacheMayHaveMoreData;
             } catch (IOException e) {
                 e.printStackTrace(); // todo
                 return false;
@@ -62,7 +68,7 @@ class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
         }
     }
 
-    private void loadCache() {
+    private void loadCaches() {
         if (caches == null) {
             caches = new LinkedList<>();
             cachedFiles.forEach(path -> {
@@ -76,34 +82,42 @@ class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
                 }
             });
         }
+        loadNextCache();
+    }
+
+    private void loadNextCache() {
         if (currentCache == null && !caches.isEmpty()) {
             currentCache = caches.removeFirst();
             cacheMayHaveMoreData = true;
         }
     }
 
-    private boolean readNextEvent(Consumer<? super ResolvedEvent> action) throws IOException {
-        try {
-            ResolvedEvent resolvedEvent = new ResolvedEvent(positionCodec.deserializePosition(currentCache.readUTF()),
-                    EventRecord.eventRecord(Instant.ofEpochMilli(currentCache.readLong()),
-                            StreamId.streamId(currentCache.readUTF(), currentCache.readUTF()),
-                            currentCache.readLong(),
-                            currentCache.readUTF(),
-                            readByteArray(currentCache),
-                            readByteArray(currentCache)));
-            action.accept(resolvedEvent);
-            lastPosition = resolvedEvent.position();
-            return true;
-        } catch (EOFException e) {
-            currentCache.close();
-            currentCache = null;
-            // todo: this should only be OK if throw from first read (position reading)
-            if (!caches.isEmpty()) {
-                return tryAdvance(action);
-            } else {
-                return false;
+    private ResolvedEvent readNextEvent() throws IOException {
+        ResolvedEvent resolvedEvent = null;
+        do {
+            try {
+                resolvedEvent = new ResolvedEvent(positionCodec.deserializePosition(currentCache.readUTF()),
+                        EventRecord.eventRecord(Instant.ofEpochMilli(currentCache.readLong()),
+                                StreamId.streamId(currentCache.readUTF(), currentCache.readUTF()),
+                                currentCache.readLong(),
+                                currentCache.readUTF(),
+                                readByteArray(currentCache),
+                                readByteArray(currentCache)));
+            } catch (EOFException ignored) {
+                // todo: this should only be OK if throw from first read (position reading)
+                try {
+                    currentCache.close();
+                } catch (IOException swallowed) {
+                    // ignore this as we need to continue processing the other caches
+                }
+                currentCache = null;
+                if (!caches.isEmpty()) {
+                    loadNextCache();
+                }
             }
-        }
+        } while (resolvedEvent == null && currentCache != null);
+
+        return resolvedEvent;
     }
 
     private byte[] readByteArray(DataInputStream current) throws IOException {

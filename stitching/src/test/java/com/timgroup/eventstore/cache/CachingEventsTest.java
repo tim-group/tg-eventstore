@@ -154,7 +154,6 @@ public class CachingEventsTest {
 
         CacheEventReader newCacheEventReader = new CacheEventReader(new JavaInMemoryEventStore(Clock.systemUTC()), CODEC, cacheDirectory, "cache");
         List<ResolvedEvent> resolvedEvents = readAllFromEmpty(newCacheEventReader);
-        assertThat(resolvedEvents, hasSize(3));
         assertThat(resolvedEvents.stream().map(ResolvedEvent::position).collect(toList()), contains(firstPosition, secondPosition, thirdPosition));
     }
 
