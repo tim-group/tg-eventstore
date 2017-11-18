@@ -11,6 +11,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -79,6 +80,10 @@ public class CachingEventsTest {
         return cacheDirectory.resolve(cacheFileName).toFile();
     }
 
+    private DataInputStream gzipCache() {
+        return new CacheInputStreamSupplier(getCacheFile("cache.gz"), true).get();
+    }
+
     @Test
     public void
     givenNoDataInUnderlying_returnsNothing() {
@@ -99,13 +104,13 @@ public class CachingEventsTest {
     public void
     givenEmptyCache_returnsEmptyLastPosition() throws Exception {
         saveAllToCache(getCacheFile("cache.gz"));
-        assertThat(CacheEventReader.findLastPosition(getCacheFile("cache.gz").toPath(), CODEC), is(Optional.empty()));
+        assertThat(CacheEventReader.findLastPosition(gzipCache(), CODEC), is(Optional.empty()));
     }
 
-    @Test(expected = ReadCacheSpliterator.CacheNotFoundException.class)
+    @Test(expected = CacheNotFoundException.class)
     public void
     givenNonExistentCache_throwsNonExistentCacheException() throws Exception {
-        CacheEventReader.findLastPosition(getCacheFile("NON_EXISTENT_FOO").toPath(), CODEC);
+        CacheEventReader.findLastPosition(new CacheInputStreamSupplier(getCacheFile("NON_EXISTENT_FOO")).get(), CODEC);
     }
 
     @Test
@@ -116,7 +121,7 @@ public class CachingEventsTest {
         saveAllToCache(getCacheFile("cache.gz"));
 
         Position currentPosition = underlyingEventStore.readAllBackwards().findFirst().get().position();
-        assertThat(CacheEventReader.findLastPosition(getCacheFile("cache.gz").toPath(), CODEC).get(), is(currentPosition));
+        assertThat(CacheEventReader.findLastPosition(gzipCache(), CODEC).get(), is(currentPosition));
     }
 
     @Test

@@ -8,9 +8,7 @@ import com.timgroup.eventstore.api.StreamId;
 
 import java.io.DataInputStream;
 import java.io.EOFException;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.time.Instant;
 import java.util.LinkedList;
 import java.util.List;
@@ -18,14 +16,14 @@ import java.util.Optional;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
-import java.util.zip.GZIPInputStream;
 
 import static java.lang.Long.MAX_VALUE;
 
 class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
     private final PositionCodec positionCodec;
-    private final LinkedList<Path> cachedFiles;
+    private final LinkedList<Supplier<DataInputStream>> cachedFiles;
     private final Function<Optional<Position>, Stream<ResolvedEvent>> nextSupplier;
 
     private DataInputStream currentCache = null;
@@ -34,7 +32,7 @@ class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
     private Spliterator<ResolvedEvent> underlyingSpliterator;
 
     public ReadCacheSpliterator(PositionCodec positionCodec,
-                                List<Path> cachedFiles,
+                                List<Supplier<DataInputStream>> cachedFiles,
                                 Function<Optional<Position>, Stream<ResolvedEvent>> nextSupplier) {
         this.nextSupplier = nextSupplier;
         this.positionCodec = positionCodec;
@@ -68,12 +66,8 @@ class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
 
     private void loadNextCache() {
         if (currentCache == null && !cachedFiles.isEmpty()) {
-            Path path = cachedFiles.removeFirst();
-            try {
-                currentCache = new DataInputStream(new GZIPInputStream(new FileInputStream(path.toFile())));
-            } catch (IOException e) {
-                throw new CacheNotFoundException(path, e);
-            }
+            Supplier<DataInputStream> cacheSupplier = cachedFiles.removeFirst();
+            currentCache = cacheSupplier.get();
             cacheMayHaveMoreData = true;
         }
     }
@@ -82,13 +76,7 @@ class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
         ResolvedEvent resolvedEvent = null;
         do {
             try {
-                resolvedEvent = new ResolvedEvent(positionCodec.deserializePosition(currentCache.readUTF()),
-                        EventRecord.eventRecord(Instant.ofEpochMilli(currentCache.readLong()),
-                                StreamId.streamId(currentCache.readUTF(), currentCache.readUTF()),
-                                currentCache.readLong(),
-                                currentCache.readUTF(),
-                                readByteArray(currentCache),
-                                readByteArray(currentCache)));
+                resolvedEvent = tryReadNextEvent();
             } catch (EOFException ignored) {
                 // todo: this should only be OK if throw from first read (position reading)
                 try {
@@ -104,6 +92,16 @@ class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
         } while (resolvedEvent == null && currentCache != null);
 
         return resolvedEvent;
+    }
+
+    private ResolvedEvent tryReadNextEvent() throws IOException {
+        return new ResolvedEvent(positionCodec.deserializePosition(currentCache.readUTF()),
+                EventRecord.eventRecord(Instant.ofEpochMilli(currentCache.readLong()),
+                        StreamId.streamId(currentCache.readUTF(), currentCache.readUTF()),
+                        currentCache.readLong(),
+                        currentCache.readUTF(),
+                        readByteArray(currentCache),
+                        readByteArray(currentCache)));
     }
 
     private byte[] readByteArray(DataInputStream current) throws IOException {
@@ -126,12 +124,6 @@ class ReadCacheSpliterator implements Spliterator<ResolvedEvent> {
     @Override
     public int characteristics() {
         return ORDERED | NONNULL | DISTINCT;
-    }
-
-    public static class CacheNotFoundException extends RuntimeException {
-        public CacheNotFoundException(Path path, Exception cause) {
-            super("Unable to load cache from " + path, cause);
-        }
     }
 
 }
