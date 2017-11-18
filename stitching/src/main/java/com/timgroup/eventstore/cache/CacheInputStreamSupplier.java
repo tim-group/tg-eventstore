@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.cache;
 
+import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -36,6 +37,8 @@ public class CacheInputStreamSupplier implements Supplier<DataInputStream> {
             InputStream fileStream = new FileInputStream(cacheFile);
             if (compressed) {
                 fileStream = new GZIPInputStream(fileStream);
+            } else {
+                fileStream = new BufferedInputStream(fileStream);
             }
             return new DataInputStream(fileStream);
         } catch (IOException e) {
