@@ -459,6 +459,40 @@ public abstract class JavaEventStoreTest {
         assertThat(eventNumberWritten, is(range(0, 100).mapToObj(i -> i).collect(toList())));
     }
 
+    @Test
+    public void
+    can_read_last_event() {
+        eventSource().writeStream().write(stream_1, asList(event_1));
+        eventSource().writeStream().write(stream_2, asList(event_2));
+        eventSource().writeStream().write(stream_3, asList(event_3));
+
+        EventRecord eventRecord = eventSource().readAll().readLastEvent().map(ResolvedEvent::eventRecord).get();
+
+        assertThat(eventRecord, is(objectWith(EventRecord::streamId, stream_3).and(EventRecord::eventNumber, 0L)));
+    }
+
+    @Test
+    public void
+    can_read_last_event_from_category() {
+        eventSource().writeStream().write(stream_1, asList(event_1));
+        eventSource().writeStream().write(stream_2, asList(event_2));
+        eventSource().writeStream().write(stream_3, asList(event_3));
+
+        EventRecord eventRecord = eventSource().readCategory().readLastEventInCategory(stream_1.category()).map(ResolvedEvent::eventRecord).get();
+        assertThat(eventRecord, is(objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 0L)));
+    }
+
+    @Test
+    public void
+    can_read_last_event_from_stream() {
+        eventSource().writeStream().write(stream_1, asList(event_1));
+        eventSource().writeStream().write(stream_2, asList(event_2));
+        eventSource().writeStream().write(stream_3, asList(event_3));
+
+        EventRecord eventRecord = eventSource().readStream().readLastEventInStream(stream_2).map(ResolvedEvent::eventRecord).get();
+        assertThat(eventRecord, is(objectWith(EventRecord::streamId, stream_2).and(EventRecord::eventNumber, 0L)));
+    }
+
     private static Matcher<Instant> shortlyAfter(Instant expected) {
         return new TypeSafeDiagnosingMatcher<Instant>() {
             @Override

@@ -4,6 +4,7 @@ import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static com.timgroup.eventstore.mysql.BasicMysqlEventStorePosition.EMPTY_STORE_POSITION;
@@ -40,11 +41,20 @@ public class BasicMysqlEventReader implements EventReader {
 
     @Override
     public Stream<ResolvedEvent> readAllBackwards(Position positionExclusive) {
+        return readBackwards((BasicMysqlEventStorePosition) positionExclusive, this.batchSize);
+    }
+
+    @Override
+    public Optional<ResolvedEvent> readLastEvent() {
+        return readBackwards(new BasicMysqlEventStorePosition(Long.MAX_VALUE), 1).findFirst();
+    }
+
+    private Stream<ResolvedEvent> readBackwards(BasicMysqlEventStorePosition positionExclusive, int theBatchSize) {
         EventSpliterator spliterator = new EventSpliterator(
                 connectionProvider,
-                batchSize,
+                theBatchSize,
                 tableName,
-                (BasicMysqlEventStorePosition) positionExclusive,
+                positionExclusive,
                 "",
                 true
         );

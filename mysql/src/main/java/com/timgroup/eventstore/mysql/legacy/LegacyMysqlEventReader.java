@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.util.stream.StreamSupport.stream;
@@ -78,23 +79,26 @@ public final class LegacyMysqlEventReader implements EventReader, EventStreamRea
     }
 
     @Override
+    public Optional<ResolvedEvent> readLastEvent() {
+        return readBackwards(LegacyMysqlEventPosition.fromLegacyVersion(Long.MAX_VALUE), 1).findFirst();
+    }
+
+    @Override
     public Stream<ResolvedEvent> readAllBackwards(Position positionExclusive) {
-        return stream(
-                new LegacyMysqlEventSpliterator(
-                        connectionProvider,
-                        batchSize,
-                        tableName,
-                        pretendStreamId,
-                        (LegacyMysqlEventPosition)positionExclusive,
-                        true
-                ),
-                false
-        );
+        return readBackwards((LegacyMysqlEventPosition) positionExclusive, this.batchSize);
     }
 
     @Override
     public Stream<ResolvedEvent> readCategoryBackwards(String category) {
         return readCategoryBackwards(category, LegacyMysqlEventPosition.fromLegacyVersion(Long.MAX_VALUE));
+    }
+
+    @Override
+    public Optional<ResolvedEvent> readLastEventInCategory(String category) {
+        if (!category.equals(pretendStreamId.category())) {
+            throw new IllegalArgumentException("Cannot read " + category + " from legacy store");
+        }
+        return readLastEvent();
     }
 
     @Override
@@ -113,6 +117,29 @@ public final class LegacyMysqlEventReader implements EventReader, EventStreamRea
     @Override
     public Stream<ResolvedEvent> readStreamBackwards(StreamId streamId, long eventNumber) {
         return readStreamBackwards(streamId, LegacyMysqlEventPosition.fromEventNumber(eventNumber));
+    }
+
+    @Override
+    public Optional<ResolvedEvent> readLastEventInStream(StreamId streamId) {
+        if (!streamId.equals(pretendStreamId)) {
+            throw new IllegalArgumentException("Cannot read " + streamId + " from legacy store");
+        }
+        ensureStreamExists(streamId);
+        return readLastEvent();
+    }
+
+    private Stream<ResolvedEvent> readBackwards(LegacyMysqlEventPosition positionExclusive, int theBatchSize) {
+        return stream(
+                new LegacyMysqlEventSpliterator(
+                        connectionProvider,
+                        theBatchSize,
+                        tableName,
+                        pretendStreamId,
+                        positionExclusive,
+                        true
+                ),
+                false
+        );
     }
 
     private Stream<ResolvedEvent> readStreamBackwards(StreamId streamId, LegacyMysqlEventPosition position) {

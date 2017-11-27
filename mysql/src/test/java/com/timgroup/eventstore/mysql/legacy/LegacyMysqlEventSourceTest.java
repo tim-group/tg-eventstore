@@ -207,6 +207,41 @@ public final class LegacyMysqlEventSourceTest {
 
     @Test
     public void
+    can_read_last_event() {
+        eventSource().writeStream().write(stream_1, asList(event_1));
+        eventSource().writeStream().write(stream_1, asList(event_2));
+        eventSource().writeStream().write(stream_1, asList(event_3));
+
+        EventRecord eventRecord = eventSource().readAll().readLastEvent().map(ResolvedEvent::eventRecord).get();
+
+        assertThat(eventRecord, is(objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 2L)));
+    }
+
+    @Test
+    public void
+    can_read_last_event_from_category() {
+        eventSource().writeStream().write(stream_1, asList(event_1));
+        eventSource().writeStream().write(stream_1, asList(event_2));
+        eventSource().writeStream().write(stream_1, asList(event_3));
+
+        EventRecord eventRecord = eventSource().readCategory().readLastEventInCategory(stream_1.category()).map(ResolvedEvent::eventRecord).get();
+        assertThat(eventRecord, is(objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 2L)));
+    }
+
+    @Test
+    public void
+    can_read_last_event_from_stream() {
+        eventSource().writeStream().write(stream_1, asList(event_1));
+        eventSource().writeStream().write(stream_1, asList(event_2));
+        eventSource().writeStream().write(stream_1, asList(event_3));
+
+        EventRecord eventRecord = eventSource().readStream().readLastEventInStream(stream_1).map(ResolvedEvent::eventRecord).get();
+        assertThat(eventRecord, is(objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 2L)));
+    }
+
+
+    @Test
+    public void
     throws_exception_when_stream_does_not_exist_on_stream_creation() {
         EventStreamReader eventStreamReader = eventSource().readStream();
 

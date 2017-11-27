@@ -4,6 +4,7 @@ import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static com.timgroup.eventstore.mysql.BasicMysqlEventStorePosition.EMPTY_STORE_POSITION;
@@ -40,19 +41,28 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
 
     @Override
     public Stream<ResolvedEvent> readCategoryBackwards(String category, Position positionExclusive) {
-        EventSpliterator spliterator = new EventSpliterator(
-                connectionProvider,
-                batchSize,
-                tableName,
-                (BasicMysqlEventStorePosition) positionExclusive,
-                format("stream_category = '%s'", category),
-                true);
+        return readBackwards(category, (BasicMysqlEventStorePosition) positionExclusive, this.batchSize);
+    }
 
-        return stream(spliterator, false);
+    @Override
+    public Optional<ResolvedEvent> readLastEventInCategory(String category) {
+        return readBackwards(category, new BasicMysqlEventStorePosition(Long.MAX_VALUE), 1).findFirst();
     }
 
     @Override
     public Position emptyCategoryPosition(String category) {
         return EMPTY_STORE_POSITION;
+    }
+
+    private Stream<ResolvedEvent> readBackwards(String category, BasicMysqlEventStorePosition positionExclusive, int theBatchSize) {
+        EventSpliterator spliterator = new EventSpliterator(
+                connectionProvider,
+                theBatchSize,
+                tableName,
+                positionExclusive,
+                format("stream_category = '%s'", category),
+                true);
+
+        return stream(spliterator, false);
     }
 }
