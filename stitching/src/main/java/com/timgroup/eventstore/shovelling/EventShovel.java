@@ -75,29 +75,27 @@ public final class EventShovel {
     }
 
     public void shovelAllNewlyAvailableEvents() {
-        try (Stream<ResolvedEvent> backwardsWrittenOutputEvents = outputReader.readAllBackwards()) {
-            Optional<ResolvedEvent> maybeLastWrittenEvent = backwardsWrittenOutputEvents.findFirst();
+        Optional<ResolvedEvent> maybeLastWrittenEvent = outputReader.readLastEvent();
 
-            Position currentPosition = maybeLastWrittenEvent
-                    .map(re -> extractShovelPositionFromMetadata(re.eventRecord().metadata()))
-                    .orElse(reader.emptyStorePosition());
+        Position currentPosition = maybeLastWrittenEvent
+                .map(re -> extractShovelPositionFromMetadata(re.eventRecord().metadata()))
+                .orElse(reader.emptyStorePosition());
 
-            try (Stream<ResolvedEvent> resolvedEventStream = reader.readAllForwards(currentPosition)) {
-                writeEvents(resolvedEventStream.map(evt -> {
-                    EventRecord record = evt.eventRecord();
-                    lastProcessedEvent.updateValue(INFO, record.streamId() + " eventNumber=" + record.eventNumber());
+        try (Stream<ResolvedEvent> resolvedEventStream = reader.readAllForwards(currentPosition)) {
+            writeEvents(resolvedEventStream.map(evt -> {
+                EventRecord record = evt.eventRecord();
+                lastProcessedEvent.updateValue(INFO, record.streamId() + " eventNumber=" + record.eventNumber());
 
-                    return new NewEventWithStreamId(
-                            record.streamId(),
-                            record.eventNumber(),
-                            newEvent(
-                                    record.eventType(),
-                                    record.data(),
-                                    createMetadataWithShovelPosition(evt.position(), record.metadata())
-                            )
-                    );
-                }));
-            }
+                return new NewEventWithStreamId(
+                        record.streamId(),
+                        record.eventNumber(),
+                        newEvent(
+                                record.eventType(),
+                                record.data(),
+                                createMetadataWithShovelPosition(evt.position(), record.metadata())
+                        )
+                );
+            }));
         }
     }
 
