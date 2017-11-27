@@ -2,6 +2,7 @@ package com.timgroup.eventstore.readerutils;
 
 import com.timgroup.eventstore.api.*;
 
+import java.util.Optional;
 import java.util.stream.Stream;
 
 public final class SingleEventCategoryEventReader implements EventReader {
@@ -36,5 +37,10 @@ public final class SingleEventCategoryEventReader implements EventReader {
     @Override
     public Stream<ResolvedEvent> readAllBackwards(Position positionExclusive) {
         return underlying.readCategoryBackwards(this.category, positionExclusive);
+    }
+
+    @Override
+    public Optional<ResolvedEvent> readLastEvent() {
+        return underlying.readLastEventInCategory(this.category);
     }
 }

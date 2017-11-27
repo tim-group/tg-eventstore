@@ -11,6 +11,7 @@ import org.junit.Test;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
@@ -19,6 +20,7 @@ import static com.timgroup.eventstore.api.EventRecordMatcher.anEventRecord;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.is;
 
 public final class FilteringEventReaderTest {
 
@@ -93,6 +95,29 @@ public final class FilteringEventReaderTest {
 
         List<EventRecord> eventsReadBackwards = underTest.readAllBackwards().map(ResolvedEvent::eventRecord).collect(toList());
         assertThat(eventsReadBackwards, contains(coolenessRemoved));
+    }
+
+    @Test public void
+    returns_last_event_from_filtered_events() throws Exception {
+        inputEventArrived(streamId("david", "tom"), newEvent("CoolenessAdded", new byte[0], new byte[0]));
+        inputEventArrived(streamId("david", "tom"), newEvent("CoolenessChanged", new byte[0], new byte[0]));
+        inputEventArrived(streamId("foo", "bar"), newEvent("CoolenessRemoved", new byte[0], new byte[0]));
+
+        Predicate<? super ResolvedEvent> predicate = (e -> "CoolenessRemoved".equals(e.eventRecord().eventType()));
+
+        FilteringEventReader underTest = new FilteringEventReader(inputSource.readAll(), predicate);
+
+        EventRecordMatcher coolenessRemoved = anEventRecord(
+                clock.instant(),
+                StreamId.streamId("foo", "bar"),
+                0L,
+                "CoolenessRemoved",
+                new byte[0],
+                new byte[0]
+        );
+
+        Optional<EventRecord> eventsReadBackwards = underTest.readLastEvent().map(ResolvedEvent::eventRecord);
+        assertThat(eventsReadBackwards.get(), is(coolenessRemoved));
     }
 
     @Test public void

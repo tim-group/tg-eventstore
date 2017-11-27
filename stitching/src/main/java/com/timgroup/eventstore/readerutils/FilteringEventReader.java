@@ -4,6 +4,7 @@ import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -31,6 +32,11 @@ public final class FilteringEventReader implements EventReader {
     @Override
     public Stream<ResolvedEvent> readAllBackwards(Position positionExclusive) {
         return underlying.readAllBackwards(positionExclusive).filter(predicate);
+    }
+
+    @Override
+    public Optional<ResolvedEvent> readLastEvent() {
+        return underlying.readLastEvent().filter(predicate);
     }
 
     @Override

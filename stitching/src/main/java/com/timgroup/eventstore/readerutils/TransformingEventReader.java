@@ -5,6 +5,7 @@ import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -49,5 +50,10 @@ public class TransformingEventReader implements EventReader {
     @Override
     public final Stream<ResolvedEvent> readAllBackwards(Position positionExclusive) {
         return underlying.readAllBackwards(positionExclusive).map(transformer);
+    }
+
+    @Override
+    public Optional<ResolvedEvent> readLastEvent() {
+        return underlying.readLastEvent().map(transformer);
     }
 }
