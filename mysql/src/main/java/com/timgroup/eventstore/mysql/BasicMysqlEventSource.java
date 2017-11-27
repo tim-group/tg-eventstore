@@ -64,7 +64,7 @@ public class BasicMysqlEventSource implements EventSource {
     @Override
     public Collection<Component> monitoring() {
         String id = "EventStore-" + this.name;
-        String label = "EventStore (" + this.name + ")";
+        String label = "EventStore (name: " + this.name + ", table: " + this.tableName +")";
         return singletonList(new DatabaseConnectionComponent(id, label, connectionProvider::getConnection));
     }
 
