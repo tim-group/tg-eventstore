@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.api;
 
+import java.util.Optional;
 import java.util.stream.Stream;
 
 public interface EventCategoryReader {
@@ -15,6 +16,10 @@ public interface EventCategoryReader {
 
     default Stream<ResolvedEvent> readCategoryBackwards(String category, Position positionExclusive) {
         throw new UnsupportedOperationException("reading backwards is not yet supported");
+    }
+
+    default Optional<ResolvedEvent> readLastEventInCategory(String category) {
+        return readCategoryBackwards(category).findFirst();
     }
 
     Position emptyCategoryPosition(String category);
