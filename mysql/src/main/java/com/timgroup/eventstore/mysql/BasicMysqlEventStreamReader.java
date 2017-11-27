@@ -35,7 +35,9 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
                 batchSize,
                 tableName,
                 EMPTY_STORE_POSITION,
-                format("stream_category = '%s' and stream_id = '%s' and event_number > %s", streamId.category(), streamId.id(), eventNumber)
+                format("stream_category = '%s' and stream_id = '%s' and event_number > %s", streamId.category(), streamId.id(), eventNumber),
+                false,
+                false
         );
 
         return stream(spliterator, false);
@@ -64,7 +66,8 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
                 tableName,
                 new BasicMysqlEventStorePosition(Long.MAX_VALUE),
                 format("stream_category = '%s' and stream_id = '%s' and event_number < %s", streamId.category(), streamId.id(), eventNumber),
-                true
+                true,
+                false
         );
 
         return stream(spliterator, false);

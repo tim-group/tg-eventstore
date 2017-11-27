@@ -15,11 +15,17 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
     private final ConnectionProvider connectionProvider;
     private final String tableName;
     private final int batchSize;
+    private final boolean forceCategoryIndex;
 
     public BasicMysqlEventCategoryReader(ConnectionProvider connectionProvider, String tableName, int batchSize) {
+        this(connectionProvider, tableName, batchSize, false);
+    }
+
+    public BasicMysqlEventCategoryReader(ConnectionProvider connectionProvider, String tableName, int batchSize, boolean forceCategoryIndex) {
         this.connectionProvider = connectionProvider;
         this.tableName = tableName;
         this.batchSize = batchSize;
+        this.forceCategoryIndex = forceCategoryIndex;
     }
 
     @Override
@@ -29,7 +35,10 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
                 batchSize,
                 tableName,
                 (BasicMysqlEventStorePosition) positionExclusive,
-                format("stream_category = '%s'", category));
+                format("stream_category = '%s'", category),
+                false,
+                forceCategoryIndex
+        );
 
         return stream(spliterator, false);
     }
@@ -61,7 +70,9 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
                 tableName,
                 positionExclusive,
                 format("stream_category = '%s'", category),
-                true);
+                true,
+                forceCategoryIndex
+        );
 
         return stream(spliterator, false);
     }

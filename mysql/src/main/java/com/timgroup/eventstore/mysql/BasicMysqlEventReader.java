@@ -28,7 +28,9 @@ public class BasicMysqlEventReader implements EventReader {
                 batchSize,
                 tableName,
                 (BasicMysqlEventStorePosition) positionExclusive,
-                ""
+                "",
+                false,
+                false
         );
 
         return stream(spliterator, false);
@@ -56,7 +58,8 @@ public class BasicMysqlEventReader implements EventReader {
                 tableName,
                 positionExclusive,
                 "",
-                true
+                true,
+                false
         );
 
         return stream(spliterator, false);

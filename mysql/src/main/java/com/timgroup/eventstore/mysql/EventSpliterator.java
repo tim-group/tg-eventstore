@@ -22,15 +22,18 @@ class EventSpliterator implements Spliterator<ResolvedEvent> {
     private Iterator<ResolvedEvent> currentPage = Collections.emptyIterator();
     private boolean streamExhausted = false;
 
-    EventSpliterator(ConnectionProvider connectionProvider, int batchSize, String tableName, BasicMysqlEventStorePosition startingPosition, String condition) {
-        this(connectionProvider, batchSize, tableName, startingPosition, condition, false);
-    }
-
-    EventSpliterator(ConnectionProvider connectionProvider, int batchSize, String tableName, BasicMysqlEventStorePosition startingPosition, String condition, boolean backwards) {
+    EventSpliterator(ConnectionProvider connectionProvider,
+                     int batchSize,
+                     String tableName,
+                     BasicMysqlEventStorePosition startingPosition,
+                     String condition,
+                     boolean backwards,
+                     boolean forceCategoryIndex) {
         this.connectionProvider = connectionProvider;
         this.lastPosition = startingPosition;
         this.queryString = "select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata" +
                 " from " + tableName +
+                (forceCategoryIndex ? " FORCE INDEX (stream_category_2)" : "") +
                 " where position " + (backwards ? "<" : ">") + " %s" +
                 (condition.isEmpty() ? "" : " and " + condition) +
                 " order by position " + (backwards ? "desc" : "asc") +
