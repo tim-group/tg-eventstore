@@ -11,6 +11,7 @@ import com.timgroup.tucker.info.Report;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.timgroup.eventsubscription.healthcheck.EventSubscriptionStatus.parenthetical;
 import static com.timgroup.tucker.info.Status.CRITICAL;
 import static com.timgroup.tucker.info.Status.INFO;
 import static com.timgroup.tucker.info.Status.OK;
@@ -32,8 +33,24 @@ public class ChaserHealth extends Component implements ChaserListener {
         this(name, description, clock, Duration.ofSeconds(1));
     }
 
+    /**
+     * Use constructor with description instead
+     */
+    @Deprecated()
+    public ChaserHealth(String name, Clock clock) {
+        this(name, null, clock, Duration.ofSeconds(1));
+    }
+
+    /**
+     * Use constructor with description instead
+     */
+    @Deprecated()
+    public ChaserHealth(String name, Clock clock, Duration subscriptionRunFrequency) {
+        this(name, null, clock, subscriptionRunFrequency);
+    }
+
     public ChaserHealth(String name, String description, Clock clock, Duration subscriptionRunFrequency) {
-        super("event-store-chaser-" + name, "Eventstore chaser health (" + name +": " + description + ")");
+        super("event-store-chaser-" + name, "Eventstore chaser health (" + parenthetical(name, description) + ")");
         this.clock = clock;
         this.warningThreshold = max(MIN_WARNING_THRESHOLD, subscriptionRunFrequency.multipliedBy(5));
         this.criticalThreshold = max(MIN_CRITICAL_THRESHOLD, subscriptionRunFrequency.multipliedBy(10));

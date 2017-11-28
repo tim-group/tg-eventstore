@@ -165,12 +165,12 @@ public class EventSubscription<T> {
         }
     }
 
-    static String descriptionFor(EventCategoryReader eventReader,
+    public static String descriptionFor(EventCategoryReader eventReader,
                                   String category) {
         return "reader=" + eventReader.toString() + ",category="+category;
     }
 
-    static String descriptionFor(EventReader eventReader) {
+    public static String descriptionFor(EventReader eventReader) {
         return eventReader.toString();
     }
 }

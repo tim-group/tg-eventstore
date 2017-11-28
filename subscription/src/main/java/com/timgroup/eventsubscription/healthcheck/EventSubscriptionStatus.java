@@ -33,7 +33,7 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
     private volatile Instant staleSince;
 
     public EventSubscriptionStatus(String name, String description, Clock clock, Duration maxInitialReplayDuration, EventSink eventSink) {
-        super("event-subscription-status-" + name, "Event subscription status (" + name + ": " + description + ")");
+        super("event-subscription-status-" + name, "Event subscription status (" + parenthetical(name, description) + ")");
         this.name = name;
         this.clock = clock;
         this.maxInitialReplayDuration = maxInitialReplayDuration;
@@ -41,6 +41,14 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
         this.staleSince = Instant.now(clock);
         this.criticalInitialReplayDuration = maxInitialReplayDuration.plus(maxInitialReplayDuration.dividedBy(4)); // 25% over max = critical
         this.eventSink = eventSink;
+    }
+
+    /**
+     * Use constructor with description instead
+     */
+    @Deprecated
+    public EventSubscriptionStatus(String name, Clock clock, Duration maxInitialReplayDuration, EventSink eventSink) {
+        this(name, null, clock, maxInitialReplayDuration, eventSink);
     }
 
     @Override
@@ -117,4 +125,13 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
         initialReplayDuration = null;
         terminatedReport = null;
     }
+
+    static String parenthetical(String name, String description) {
+        if (description != null) {
+            return name + ": " + description;
+        } else {
+            return name;
+        }
+    }
+
 }
