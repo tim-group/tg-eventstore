@@ -63,8 +63,7 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
     @Override
     public String toString() {
         return "BasicMysqlEventStreamWriter{" +
-                "connectionProvider=" + connectionProvider +
-                ", tableName='" + tableName + '\'' +
+                "tableName='" + tableName + '\'' +
                 '}';
     }
 

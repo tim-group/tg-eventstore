@@ -73,8 +73,7 @@ public class BasicMysqlEventReader implements EventReader {
     @Override
     public String toString() {
         return "BasicMysqlEventReader{" +
-                "connectionProvider=" + connectionProvider +
-                ", tableName='" + tableName + '\'' +
+                "tableName='" + tableName + '\'' +
                 ", batchSize=" + batchSize +
                 '}';
     }

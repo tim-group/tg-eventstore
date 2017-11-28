@@ -74,8 +74,7 @@ public final class LegacyMysqlEventStreamWriter implements EventStreamWriter {
     @Override
     public String toString() {
         return "LegacyMysqlEventStreamWriter{" +
-                "connectionProvider=" + connectionProvider +
-                ", tableName='" + tableName + '\'' +
+                "tableName='" + tableName + '\'' +
                 ", pretendStreamId=" + pretendStreamId +
                 '}';
     }

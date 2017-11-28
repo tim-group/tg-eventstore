@@ -138,8 +138,7 @@ public final class LegacyMysqlEventReader implements EventReader, EventStreamRea
     @Override
     public String toString() {
         return "LegacyMysqlEventReader{" +
-                "connectionProvider=" + connectionProvider +
-                ", tableName='" + tableName + '\'' +
+                "tableName='" + tableName + '\'' +
                 ", pretendStreamId=" + pretendStreamId +
                 ", batchSize=" + batchSize +
                 '}';

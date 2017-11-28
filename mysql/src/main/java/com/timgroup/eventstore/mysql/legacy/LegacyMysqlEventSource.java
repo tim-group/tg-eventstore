@@ -75,8 +75,7 @@ public class LegacyMysqlEventSource implements EventSource {
     @Override
     public String toString() {
         return "LegacyMysqlEventSource{" +
-                "connectionProvider=" + connectionProvider +
-                ", name='" + name + '\'' +
+                "name='" + name + '\'' +
                 ", eventReader=" + eventReader +
                 ", eventStreamWriter=" + eventStreamWriter +
                 '}';

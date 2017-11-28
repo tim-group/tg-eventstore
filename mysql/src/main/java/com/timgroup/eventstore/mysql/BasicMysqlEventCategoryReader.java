@@ -66,8 +66,7 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
     @Override
     public String toString() {
         return "BasicMysqlEventCategoryReader{" +
-                "connectionProvider=" + connectionProvider +
-                ", tableName='" + tableName + '\'' +
+                "tableName='" + tableName + '\'' +
                 ", batchSize=" + batchSize +
                 ", forceCategoryIndex=" + forceCategoryIndex +
                 '}';
