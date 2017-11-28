@@ -69,4 +69,13 @@ public class BasicMysqlEventReader implements EventReader {
     public Position emptyStorePosition() {
         return EMPTY_STORE_POSITION;
     }
+
+    @Override
+    public String toString() {
+        return "BasicMysqlEventReader{" +
+                "connectionProvider=" + connectionProvider +
+                ", tableName='" + tableName + '\'' +
+                ", batchSize=" + batchSize +
+                '}';
+    }
 }

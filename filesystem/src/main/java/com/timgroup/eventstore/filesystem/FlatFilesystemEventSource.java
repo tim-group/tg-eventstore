@@ -54,4 +54,13 @@ public final class FlatFilesystemEventSource implements EventSource {
     public Collection<Component> monitoring() {
         return Collections.emptyList();
     }
+
+    @Override
+    public String toString() {
+        return "FlatFilesystemEventSource{" +
+                "directory=" + directory +
+                ", clock=" + clock +
+                ", filenameSuffix='" + filenameSuffix + '\'' +
+                '}';
+    }
 }

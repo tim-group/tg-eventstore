@@ -44,6 +44,14 @@ public final class FilteringEventReader implements EventReader {
         return underlying.emptyStorePosition();
     }
 
+    @Override
+    public String toString() {
+        return "FilteringEventReader{" +
+                "underlying=" + underlying +
+                ", predicate=" + predicate +
+                '}';
+    }
+
     public static FilteringEventReader containingEventTypes(EventReader underlying, Set<String> eventTypes) {
         return new FilteringEventReader(underlying, e -> eventTypes.contains(e.eventRecord().eventType()));
     }

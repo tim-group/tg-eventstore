@@ -60,6 +60,14 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
         }
     }
 
+    @Override
+    public String toString() {
+        return "BasicMysqlEventStreamWriter{" +
+                "connectionProvider=" + connectionProvider +
+                ", tableName='" + tableName + '\'' +
+                '}';
+    }
+
     private void write(StreamId streamId, Collection<NewEvent> events, long currentEventNumber, Connection connection) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("insert into " + tableName + "(position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata) values(?, UTC_TIMESTAMP(), ?, ?, ?, ?, ?, ?)")) {
 

@@ -65,6 +65,13 @@ public class HttpGesEventStreamReader implements EventStreamReader {
         }
     }
 
+    @Override
+    public String toString() {
+        return "HttpGesEventStreamReader{" +
+                "host='" + host + '\'' +
+                '}';
+    }
+
     static class GesHttpPosition implements Position {
         final long value;
 

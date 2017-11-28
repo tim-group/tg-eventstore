@@ -51,6 +51,16 @@ public final class RekeyingEventReader implements EventReader {
         return RekeyedStreamPosition.codec(underlyingPositionCodec);
     }
 
+
+    @Override
+    public String toString() {
+        return "RekeyingEventReader{" +
+                "underlying=" + underlying +
+                ", underlyingPositionCodec=" + underlyingPositionCodec +
+                ", newStreamId=" + newStreamId +
+                '}';
+    }
+
     private static final class RekeyingSpliterator implements Spliterator<ResolvedEvent> {
         private final StreamId newStreamId;
         private final Spliterator<ResolvedEvent> events;

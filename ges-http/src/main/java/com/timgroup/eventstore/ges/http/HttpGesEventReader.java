@@ -73,4 +73,11 @@ public class HttpGesEventReader implements EventReader {
     public Position emptyStorePosition() {
         return null;
     }
+
+    @Override
+    public String toString() {
+        return "HttpGesEventReader{" +
+                "host='" + host + '\'' +
+                '}';
+    }
 }

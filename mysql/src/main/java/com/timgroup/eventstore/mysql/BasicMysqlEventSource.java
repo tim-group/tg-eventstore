@@ -68,6 +68,16 @@ public class BasicMysqlEventSource implements EventSource {
         return singletonList(new DatabaseConnectionComponent(id, label, connectionProvider::getConnection));
     }
 
+    @Override
+    public String toString() {
+        return "BasicMysqlEventSource{" +
+                "connectionProvider=" + connectionProvider +
+                ", tableName='" + tableName + '\'' +
+                ", batchSize=" + batchSize +
+                ", name='" + name + '\'' +
+                '}';
+    }
+
     public static PooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name) {
         return pooledMasterDbEventSource(config, tableName, name, DefaultBatchSize);
     }

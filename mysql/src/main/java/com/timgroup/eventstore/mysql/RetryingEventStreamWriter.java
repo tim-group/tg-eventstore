@@ -33,6 +33,15 @@ public class RetryingEventStreamWriter implements EventStreamWriter {
         retry(() -> underlying.write(streamId, events, expectedVersion));
     }
 
+    @Override
+    public String toString() {
+        return "RetryingEventStreamWriter{" +
+                "underlying=" + underlying +
+                ", count=" + count +
+                ", interval=" + interval +
+                '}';
+    }
+
     private void retry(Runnable work) {
         int retriesRemaining = count;
         while (true) {

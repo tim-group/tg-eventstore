@@ -56,4 +56,12 @@ public class TransformingEventReader implements EventReader {
     public Optional<ResolvedEvent> readLastEvent() {
         return underlying.readLastEvent().map(transformer);
     }
+
+    @Override
+    public String toString() {
+        return "TransformingEventReader{" +
+                "underlying=" + underlying +
+                ", transformer=" + transformer +
+                '}';
+    }
 }

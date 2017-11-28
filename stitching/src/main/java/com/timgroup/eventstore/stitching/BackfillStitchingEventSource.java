@@ -60,5 +60,13 @@ public final class BackfillStitchingEventSource implements EventSource {
         return result;
     }
 
-
+    @Override
+    public String toString() {
+        return "BackfillStitchingEventSource{" +
+                "backfill=" + backfill +
+                ", live=" + live +
+                ", positionCodec=" + positionCodec +
+                ", eventReader=" + eventReader +
+                '}';
+    }
 }

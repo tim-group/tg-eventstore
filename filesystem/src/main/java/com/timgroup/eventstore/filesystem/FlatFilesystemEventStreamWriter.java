@@ -47,6 +47,16 @@ final class FlatFilesystemEventStreamWriter implements EventStreamWriter {
         }
     }
 
+    @Override
+    public String toString() {
+        return "FlatFilesystemEventStreamWriter{" +
+                "directory=" + directory +
+                ", clock=" + clock +
+                ", dataSuffix='" + dataSuffix + '\'' +
+                ", metadataSuffix='" + metadataSuffix + '\'' +
+                '}';
+    }
+
     private void writeImpl(StreamId streamId, Collection<NewEvent> events, long currentVersion) {
         try (Lockfile ignored = lock()) {
             long globalNumber = currentGlobalVersion() + 1;

@@ -78,5 +78,11 @@ public final class MergedEventSource<T extends Comparable<T>> implements EventSo
         return null;
     }
 
-
+    @Override
+    public String toString() {
+        return "MergedEventSource{" +
+                "eventReader=" + eventReader +
+                ", mergedEventReaderPositionCodec=" + mergedEventReaderPositionCodec +
+                '}';
+    }
 }

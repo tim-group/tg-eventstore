@@ -78,6 +78,16 @@ public class CacheEventReader implements EventReader {
         return underlying.emptyStorePosition();
     }
 
+    @Override
+    public String toString() {
+        return "CacheEventReader{" +
+                "underlying=" + underlying +
+                ", positionCodec=" + positionCodec +
+                ", cacheDirectory=" + cacheDirectory +
+                ", cacheFileBaseName='" + cacheFileBaseName + '\'' +
+                '}';
+    }
+
     public static Optional<Position> findLastPosition(DataInputStream cache, PositionCodec positionCodec) throws CacheNotFoundException {
         ReadCacheSpliterator spliterator = new ReadCacheSpliterator(positionCodec, singletonList(() -> cache), ignore -> Stream.empty());
         AtomicReference<Position> lastPosition = new AtomicReference<>(null);

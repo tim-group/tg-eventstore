@@ -65,6 +65,15 @@ public class TimeReader implements EventReader, PositionCodec {
         return Long.toString(((TimePosition) position).value);
     }
 
+    @Override
+    public String toString() {
+        return "TimeReader{" +
+                "start=" + start +
+                ", accuracy=" + accuracy +
+                ", clock=" + clock +
+                '}';
+    }
+
     private static final class TimePosition implements Position, Comparable<TimePosition> {
         private final long value;
 

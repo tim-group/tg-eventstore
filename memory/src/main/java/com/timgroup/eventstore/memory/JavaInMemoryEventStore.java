@@ -159,6 +159,14 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
                 .filter(event -> event.eventRecord().eventNumber() > eventNumberExclusive);
     }
 
+    @Override
+    public String toString() {
+        return "JavaInMemoryEventStore{" +
+                "events.size=" + events.size() +
+                ", clock=" + clock +
+                '}';
+    }
+
     static final class InMemoryEventStorePosition implements Position, Comparable<InMemoryEventStorePosition> {
 
         private final long eventNumber;

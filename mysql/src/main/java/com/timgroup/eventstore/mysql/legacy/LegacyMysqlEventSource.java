@@ -72,7 +72,15 @@ public class LegacyMysqlEventSource implements EventSource {
         return singletonList(new DatabaseConnectionComponent(id, label, connectionProvider::getConnection));
     }
 
-
+    @Override
+    public String toString() {
+        return "LegacyMysqlEventSource{" +
+                "connectionProvider=" + connectionProvider +
+                ", name='" + name + '\'' +
+                ", eventReader=" + eventReader +
+                ", eventStreamWriter=" + eventStreamWriter +
+                '}';
+    }
 
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name) {
         return pooledMasterDbEventSource(config, tableName, DEFAULT_STREAM_ID, name);

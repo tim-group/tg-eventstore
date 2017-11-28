@@ -61,4 +61,13 @@ public final class BackfillStitchingEventReader implements EventReader, EventCat
     public Position emptyCategoryPosition(String category) {
         return emptyStorePosition;
     }
+
+    @Override
+    public String toString() {
+        return "BackfillStitchingEventReader{" +
+                "emptyStorePosition=" + emptyStorePosition +
+                ", backfill=" + backfill +
+                ", live=" + live +
+                '}';
+    }
 }

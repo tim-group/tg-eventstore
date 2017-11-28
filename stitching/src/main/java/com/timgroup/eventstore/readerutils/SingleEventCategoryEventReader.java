@@ -43,4 +43,12 @@ public final class SingleEventCategoryEventReader implements EventReader {
     public Optional<ResolvedEvent> readLastEvent() {
         return underlying.readLastEventInCategory(this.category);
     }
+
+    @Override
+    public String toString() {
+        return "SingleEventCategoryEventReader{" +
+                "underlying=" + underlying +
+                ", category='" + category + '\'' +
+                '}';
+    }
 }

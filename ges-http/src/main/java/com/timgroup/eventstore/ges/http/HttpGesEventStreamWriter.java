@@ -40,6 +40,15 @@ public class HttpGesEventStreamWriter implements EventStreamWriter {
         write(streamId, events, OptionalLong.of(expectedVersion));
     }
 
+
+    @Override
+    public String toString() {
+        return "HttpGesEventStreamWriter{" +
+                "mapper=" + mapper +
+                ", host='" + host + '\'' +
+                '}';
+    }
+
     private void write(StreamId streamId, Collection<NewEvent> events, OptionalLong maybeExpectedVersion) {
         try {
             CloseableHttpClient client = HttpClientBuilder.create().build();

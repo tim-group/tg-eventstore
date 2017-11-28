@@ -38,4 +38,11 @@ final class FilteringCategoryReader implements EventCategoryReader {
     public Position emptyCategoryPosition(String category) {
         return underlying.emptyStorePosition();
     }
+
+    @Override
+    public String toString() {
+        return "FilteringCategoryReader{" +
+                "underlying=" + underlying +
+                '}';
+    }
 }

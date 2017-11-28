@@ -83,4 +83,12 @@ public class LegacyEventStoreEventReaderAdapter implements EventReader, EventStr
                 )
         );
     }
+
+    @Override
+    public String toString() {
+        return "LegacyEventStoreEventReaderAdapter{" +
+                "eventStore=" + eventStore +
+                ", pretendStreamId=" + pretendStreamId +
+                '}';
+    }
 }

@@ -49,6 +49,15 @@ public final class ReorderingEventReader<T extends Comparable<T>> implements Eve
         }
     }
 
+    @Override
+    public String toString() {
+        return "ReorderingEventReader{" +
+                "underlying=" + underlying +
+                ", cutoffSortKey=" + cutoffSortKey +
+                ", sortKeyExtractor=" + sortKeyExtractor +
+                '}';
+    }
+
     private Stream<ResolvedEvent> bufferedAndSortedReadAllForwards(Position positionExclusive) {
         try(Stream<ResolvedEvent> allForwards = underlying.readAllForwards()) {
 

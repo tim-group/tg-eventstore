@@ -47,4 +47,11 @@ public class InMemoryEventSource implements EventSource {
     public Collection<Component> monitoring() {
         return Collections.emptyList();
     }
+
+    @Override
+    public String toString() {
+        return "InMemoryEventSource{" +
+                "eventStore=" + eventStore +
+                '}';
+    }
 }

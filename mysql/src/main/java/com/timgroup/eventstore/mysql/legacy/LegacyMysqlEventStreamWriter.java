@@ -71,6 +71,15 @@ public final class LegacyMysqlEventStreamWriter implements EventStreamWriter {
         }
     }
 
+    @Override
+    public String toString() {
+        return "LegacyMysqlEventStreamWriter{" +
+                "connectionProvider=" + connectionProvider +
+                ", tableName='" + tableName + '\'' +
+                ", pretendStreamId=" + pretendStreamId +
+                '}';
+    }
+
     private void write(Connection connection, long currentPosition, Collection<NewEvent> events) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("insert into " + tableName + "(version, effective_timestamp, eventType, body) values(?, ?, ?, ?)")) {
             for (NewEvent event : events) {

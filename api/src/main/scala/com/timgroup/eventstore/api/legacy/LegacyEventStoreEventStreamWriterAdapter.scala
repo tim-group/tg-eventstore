@@ -26,6 +26,8 @@ class LegacyEventStoreEventStreamWriterAdapter(eventstore: EventStore, pretendSt
     eventstore.save(events.toList.map(toEventData), Some(expectedVersion))
   }
 
+  override def toString = s"LegacyEventStoreEventStreamWriterAdapter{eventstore=$eventstore,previousStreamId=$pretendStreamId}"
+
   private def toEventData(newEvent: NewEvent): EventData = {
     if (newEvent.metadata().length != 0) {
       throw new IllegalArgumentException("Attempting to store metadata with legacy adapter.")

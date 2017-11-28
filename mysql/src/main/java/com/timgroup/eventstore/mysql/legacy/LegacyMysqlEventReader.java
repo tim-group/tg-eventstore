@@ -135,6 +135,16 @@ public final class LegacyMysqlEventReader implements EventReader, EventStreamRea
         return readLastEvent().get();
     }
 
+    @Override
+    public String toString() {
+        return "LegacyMysqlEventReader{" +
+                "connectionProvider=" + connectionProvider +
+                ", tableName='" + tableName + '\'' +
+                ", pretendStreamId=" + pretendStreamId +
+                ", batchSize=" + batchSize +
+                '}';
+    }
+
     private Stream<ResolvedEvent> readBackwards(LegacyMysqlEventPosition positionExclusive, int theBatchSize) {
         return stream(
                 new LegacyMysqlEventSpliterator(

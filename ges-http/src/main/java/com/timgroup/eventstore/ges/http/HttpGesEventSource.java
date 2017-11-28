@@ -48,4 +48,11 @@ public class HttpGesEventSource implements EventSource {
     public Collection<Component> monitoring() {
         return emptyList();
     }
+
+    @Override
+    public String toString() {
+        return "HttpGesEventSource{" +
+                "host='" + host + '\'' +
+                '}';
+    }
 }

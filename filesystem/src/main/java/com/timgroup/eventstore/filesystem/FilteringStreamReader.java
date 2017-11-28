@@ -38,4 +38,12 @@ final class FilteringStreamReader implements EventStreamReader {
         return underlying.readAllBackwards()
                 .filter(re -> re.eventRecord().streamId().equals(streamId) && re.eventRecord().eventNumber() < eventNumber);
     }
+
+    @Override
+    public String toString() {
+        return "FilteringStreamReader{" +
+                "underlying=" + underlying +
+                ", streamExistsPredicate=" + streamExistsPredicate +
+                '}';
+    }
 }

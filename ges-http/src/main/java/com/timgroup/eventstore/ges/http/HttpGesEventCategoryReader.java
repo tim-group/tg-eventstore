@@ -26,4 +26,11 @@ public class HttpGesEventCategoryReader implements EventCategoryReader {
     public Position emptyCategoryPosition(String category) {
         return new GesHttpPosition(-1L);
     }
+
+    @Override
+    public String toString() {
+        return "HttpGesEventCategoryReader{" +
+                "eventStreamReader=" + eventStreamReader +
+                '}';
+    }
 }

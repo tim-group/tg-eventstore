@@ -112,4 +112,13 @@ final class FlatFilesystemEventReader implements EventReader {
     public Position emptyStorePosition() {
         return FilesystemPosition.EMPTY;
     }
+
+    @Override
+    public String toString() {
+        return "FlatFilesystemEventReader{" +
+                "directory=" + directory +
+                ", dataSuffix='" + dataSuffix + '\'' +
+                ", metadataSuffix='" + metadataSuffix + '\'' +
+                '}';
+    }
 }

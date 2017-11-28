@@ -58,6 +58,15 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
         return readBackwards(streamId, Long.MAX_VALUE, 1).findFirst().get();
     }
 
+    @Override
+    public String toString() {
+        return "BasicMysqlEventStreamReader{" +
+                "connectionProvider=" + connectionProvider +
+                ", tableName='" + tableName + '\'' +
+                ", batchSize=" + batchSize +
+                '}';
+    }
+
     private Stream<ResolvedEvent> readBackwards(StreamId streamId, long eventNumber, int theBatchSize) {
         ensureStreamExists(streamId);
         EventSpliterator spliterator = new EventSpliterator(

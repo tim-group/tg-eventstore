@@ -73,6 +73,15 @@ public final class IdempotentEventStreamWriter implements EventStreamWriter {
         }
     }
 
+    @Override
+    public String toString() {
+        return "IdempotentEventStreamWriter{" +
+                "underlying=" + underlying +
+                ", reader=" + reader +
+                ", isCompatible=" + isCompatible +
+                '}';
+    }
+
     public static EventStreamWriter idempotent(EventStreamWriter underlying, EventStreamReader reader) {
         return idempotent(underlying, reader, BASIC_COMPATIBILITY_CHECK);
     }

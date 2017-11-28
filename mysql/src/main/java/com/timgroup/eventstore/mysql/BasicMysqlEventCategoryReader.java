@@ -63,6 +63,16 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
         return EMPTY_STORE_POSITION;
     }
 
+    @Override
+    public String toString() {
+        return "BasicMysqlEventCategoryReader{" +
+                "connectionProvider=" + connectionProvider +
+                ", tableName='" + tableName + '\'' +
+                ", batchSize=" + batchSize +
+                ", forceCategoryIndex=" + forceCategoryIndex +
+                '}';
+    }
+
     private Stream<ResolvedEvent> readBackwards(String category, BasicMysqlEventStorePosition positionExclusive, int theBatchSize) {
         EventSpliterator spliterator = new EventSpliterator(
                 connectionProvider,
