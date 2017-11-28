@@ -20,6 +20,7 @@ public class LegacyMysqlEventSource implements EventSource {
     private static final StreamId DEFAULT_STREAM_ID = StreamId.streamId("all", "all");
 
     private final ConnectionProvider connectionProvider;
+    private final String tableName;
     private final String name;
 
     private final LegacyMysqlEventReader eventReader;
@@ -27,6 +28,7 @@ public class LegacyMysqlEventSource implements EventSource {
 
     public LegacyMysqlEventSource(ConnectionProvider connectionProvider, String tableName, StreamId pretendStreamId, int batchSize, String name) {
         this.connectionProvider = connectionProvider;
+        this.tableName = tableName;
         this.name = name;
         this.eventReader = new LegacyMysqlEventReader(connectionProvider, tableName, pretendStreamId, batchSize);
         this.eventStreamWriter = new LegacyMysqlEventStreamWriter(connectionProvider, tableName, pretendStreamId);
@@ -68,7 +70,7 @@ public class LegacyMysqlEventSource implements EventSource {
     @Override
     public Collection<Component> monitoring() {
         String id = "EventStore-" + this.name;
-        String label = "EventStore (" + this.name + ")";
+        String label = "EventStore (name=" + this.name + ", tableName=" + this.tableName +", legacy=true)";
         return singletonList(new DatabaseConnectionComponent(id, label, connectionProvider::getConnection));
     }
 
