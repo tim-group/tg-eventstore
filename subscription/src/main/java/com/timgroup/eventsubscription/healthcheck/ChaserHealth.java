@@ -28,12 +28,12 @@ public class ChaserHealth extends Component implements ChaserListener {
     private volatile Instant lastPollTimestamp;
     private volatile Position currentPosition;
 
-    public ChaserHealth(String name, Clock clock) {
-        this(name, clock, Duration.ofSeconds(1));
+    public ChaserHealth(String name, String description, Clock clock) {
+        this(name, description, clock, Duration.ofSeconds(1));
     }
 
-    public ChaserHealth(String name, Clock clock, Duration subscriptionRunFrequency) {
-        super("event-store-chaser-" + name, "Eventstore chaser health (" + name + ")");
+    public ChaserHealth(String name, String description, Clock clock, Duration subscriptionRunFrequency) {
+        super("event-store-chaser-" + name, "Eventstore chaser health (" + name +": " + description + ")");
         this.clock = clock;
         this.warningThreshold = max(MIN_WARNING_THRESHOLD, subscriptionRunFrequency.multipliedBy(5));
         this.criticalThreshold = max(MIN_CRITICAL_THRESHOLD, subscriptionRunFrequency.multipliedBy(10));

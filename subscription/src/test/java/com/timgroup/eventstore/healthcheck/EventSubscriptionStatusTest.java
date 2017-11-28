@@ -29,7 +29,7 @@ public class EventSubscriptionStatusTest {
 
     @Before
     public void setup() {
-        status = new EventSubscriptionStatus("", clock, Duration.ofSeconds(123), new LocalEventSink());
+        status = new EventSubscriptionStatus("", "", clock, Duration.ofSeconds(123), new LocalEventSink());
         adapter = new SubscriptionListenerAdapter(new TestPosition(0), singletonList(status));
     }
 

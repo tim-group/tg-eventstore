@@ -19,8 +19,8 @@ import static org.hamcrest.Matchers.is;
 public class ChaserHealthTest {
     private final ManualClock clock = new ManualClock(Instant.now(), UTC);
 
-    private final ChaserHealth defaultChaserHealth = new ChaserHealth("", clock);
-    private final ChaserHealth slowChaserHealth = new ChaserHealth("", clock, Duration.ofSeconds(20));
+    private final ChaserHealth defaultChaserHealth = new ChaserHealth("", "", clock);
+    private final ChaserHealth slowChaserHealth = new ChaserHealth("", "", clock, Duration.ofSeconds(20));
 
     @Test public void
     reports_OK_if_chaser_polled_within_last_5s() {

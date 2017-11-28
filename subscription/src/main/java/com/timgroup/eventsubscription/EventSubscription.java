@@ -57,7 +57,7 @@ public class EventSubscription<T> {
             Duration maxInitialReplayDuration,
             List<SubscriptionListener> listeners
     ) {
-        this(name, pos -> eventReader.readCategoryForwards(category, pos), deserializer, eventHandler, clock, bufferSize, runFrequency, startingPosition, maxInitialReplayDuration, listeners, new Slf4jEventSink());
+        this(name, descriptionFor(eventReader, category), pos -> eventReader.readCategoryForwards(category, pos), deserializer, eventHandler, clock, bufferSize, runFrequency, startingPosition, maxInitialReplayDuration, listeners, new Slf4jEventSink());
     }
 
     public EventSubscription(
@@ -72,11 +72,12 @@ public class EventSubscription<T> {
             Duration maxInitialReplayDuration,
             List<SubscriptionListener> listeners
     ) {
-        this(name, eventReader::readAllForwards, deserializer, eventHandler, clock, bufferSize, runFrequency, startingPosition, maxInitialReplayDuration, listeners, new Slf4jEventSink());
+        this(name, descriptionFor(eventReader), eventReader::readAllForwards, deserializer, eventHandler, clock, bufferSize, runFrequency, startingPosition, maxInitialReplayDuration, listeners, new Slf4jEventSink());
     }
 
     EventSubscription(
                 String name,
+                String description,
                 Function<Position, Stream<ResolvedEvent>> eventSource,
                 Deserializer<? extends T> deserializer,
                 EventHandler<? super T> eventHandler,
@@ -89,8 +90,8 @@ public class EventSubscription<T> {
                 EventSink eventSink
     ) {
         this.runFrequency = runFrequency;
-        ChaserHealth chaserHealth = new ChaserHealth(name, clock, runFrequency);
-        subscriptionStatus = new EventSubscriptionStatus(name, clock, maxInitialReplayDuration, eventSink);
+        ChaserHealth chaserHealth = new ChaserHealth(name, description, clock, runFrequency);
+        subscriptionStatus = new EventSubscriptionStatus(name, description, clock, maxInitialReplayDuration, eventSink);
 
         List<SubscriptionListener> subListeners = new ArrayList<>();
         subListeners.add(subscriptionStatus);
@@ -162,5 +163,14 @@ public class EventSubscription<T> {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    static String descriptionFor(EventCategoryReader eventReader,
+                                  String category) {
+        return "reader=" + eventReader.toString() + ",category="+category;
+    }
+
+    static String descriptionFor(EventReader eventReader) {
+        return eventReader.toString();
     }
 }

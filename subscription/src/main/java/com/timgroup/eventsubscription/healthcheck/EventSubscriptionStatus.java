@@ -32,8 +32,8 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
     private volatile Report terminatedReport;
     private volatile Instant staleSince;
 
-    public EventSubscriptionStatus(String name, Clock clock, Duration maxInitialReplayDuration, EventSink eventSink) {
-        super("event-subscription-status-" + name, "Event subscription status (" + name + ")");
+    public EventSubscriptionStatus(String name, String description, Clock clock, Duration maxInitialReplayDuration, EventSink eventSink) {
+        super("event-subscription-status-" + name, "Event subscription status (" + name + ": " + description + ")");
         this.name = name;
         this.clock = clock;
         this.maxInitialReplayDuration = maxInitialReplayDuration;

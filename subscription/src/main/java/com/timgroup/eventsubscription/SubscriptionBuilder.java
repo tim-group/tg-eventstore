@@ -33,6 +33,7 @@ public class SubscriptionBuilder<T> {
     private Position startingPosition = null;
     private Deserializer<? extends T> deserializer = null;
     private EventSink eventSink = new Slf4jEventSink();
+    private String readerDescription = null;
 
     private SubscriptionBuilder(String name) {
         this.name = name;
@@ -73,6 +74,7 @@ public class SubscriptionBuilder<T> {
 
     public SubscriptionBuilder<T> readingFrom(EventReader eventReader, Position startingPosition) {
         this.reader = eventReader::readAllForwards;
+        this.readerDescription = EventSubscription.descriptionFor(eventReader);
         this.startingPosition = startingPosition;
         return this;
     }
@@ -83,6 +85,7 @@ public class SubscriptionBuilder<T> {
 
     public SubscriptionBuilder<T> readingFrom(EventCategoryReader categoryReader, String category, Position startingPosition) {
         this.reader = pos -> categoryReader.readCategoryForwards(category, pos);
+        this.readerDescription = EventSubscription.descriptionFor(categoryReader, category);
         this.startingPosition = startingPosition;
         return this;
     }
@@ -131,6 +134,7 @@ public class SubscriptionBuilder<T> {
 
         return new EventSubscription<>(
                 name,
+                readerDescription,
                 reader,
                 deserializer,
                 eventHandler,
