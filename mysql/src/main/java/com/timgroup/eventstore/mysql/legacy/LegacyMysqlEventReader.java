@@ -1,6 +1,12 @@
 package com.timgroup.eventstore.mysql.legacy;
 
-import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.EventCategoryReader;
+import com.timgroup.eventstore.api.EventReader;
+import com.timgroup.eventstore.api.EventStreamReader;
+import com.timgroup.eventstore.api.NoSuchStreamException;
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
 
 import java.sql.Connection;
@@ -120,12 +126,13 @@ public final class LegacyMysqlEventReader implements EventReader, EventStreamRea
     }
 
     @Override
-    public Optional<ResolvedEvent> readLastEventInStream(StreamId streamId) {
+    public ResolvedEvent readLastEventInStream(StreamId streamId) {
         if (!streamId.equals(pretendStreamId)) {
             throw new IllegalArgumentException("Cannot read " + streamId + " from legacy store");
         }
         ensureStreamExists(streamId);
-        return readLastEvent();
+        //noinspection ConstantConditions
+        return readLastEvent().get();
     }
 
     private Stream<ResolvedEvent> readBackwards(LegacyMysqlEventPosition positionExclusive, int theBatchSize) {

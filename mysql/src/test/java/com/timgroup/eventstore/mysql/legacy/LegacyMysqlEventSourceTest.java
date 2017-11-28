@@ -1,7 +1,15 @@
 package com.timgroup.eventstore.mysql.legacy;
 
-import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.EventRecord;
+import com.timgroup.eventstore.api.EventSource;
+import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.HasPropertyValueMatcher.PropertyToMatch;
+import com.timgroup.eventstore.api.NewEvent;
+import com.timgroup.eventstore.api.NoSuchStreamException;
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.api.StreamId;
+import com.timgroup.eventstore.api.WrongExpectedVersionException;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
 import com.typesafe.config.Config;
 import org.hamcrest.Description;
@@ -34,7 +42,11 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.startsWith;
 
 @SuppressWarnings({"OptionalGetWithoutIsPresent", "unchecked"})
 public final class LegacyMysqlEventSourceTest {
@@ -235,7 +247,7 @@ public final class LegacyMysqlEventSourceTest {
         eventSource().writeStream().write(stream_1, asList(event_2));
         eventSource().writeStream().write(stream_1, asList(event_3));
 
-        EventRecord eventRecord = eventSource().readStream().readLastEventInStream(stream_1).map(ResolvedEvent::eventRecord).get();
+        EventRecord eventRecord = eventSource().readStream().readLastEventInStream(stream_1).eventRecord();
         assertThat(eventRecord, is(objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 2L)));
     }
 

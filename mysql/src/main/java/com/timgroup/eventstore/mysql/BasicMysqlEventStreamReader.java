@@ -9,7 +9,6 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import static com.timgroup.eventstore.mysql.BasicMysqlEventStorePosition.EMPTY_STORE_POSITION;
@@ -54,8 +53,9 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
     }
 
     @Override
-    public Optional<ResolvedEvent> readLastEventInStream(StreamId streamId) {
-        return readBackwards(streamId, Long.MAX_VALUE, 1).findFirst();
+    public ResolvedEvent readLastEventInStream(StreamId streamId) {
+        //noinspection ConstantConditions
+        return readBackwards(streamId, Long.MAX_VALUE, 1).findFirst().get();
     }
 
     private Stream<ResolvedEvent> readBackwards(StreamId streamId, long eventNumber, int theBatchSize) {

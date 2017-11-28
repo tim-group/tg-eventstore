@@ -489,7 +489,7 @@ public abstract class JavaEventStoreTest {
         eventSource().writeStream().write(stream_2, asList(event_2));
         eventSource().writeStream().write(stream_3, asList(event_3));
 
-        EventRecord eventRecord = eventSource().readStream().readLastEventInStream(stream_2).map(ResolvedEvent::eventRecord).get();
+        EventRecord eventRecord = eventSource().readStream().readLastEventInStream(stream_2).eventRecord();
         assertThat(eventRecord, is(objectWith(EventRecord::streamId, stream_2).and(EventRecord::eventNumber, 0L)));
     }
 
