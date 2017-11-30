@@ -69,8 +69,7 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
     @Override
     public String toString() {
         return "MergedEventReader{" +
-                "clock=" + clock +
-                ", mergingStrategy=" + mergingStrategy +
+                "mergingStrategy.delay=" + mergingStrategy.delay() +
                 ", readers=" + readers +
                 '}';
     }

@@ -43,7 +43,6 @@ public final class NamedReaderWithCodec {
         return "NamedReaderWithCodec{" +
                 "name='" + name + '\'' +
                 ", reader=" + reader +
-                ", codec=" + codec +
                 '}';
     }
 }
