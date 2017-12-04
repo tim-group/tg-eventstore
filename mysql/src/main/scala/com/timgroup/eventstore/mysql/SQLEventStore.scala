@@ -140,4 +140,6 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
       }
     }
   }
+
+  override def toString = s"SQLEventStore{tableName='$tableName',batchSize=${batchSize.getOrElse("None")}}"
 }
