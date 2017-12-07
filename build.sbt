@@ -51,7 +51,7 @@ val eventstore_mysql = Project(id = "eventstore-mysql", base = file("mysql"))
     libraryDependencies += "com.typesafe" % "config" % "1.2.1",
     libraryDependencies += "c3p0" % "c3p0" % "0.9.1.2",
     libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.20" % "test",
-    libraryDependencies += "com.timgroup" %% "tim-slogger" % autobump
+    libraryDependencies += "com.timgroup" % "tim-logger" % autobump
   )
   .settings(CreateDatabase.settings :_*)
   .settings(overridePublishSettings)
