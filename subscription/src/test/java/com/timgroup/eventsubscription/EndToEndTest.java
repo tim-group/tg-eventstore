@@ -1,20 +1,5 @@
 package com.timgroup.eventsubscription;
 
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
-import java.util.function.BinaryOperator;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collector;
-
 import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.NewEvent;
@@ -38,6 +23,20 @@ import org.junit.Test;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
 
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collector;
+
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static com.timgroup.eventstore.api.StreamId.streamId;
 import static com.timgroup.tucker.info.Health.State.healthy;
@@ -47,6 +46,7 @@ import static com.timgroup.tucker.info.Status.OK;
 import static java.time.Duration.ofMillis;
 import static java.time.Duration.ofSeconds;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -54,6 +54,7 @@ import static org.hamcrest.core.StringContains.containsString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
+@SuppressWarnings("CodeBlock2Expr")
 public class EndToEndTest {
     private final ManualClock clock = ManualClock.createDefault();
     private final StreamId stream = streamId("any", "any");
@@ -112,7 +113,7 @@ public class EndToEndTest {
     public void does_not_continue_processing_events_if_event_processing_failed_on_a_previous_event() throws Exception {
         store.write(stream, Arrays.asList(newEvent(), newEvent()));
         AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = subscription(EndToEndTest::deserialize, handler(e -> {
+        subscription = subscription(EndToEndTest::deserialize, EventHandler.ofConsumer(e -> {
             eventsProcessed.incrementAndGet();
             if (e.event.eventNumber() == 0) {
                 throw new RuntimeException("failure");
@@ -140,7 +141,7 @@ public class EndToEndTest {
             else {
                 return deserialize(e);
             }
-        }, handler(e -> {
+        }, EventHandler.ofConsumer(e1 -> {
             eventsProcessed.incrementAndGet();
             throw new UnsupportedOperationException();
         }));
@@ -185,9 +186,9 @@ public class EndToEndTest {
         NewEvent event1 = newEvent();
         NewEvent event2 = newEvent();
         NewEvent event3 = newEvent();
-        store.write(streamId("alpha", "1"), Arrays.asList(event1));
-        store.write(streamId("beta", "1"), Arrays.asList(event2));
-        store.write(streamId("alpha", "2"), Arrays.asList(event3));
+        store.write(streamId("alpha", "1"), singletonList(event1));
+        store.write(streamId("beta", "1"), singletonList(event2));
+        store.write(streamId("alpha", "2"), singletonList(event3));
         @SuppressWarnings("unchecked")
         EventHandler<DeserialisedEvent> eventHandler = Mockito.mock(EventHandler.class);
         subscription = new EventSubscription<>("test", store, "alpha", EndToEndTest::deserialize, eventHandler, clock, 1024, ofMillis(1L), store.emptyStorePosition(), ofSeconds(320), emptyList());
@@ -215,7 +216,9 @@ public class EndToEndTest {
     @Test
     public void starts_up_healthy_when_there_are_no_events() throws Exception {
         AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = subscription(EndToEndTest::deserialize, handler(e -> {eventsProcessed.incrementAndGet(); }));
+        subscription = subscription(EndToEndTest::deserialize, EventHandler.ofConsumer(e -> {
+            eventsProcessed.incrementAndGet();
+        }));
         subscription.start();
 
         eventually(() -> {
@@ -227,9 +230,9 @@ public class EndToEndTest {
     @Test
     public void starts_up_healthy_when_there_are_no_events_after_fromversion() throws Exception {
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
-        Position lastPosition = store.readAllForwards().map(ResolvedEvent::position).collect(last()).get();
+        Position lastPosition = store.readAllForwards().map(ResolvedEvent::position).collect(last()).orElseThrow(() -> new AssertionError("No events"));
         AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = subscription(EndToEndTest::deserialize, handler(e -> eventsProcessed.incrementAndGet()), lastPosition);
+        subscription = subscription(EndToEndTest::deserialize, EventHandler.ofConsumer(e -> eventsProcessed.incrementAndGet()), lastPosition);
         subscription.start();
 
         eventually(() -> {
@@ -320,24 +323,15 @@ public class EndToEndTest {
         return new DeserialisedEvent(eventRecord);
     }
 
-    private static EventHandler<DeserialisedEvent> handler(Consumer<DeserialisedEvent> consumer) {
-        return new EventHandler<DeserialisedEvent>() {
-            @Override
-            public void apply(DeserialisedEvent deserialized) {
-                consumer.accept(deserialized);
-            }
-        };
-    };
-
     private static EventHandler<DeserialisedEvent> failingHandler(Supplier<RuntimeException> supplier) {
-        return handler(e -> { throw supplier.get(); });
+        return EventHandler.ofConsumer(e -> { throw supplier.get(); });
     }
 
     private static final class BlockingEventHandler implements EventHandler<DeserialisedEvent> {
         private final Semaphore lock = new Semaphore(0);
 
         @Override
-        public void apply(DeserialisedEvent deserialized) {
+        public void apply(DeserialisedEvent deserialised) {
             try {
                 lock.acquire();
             } catch (InterruptedException e) {
@@ -345,7 +339,7 @@ public class EndToEndTest {
             }
         }
 
-        public void allowProcessing(int count) {
+        void allowProcessing(int count) {
             lock.release(count);
         }
     }
@@ -354,7 +348,7 @@ public class EndToEndTest {
         return new Collector<T, ArrayList<T>, Optional<T>>() {
             @Override
             public Supplier<ArrayList<T>> supplier() {
-                return () -> new ArrayList<T>(1);
+                return () -> new ArrayList<>(1);
             }
 
             @Override
