@@ -103,7 +103,7 @@ val eventstore_stitching = Project(id = "eventstore-stitching", base = file("sti
   .settings(crossPaths := false)
 
 val eventstore_stitching_legacy = Project(id = "eventstore-stitching-legacy", base = file("stitching-legacy"))
-  .dependsOn(eventstore_api_legacy % "compile->compile; test->test", eventstore_memory_legacy % "test")
+  .dependsOn(eventstore_api_legacy % "compile->compile; test->test", eventstore_stitching, eventstore_memory_legacy % "test")
   .settings(libraryDependencies += "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.2")
   .settings(compatibleScalaTestDependency)
   .settings(overridePublishSettings)
