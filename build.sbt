@@ -142,7 +142,7 @@ val eventstore_subscription = Project(id = "eventstore-subscription", base = fil
   .settings(crossPaths := false)
 
 val eventstore_subscription_legacy = Project(id = "eventstore-subscription-legacy", base = file("subscription-legacy"))
-  .dependsOn(eventstore_api_legacy % "compile->compile; test->test", eventstore_memory % "test")
+  .dependsOn(eventstore_api_legacy % "compile->compile; test->test", eventstore_subscription, eventstore_memory % "test")
   .settings(
     publishArtifact in (Compile, packageDoc) := false,
     libraryDependencies ++= Seq(
