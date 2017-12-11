@@ -7,6 +7,7 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
+import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
 import com.timgroup.structuredevents.LocalEventSink;
 import com.timgroup.structuredevents.StructuredEventMatcher;
 import com.timgroup.tucker.info.Component;
@@ -20,6 +21,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Test;
+import org.mockito.InOrder;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
 
@@ -43,14 +45,14 @@ import static com.timgroup.tucker.info.Health.State.healthy;
 import static com.timgroup.tucker.info.Health.State.ill;
 import static com.timgroup.tucker.info.Status.CRITICAL;
 import static com.timgroup.tucker.info.Status.OK;
-import static java.time.Duration.ofMillis;
-import static java.time.Duration.ofSeconds;
+import static com.youdevise.testutils.matchers.ExceptionMatcher.anExceptionOfType;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.core.StringContains.containsString;
+import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
@@ -61,6 +63,7 @@ public class EndToEndTest {
     private final JavaInMemoryEventStore store = new JavaInMemoryEventStore(clock);
 
     private final LocalEventSink eventSink = new LocalEventSink();
+    private final SubscriptionListener listener = Mockito.mock(SubscriptionListener.class);
 
     private EventSubscription<DeserialisedEvent> subscription;
 
@@ -95,6 +98,11 @@ public class EndToEndTest {
             assertThat(statusComponent().getReport(), is(new Report(OK, "Caught up at version 3. Initial replay took PT2M3S")));
             assertThat(eventSink.events(), Contains.only(StructuredEventMatcher.ofType("InitialReplayCompleted")));
         });
+
+        InOrder inOrder = Mockito.inOrder(listener);
+        inOrder.verify(listener, Mockito.atLeastOnce()).staleAtVersion(Mockito.eq(Optional.empty()));
+        inOrder.verify(listener, Mockito.atLeastOnce()).caughtUpAt(argThat(inMemoryPosition(3)));
+        Mockito.verify(listener, Mockito.never()).terminated(Mockito.any(), Mockito.any());
     }
 
     @Test
@@ -127,6 +135,7 @@ public class EndToEndTest {
             assertThat(statusComponent().getReport().getStatus(), is(CRITICAL));
             assertThat(statusComponent().getReport().getValue().toString(), containsString("Event subscription terminated. Failed to process version 1: failure"));
             assertThat(eventsProcessed.get(), is(1));
+            Mockito.verify(listener).terminated(argThat(inMemoryPosition(1)), argThat(anExceptionOfType(RuntimeException.class).withTheMessage("failure")));
         });
     }
 
@@ -151,6 +160,7 @@ public class EndToEndTest {
 
         eventually(() -> {
             assertThat(eventsProcessed.get(), is(0));
+            Mockito.verify(listener).terminated(argThat(inMemoryPosition(1)), argThat(anExceptionOfType(RuntimeException.class).withTheMessage("Failed to deserialize first event")));
         });
     }
 
@@ -191,7 +201,7 @@ public class EndToEndTest {
         store.write(streamId("alpha", "2"), singletonList(event3));
         @SuppressWarnings("unchecked")
         EventHandler<DeserialisedEvent> eventHandler = Mockito.mock(EventHandler.class);
-        subscription = new EventSubscription<>("test", store, "alpha", EndToEndTest::deserialize, eventHandler, clock, 1024, ofMillis(1L), store.emptyStorePosition(), ofSeconds(320), emptyList());
+        subscription = new EventSubscription<>("test", store, "alpha", EndToEndTest::deserialize, eventHandler, clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), emptyList());
         subscription.start();
 
         eventually(() -> {
@@ -248,12 +258,13 @@ public class EndToEndTest {
     private EventSubscription<DeserialisedEvent> subscription(Deserializer<DeserialisedEvent> deserializer, EventHandler<DeserialisedEvent> eventHandler, Position startingPosition) {
         return SubscriptionBuilder.<DeserialisedEvent>eventSubscription("test")
                 .withClock(clock)
-                .withRunFrequency(ofMillis(1))
-                .withMaxInitialReplayDuration(ofSeconds(320))
+                .withRunFrequency(Duration.ofMillis(1))
+                .withMaxInitialReplayDuration(Duration.ofSeconds(320))
                 .readingFrom(store, startingPosition)
                 .deserializingUsing(deserializer)
                 .publishingTo(eventHandler)
                 .withEventSink(eventSink)
+                .withListener(listener)
                 .build();
     }
 
@@ -271,13 +282,15 @@ public class EndToEndTest {
             }
         };
     }
+
     private Component statusComponent() {
         return subscription.statusComponents().stream().filter(c -> c.getId().equals("event-subscription-status-test")).findFirst().orElseThrow(() -> new AssertionFailedError("No event-subscription-status-test component"));
     }
 
     private void eventually(Runnable work) throws Exception {
-        int remaining = 10;
-        Duration interval = ofMillis(15);
+        Duration patience = Duration.ofSeconds(1);
+        Duration interval = Duration.ofMillis(15);
+        int remaining = (int) (patience.toMillis() / interval.toMillis());
 
         while (true) {
             try {
