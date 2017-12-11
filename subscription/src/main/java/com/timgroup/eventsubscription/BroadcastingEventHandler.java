@@ -1,15 +1,16 @@
 package com.timgroup.eventsubscription;
 
-import java.util.List;
-
 import com.timgroup.eventstore.api.Position;
 import org.joda.time.DateTime;
+
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class BroadcastingEventHandler<T> implements EventHandler<T> {
     private final List<EventHandler<? super T>> handlers;
 
     public BroadcastingEventHandler(List<EventHandler<? super T>> handlers) {
-        this.handlers = handlers;
+        this.handlers = new CopyOnWriteArrayList<>(handlers);
     }
 
     @Override
