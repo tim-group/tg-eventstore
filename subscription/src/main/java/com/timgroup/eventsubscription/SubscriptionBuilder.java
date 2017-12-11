@@ -132,7 +132,7 @@ public class SubscriptionBuilder<T> {
 
         EventHandler<? super T> eventHandler;
         if (handlers.isEmpty()) {
-            eventHandler = EventHandler.ofConsumer(e -> {});
+            eventHandler = EventHandler.discard();
         }
         else if (handlers.size() == 1) {
             eventHandler = handlers.iterator().next();
