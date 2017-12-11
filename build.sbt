@@ -9,11 +9,11 @@ crossScalaVersions := Seq("2.11.8", "2.12.1")
 javacOptions += "-g"
 javacOptions += "-parameters"
 
-publishTo in ThisBuild := Some("publish-repo" at "http://repo.net.local/nexus/content/repositories/yd-release-candidates")
+publishTo in ThisBuild := Some("publish-repo" at "http://repo.youdevise.com:8081/nexus/content/repositories/yd-release-candidates")
 
 credentials in ThisBuild += Credentials(new File("/etc/sbt/credentials"))
 
-resolvers in ThisBuild += "TIM Group Repo" at "http://repo.net.local/nexus/content/groups/public"
+resolvers in ThisBuild += "TIM Group Repo" at "http://repo.youdevise.com/nexus/content/groups/public"
 
 val joda = Seq(
   "joda-time" % "joda-time" % "2.3",
