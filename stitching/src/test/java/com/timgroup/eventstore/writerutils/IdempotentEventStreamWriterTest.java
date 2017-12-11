@@ -2,7 +2,7 @@ package com.timgroup.eventstore.writerutils;
 
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.EventStreamWriter;
-import com.timgroup.eventstore.api.IdempotentWriteFailure;
+import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Rule;
@@ -11,6 +11,7 @@ import org.junit.rules.ExpectedException;
 
 import java.time.Clock;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 import static com.timgroup.eventstore.api.EventStreamReader.EmptyStreamEventNumber;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
@@ -172,13 +173,16 @@ public class IdempotentEventStreamWriterTest {
 
     @Test public void
     allows_custom_matching_to_cause_not_matching() {
-        IdempotentWriteFailure e = new IdempotentWriteFailure("Because I said say!");
-        thrown.expect(equalTo(e));
         underlying
                 .write(stream, asList(newEvent("type", "data".getBytes(), "metadata".getBytes()),
                         newEvent("type", "data2".getBytes(), "metadata".getBytes()),
                         newEvent("type", "data3".getBytes(), "metadata".getBytes())
                         ), EmptyStreamEventNumber);
+
+        ResolvedEvent lastEvent = store.readAllForwards().collect(Collectors.toList()).get(2);
+        IdempotentEventStreamWriter.IncompatibleNewEventException e = new IdempotentEventStreamWriter.IncompatibleNewEventException("Because I said say!", lastEvent, newEvent("type", "different data".getBytes(), "metadata".getBytes()));
+        thrown.expect(equalTo(e));
+
         idempotent(underlying, reader, (a, b) -> {
             throw e;
         })

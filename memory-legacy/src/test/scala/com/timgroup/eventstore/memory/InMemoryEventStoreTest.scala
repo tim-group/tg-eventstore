@@ -3,10 +3,12 @@ package com.timgroup.eventstore.memory
 import java.time.{Clock, Instant, ZoneOffset}
 
 import com.timgroup.eventstore.api.{EventStoreTest, Clock => LegacyClock}
+import com.timgroup.eventstore.memory.Wrapper._
 import org.joda.time.DateTime
 import org.scalatest.{FunSpec, MustMatchers, OneInstancePerTest}
 
 class InMemoryEventStoreTest extends FunSpec with EventStoreTest with MustMatchers with OneInstancePerTest {
+
   describe("traditional") {
     val traditionalInMemoryEventStore = new InMemoryEventStore(
       now = new LegacyClock {
