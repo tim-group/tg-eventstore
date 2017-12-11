@@ -39,6 +39,7 @@ val eventstore_api = Project(id = "eventstore-api", base = file("api"))
   .settings(libraryDependencies ++= JUnit)
   .settings(compatibleScalaTestDependency)
   .settings(overridePublishSettings)
+  .settings(crossPaths := false)
 
 val eventstore_api_legacy = Project(id = "eventstore-api-legacy", base = file("api-legacy"))
   .dependsOn(eventstore_api % "compile->compile; test->test")
@@ -48,6 +49,7 @@ val eventstore_api_legacy = Project(id = "eventstore-api-legacy", base = file("a
 val eventstore_memory = Project(id = "eventstore-memory", base = file("memory"))
   .dependsOn(eventstore_api % "compile->compile; test->test")
   .settings(overridePublishSettings)
+  .settings(crossPaths := false)
 
 val eventstore_memory_legacy = Project(id = "eventstore-memory-legacy", base = file("memory-legacy"))
   .dependsOn(eventstore_api_legacy % "compile->compile; test->test", eventstore_memory)
@@ -74,6 +76,7 @@ val eventstore_mysql = Project(id = "eventstore-mysql", base = file("mysql"))
   )
   .settings((test in Test) <<= (test in Test) dependsOn createDb)
   .settings(overridePublishSettings)
+  .settings(crossPaths := false)
 
 val eventstore_mysql_legacy = Project(id = "eventstore-mysql-legacy", base = file("mysql-legacy"))
   .dependsOn(eventstore_api_legacy % "compile->compile; test->test", eventstore_mysql, eventstore_memory_legacy % "test")
@@ -97,6 +100,7 @@ val eventstore_stitching = Project(id = "eventstore-stitching", base = file("sti
     libraryDependencies ++= Seq(
   "com.google.guava" % "guava" % "19.0"
 ))
+  .settings(crossPaths := false)
 
 val eventstore_stitching_legacy = Project(id = "eventstore-stitching-legacy", base = file("stitching-legacy"))
   .dependsOn(eventstore_api_legacy % "compile->compile; test->test", eventstore_memory_legacy % "test")
@@ -115,11 +119,13 @@ val eventstore_ges_http = Project(id = "eventstore-ges-http", base = file("ges-h
   .settings(libraryDependencies += "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % "2.7.2")
   .settings(publishArtifact in (Compile, packageDoc) := false)
   .settings(overridePublishSettings)
+  .settings(crossPaths := false)
 
 val eventstore_filesystem = Project(id = "eventstore-filesystem", base = file("filesystem"))
   .dependsOn(eventstore_api % "compile->compile; test->test")
   .settings(publishArtifact in (Compile, packageDoc) := false)
   .settings(overridePublishSettings)
+  .settings(crossPaths := false)
 
 val eventstore_subscription = Project(id = "eventstore-subscription", base = file("subscription"))
   .dependsOn(eventstore_api % "compile->compile; test->test", eventstore_memory % "test")
@@ -133,6 +139,7 @@ val eventstore_subscription = Project(id = "eventstore-subscription", base = fil
       "com.youdevise" % "Matchers" % autobump % "test"
 ))
   .settings(overridePublishSettings)
+  .settings(crossPaths := false)
 
 val eventstore_subscription_legacy = Project(id = "eventstore-subscription-legacy", base = file("subscription-legacy"))
   .dependsOn(eventstore_api_legacy % "compile->compile; test->test", eventstore_memory % "test")
