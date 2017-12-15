@@ -117,6 +117,13 @@ public class LegacyMysqlEventSource implements EventSource {
         return pooledEventSource(StacksConfiguredDataSource.pooledMasterDb(properties, configPrefix), tableName, pretendStreamId, name, batchSize);
     }
 
+    public static LegacyPooledMysqlEventSource pooledReadOnlyDbEventSource(Config config, String tableName, String name) {
+        return pooledReadOnlyDbEventSource(config, tableName, DEFAULT_STREAM_ID, name, DEFAULT_BATCH_SIZE);
+    }
+
+    public static LegacyPooledMysqlEventSource pooledReadOnlyDbEventSource(Config config, String tableName, StreamId pretendStreamId, String name, int batchSize) {
+        return pooledEventSource(StacksConfiguredDataSource.pooledReadOnlyDb(config), tableName, pretendStreamId, name, batchSize);
+    }
 
     public static LegacyPooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name) {
         return pooledReadOnlyDbEventSource(properties, configPrefix, tableName, DEFAULT_STREAM_ID, name);
