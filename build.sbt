@@ -142,8 +142,8 @@ val eventstore_subscription = Project(id = "eventstore-subscription", base = fil
     publishArtifact in (Compile, packageDoc) := false,
     libraryDependencies ++= Seq(
       "com.lmax" % "disruptor" % "3.3.2",
-      "com.timgroup" % "tim-structured-events" % "0.4.1233", // autobump
-      "com.timgroup" % "tim-structured-events-testing" % "0.4.1233" % "test", // autobump
+      "com.timgroup" % "tim-structured-events" % "0.4.1234", // autobump
+      "com.timgroup" % "tim-structured-events-testing" % "0.4.1234" % "test", // autobump
       "org.mockito" % "mockito-core" % "1.9.5" % "test",
       "com.youdevise" % "Matchers" % "0.0.1263" % "test" // autobump
 ))
@@ -156,8 +156,8 @@ val eventstore_subscription_legacy = Project(id = "eventstore-subscription-legac
     publishArtifact in (Compile, packageDoc) := false,
     libraryDependencies ++= Seq(
       "com.lmax" % "disruptor" % "3.3.2",
-      "com.timgroup" % "tim-structured-events" % "0.4.1233", // autobump
-      "com.timgroup" % "tim-structured-events-testing" % "0.4.1233" % "test", // autobump
+      "com.timgroup" % "tim-structured-events" % "0.4.1234", // autobump
+      "com.timgroup" % "tim-structured-events-testing" % "0.4.1234" % "test", // autobump
       "org.mockito" % "mockito-core" % "1.9.5" % "test",
       "com.youdevise" % "Matchers" % "0.0.1263" % "test" // autobump
 ))
