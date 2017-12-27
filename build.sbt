@@ -23,7 +23,7 @@ val compatibleScalaTestDependency = libraryDependencies ++= Seq(
 
 val JUnit = Seq(
   "junit" % "junit" % "4.12" % "test",
-  "com.timgroup" % "clocks-testing" % 1.0.1079 % "test", // autobump
+  "com.timgroup" % "clocks-testing" % "1.0.1079" % "test", // autobump
   "com.novocode" % "junit-interface" % "0.10-M1" % "test",
   "org.hamcrest" % "hamcrest-core" % "1.3" % "test",
   "org.hamcrest" % "hamcrest-library" % "1.3" % "test"
@@ -39,7 +39,7 @@ val publishScala = Seq(
 )
 
 val eventstore_api = Project(id = "eventstore-api", base = file("api"))
-  .settings(libraryDependencies += "com.timgroup" % "Tucker" % 1.0.1493) // autobump
+  .settings(libraryDependencies += "com.timgroup" % "Tucker" % "1.0.1493") // autobump
   .settings(libraryDependencies ++= joda)
   .settings(libraryDependencies ++= JUnit)
   .settings(compatibleScalaTestDependency)
@@ -70,7 +70,7 @@ val eventstore_mysql = Project(id = "eventstore-mysql", base = file("mysql"))
     libraryDependencies += "com.typesafe" % "config" % "1.2.1",
     libraryDependencies += "c3p0" % "c3p0" % "0.9.1.2",
     libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.20" % "test",
-    libraryDependencies += "com.timgroup" % "tim-logger" % 1.5.1083 // autobump
+    libraryDependencies += "com.timgroup" % "tim-logger" % "1.5.1083" // autobump
   )
   .settings(libraryDependencies ++= JUnit)
   .settings(
@@ -93,7 +93,7 @@ val eventstore_mysql_legacy = Project(id = "eventstore-mysql-legacy", base = fil
     libraryDependencies += "com.typesafe" % "config" % "1.2.1",
     libraryDependencies += "c3p0" % "c3p0" % "0.9.1.2",
     libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.20" % "test",
-    libraryDependencies += "com.timgroup" % "tim-logger" % 1.5.1083 // autobump
+    libraryDependencies += "com.timgroup" % "tim-logger" % "1.5.1083" // autobump
   )
   .settings((test in Test) <<= (test in Test) dependsOn (createDb in eventstore_mysql))
   .settings(overridePublishSettings)
@@ -142,10 +142,10 @@ val eventstore_subscription = Project(id = "eventstore-subscription", base = fil
     publishArtifact in (Compile, packageDoc) := false,
     libraryDependencies ++= Seq(
       "com.lmax" % "disruptor" % "3.3.2",
-      "com.timgroup" % "tim-structured-events" % 0.4.1233, // autobump
-      "com.timgroup" % "tim-structured-events-testing" % 0.4.1233 % "test", // autobump
+      "com.timgroup" % "tim-structured-events" % "0.4.1233", // autobump
+      "com.timgroup" % "tim-structured-events-testing" % "0.4.1233" % "test", // autobump
       "org.mockito" % "mockito-core" % "1.9.5" % "test",
-      "com.youdevise" % "Matchers" % 0.0.1263 % "test" // autobump
+      "com.youdevise" % "Matchers" % "0.0.1263" % "test" // autobump
 ))
   .settings(overridePublishSettings)
   .settings(publishJavaOnly)
@@ -156,10 +156,10 @@ val eventstore_subscription_legacy = Project(id = "eventstore-subscription-legac
     publishArtifact in (Compile, packageDoc) := false,
     libraryDependencies ++= Seq(
       "com.lmax" % "disruptor" % "3.3.2",
-      "com.timgroup" % "tim-structured-events" % 0.4.1233, // autobump
-      "com.timgroup" % "tim-structured-events-testing" % 0.4.1233 % "test", // autobump
+      "com.timgroup" % "tim-structured-events" % "0.4.1233", // autobump
+      "com.timgroup" % "tim-structured-events-testing" % "0.4.1233" % "test", // autobump
       "org.mockito" % "mockito-core" % "1.9.5" % "test",
-      "com.youdevise" % "Matchers" % 0.0.1263 % "test" // autobump
+      "com.youdevise" % "Matchers" % "0.0.1263" % "test" // autobump
 ))
   .settings(overridePublishSettings)
   .settings(publishScala)
