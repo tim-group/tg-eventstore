@@ -30,12 +30,12 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
     private volatile Report terminatedReport;
     private volatile Instant staleSince;
 
-    public EventSubscriptionStatus(String name, String description, Clock clock, Duration maxInitialReplayDuration, DurationThreshold staleness, EventSink eventSink) {
+    public EventSubscriptionStatus(String name, String description, Clock clock, DurationThreshold initialReplay, DurationThreshold staleness, EventSink eventSink) {
         super("event-subscription-status-" + name, "Event subscription status (" + parenthetical(name, description) + ")");
         this.name = name;
         this.clock = clock;
         this.staleness = staleness;
-        this.initialReplay = DurationThreshold.warningThresholdWithCriticalRatio(maxInitialReplayDuration, 1.25);
+        this.initialReplay = initialReplay;
         this.startTime = Instant.now(clock);
         this.staleSince = Instant.now(clock);
         this.eventSink = eventSink;
@@ -46,7 +46,7 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
      */
     @Deprecated
     public EventSubscriptionStatus(String name, Clock clock, Duration maxInitialReplayDuration, EventSink eventSink) {
-        this(name, null, clock, maxInitialReplayDuration, new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(30)), eventSink);
+        this(name, null, clock, DurationThreshold.warningThresholdWithCriticalRatio(maxInitialReplayDuration, 1.25), new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(30)), eventSink);
     }
 
     @Override

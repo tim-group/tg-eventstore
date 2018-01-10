@@ -25,7 +25,7 @@ public class SubscriptionBuilder<T> {
     private final String name;
     private Clock clock = Clock.systemUTC();
     private Duration runFrequency = Duration.ofSeconds(1);
-    private Duration maxInitialReplayDuration = Duration.ofSeconds(1);
+    private DurationThreshold initialReplay = new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(2));
     private DurationThreshold staleness = new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(30));
     private int bufferSize = 1024;
     private final List<EventHandler<? super T>> handlers = new ArrayList<>();
@@ -66,7 +66,12 @@ public class SubscriptionBuilder<T> {
     }
 
     public SubscriptionBuilder<T> withMaxInitialReplayDuration(Duration maxInitialReplayDuration) {
-        this.maxInitialReplayDuration = maxInitialReplayDuration;
+        this.initialReplay = DurationThreshold.warningThresholdWithCriticalRatio(maxInitialReplayDuration, 1.25);
+        return this;
+    }
+
+    public SubscriptionBuilder<T> withMaxInitialReplayDuration(DurationThreshold initialReplay) {
+        this.initialReplay = initialReplay;
         return this;
     }
 
@@ -158,7 +163,7 @@ public class SubscriptionBuilder<T> {
                 bufferSize,
                 runFrequency,
                 startingPosition,
-                maxInitialReplayDuration,
+                initialReplay,
                 staleness,
                 listeners,
                 eventSink

@@ -55,11 +55,11 @@ public class EventSubscription<T> {
             int bufferSize,
             Duration runFrequency,
             Position startingPosition,
-            Duration maxInitialReplayDuration,
+            DurationThreshold initialReplay,
             DurationThreshold staleness,
             List<SubscriptionListener> listeners
     ) {
-        this(name, descriptionFor(eventReader, category), pos -> eventReader.readCategoryForwards(category, pos), deserializer, eventHandler, clock, bufferSize, runFrequency, startingPosition, maxInitialReplayDuration, staleness, listeners, new Slf4jEventSink());
+        this(name, descriptionFor(eventReader, category), pos -> eventReader.readCategoryForwards(category, pos), deserializer, eventHandler, clock, bufferSize, runFrequency, startingPosition, initialReplay, staleness, listeners, new Slf4jEventSink());
     }
 
     public EventSubscription(
@@ -71,11 +71,11 @@ public class EventSubscription<T> {
             int bufferSize,
             Duration runFrequency,
             Position startingPosition,
-            Duration maxInitialReplayDuration,
+            DurationThreshold initialReplay,
             DurationThreshold staleness,
             List<SubscriptionListener> listeners
     ) {
-        this(name, descriptionFor(eventReader), eventReader::readAllForwards, deserializer, eventHandler, clock, bufferSize, runFrequency, startingPosition, maxInitialReplayDuration, staleness, listeners, new Slf4jEventSink());
+        this(name, descriptionFor(eventReader), eventReader::readAllForwards, deserializer, eventHandler, clock, bufferSize, runFrequency, startingPosition, initialReplay, staleness, listeners, new Slf4jEventSink());
     }
 
     EventSubscription(
@@ -88,14 +88,14 @@ public class EventSubscription<T> {
                 int bufferSize,
                 Duration runFrequency,
                 Position startingPosition,
-                Duration maxInitialReplayDuration,
+                DurationThreshold initialReplay,
                 DurationThreshold staleness,
                 List<SubscriptionListener> listeners,
                 EventSink eventSink
     ) {
         this.runFrequency = runFrequency;
         ChaserHealth chaserHealth = new ChaserHealth(name, description, clock, runFrequency);
-        subscriptionStatus = new EventSubscriptionStatus(name, description, clock, maxInitialReplayDuration, staleness, eventSink);
+        subscriptionStatus = new EventSubscriptionStatus(name, description, clock, initialReplay, staleness, eventSink);
 
         List<SubscriptionListener> subListeners = new ArrayList<>();
         subListeners.add(subscriptionStatus);

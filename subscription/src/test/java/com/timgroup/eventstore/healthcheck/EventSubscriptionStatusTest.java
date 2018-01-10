@@ -30,7 +30,7 @@ public class EventSubscriptionStatusTest {
 
     @Before
     public void setup() {
-        status = new EventSubscriptionStatus("", "", clock, Duration.ofSeconds(123), new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(30)), new LocalEventSink());
+        status = new EventSubscriptionStatus("", "", clock, DurationThreshold.warningThresholdWithCriticalRatio(Duration.ofSeconds(123), 1.25), new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(30)), new LocalEventSink());
         adapter = new SubscriptionListenerAdapter(new TestPosition(0), singletonList(status));
     }
 

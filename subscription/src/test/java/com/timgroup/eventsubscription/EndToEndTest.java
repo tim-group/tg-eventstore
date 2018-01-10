@@ -202,7 +202,7 @@ public class EndToEndTest {
         store.write(streamId("alpha", "2"), singletonList(event3));
         @SuppressWarnings("unchecked")
         EventHandler<DeserialisedEvent> eventHandler = Mockito.mock(EventHandler.class);
-        subscription = new EventSubscription<>("test", store, "alpha", EndToEndTest::deserialize, eventHandler, clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(60)), emptyList());
+        subscription = new EventSubscription<>("test", store, "alpha", EndToEndTest::deserialize, eventHandler, clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), DurationThreshold.warningThresholdWithCriticalRatio(Duration.ofSeconds(320), 1.25), new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(60)), emptyList());
         subscription.start();
 
         eventually(() -> {
