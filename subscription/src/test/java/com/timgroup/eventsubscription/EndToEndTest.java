@@ -7,6 +7,7 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
+import com.timgroup.eventsubscription.healthcheck.DurationThreshold;
 import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
 import com.timgroup.structuredevents.LocalEventSink;
 import com.timgroup.structuredevents.StructuredEventMatcher;
@@ -201,7 +202,7 @@ public class EndToEndTest {
         store.write(streamId("alpha", "2"), singletonList(event3));
         @SuppressWarnings("unchecked")
         EventHandler<DeserialisedEvent> eventHandler = Mockito.mock(EventHandler.class);
-        subscription = new EventSubscription<>("test", store, "alpha", EndToEndTest::deserialize, eventHandler, clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), emptyList());
+        subscription = new EventSubscription<>("test", store, "alpha", EndToEndTest::deserialize, eventHandler, clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), Duration.ofSeconds(320), new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(60)), emptyList());
         subscription.start();
 
         eventually(() -> {

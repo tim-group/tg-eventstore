@@ -4,6 +4,7 @@ import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventsubscription.healthcheck.DurationThreshold;
 import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
 import com.timgroup.structuredevents.EventSink;
 import com.timgroup.structuredevents.Slf4jEventSink;
@@ -25,6 +26,7 @@ public class SubscriptionBuilder<T> {
     private Clock clock = Clock.systemUTC();
     private Duration runFrequency = Duration.ofSeconds(1);
     private Duration maxInitialReplayDuration = Duration.ofSeconds(1);
+    private DurationThreshold staleness = new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(30));
     private int bufferSize = 1024;
     private final List<EventHandler<? super T>> handlers = new ArrayList<>();
     private final List<SubscriptionListener> listeners = new ArrayList<>();
@@ -65,6 +67,11 @@ public class SubscriptionBuilder<T> {
 
     public SubscriptionBuilder<T> withMaxInitialReplayDuration(Duration maxInitialReplayDuration) {
         this.maxInitialReplayDuration = maxInitialReplayDuration;
+        return this;
+    }
+
+    public SubscriptionBuilder<T> withStalenessThreshold(DurationThreshold threshold) {
+        this.staleness = threshold;
         return this;
     }
 
@@ -152,6 +159,7 @@ public class SubscriptionBuilder<T> {
                 runFrequency,
                 startingPosition,
                 maxInitialReplayDuration,
+                staleness,
                 listeners,
                 eventSink
         );

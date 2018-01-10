@@ -18,13 +18,11 @@ import static com.timgroup.tucker.info.Status.OK;
 import static com.timgroup.tucker.info.Status.WARNING;
 
 public class EventSubscriptionStatus extends Component implements Health, SubscriptionListener {
-    private static final Duration STALENESS_WARNING_THRESHOLD = Duration.ofSeconds(1);
-    private static final Duration STALENESS_CRITICAL_THRESHOLD = Duration.ofSeconds(30);
     private final String name;
     private final Clock clock;
-    private final Duration maxInitialReplayDuration;
-    private final Duration criticalInitialReplayDuration;
     private final EventSink eventSink;
+    private final DurationThreshold initialReplay;
+    private final DurationThreshold staleness;
 
     private volatile Instant startTime;
     private volatile Duration initialReplayDuration;
@@ -32,14 +30,14 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
     private volatile Report terminatedReport;
     private volatile Instant staleSince;
 
-    public EventSubscriptionStatus(String name, String description, Clock clock, Duration maxInitialReplayDuration, EventSink eventSink) {
+    public EventSubscriptionStatus(String name, String description, Clock clock, Duration maxInitialReplayDuration, DurationThreshold staleness, EventSink eventSink) {
         super("event-subscription-status-" + name, "Event subscription status (" + parenthetical(name, description) + ")");
         this.name = name;
         this.clock = clock;
-        this.maxInitialReplayDuration = maxInitialReplayDuration;
+        this.staleness = staleness;
+        this.initialReplay = DurationThreshold.warningThresholdWithCriticalRatio(maxInitialReplayDuration, 1.25);
         this.startTime = Instant.now(clock);
         this.staleSince = Instant.now(clock);
-        this.criticalInitialReplayDuration = maxInitialReplayDuration.plus(maxInitialReplayDuration.dividedBy(4)); // 25% over max = critical
         this.eventSink = eventSink;
     }
 
@@ -48,7 +46,7 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
      */
     @Deprecated
     public EventSubscriptionStatus(String name, Clock clock, Duration maxInitialReplayDuration, EventSink eventSink) {
-        this(name, null, clock, maxInitialReplayDuration, eventSink);
+        this(name, null, clock, maxInitialReplayDuration, new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(30)), eventSink);
     }
 
     @Override
@@ -60,32 +58,20 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
         Instant staleSinceSnap = this.staleSince;
         if (staleSinceSnap != null) {
             Duration staleFor = Duration.between(staleSinceSnap, Instant.now(clock));
-            Status status = initialReplayDuration != null ? classifyStaleness(staleFor) : classifyInitialStaleness(staleFor);
+            Status status = initialReplayDuration != null ? staleness.classify(staleFor) : initialReplay.classify(staleFor);
 
             String currentVersionText = currentPosition != null ?  "Currently at version " + currentPosition + "." : "No events processed yet.";
             return new Report(status, "Stale, catching up. " + currentVersionText + " (Stale for " + staleFor + ")");
         } else if (initialReplayDuration != null) {
-            if (initialReplayDuration.compareTo(maxInitialReplayDuration) < 0) {
+            if (initialReplayDuration.compareTo(initialReplay.getWarning()) < 0) {
                 return new Report(OK, "Caught up at version " + currentPosition + ". Initial replay took " + initialReplayDuration);
             } else {
                 return new Report(WARNING, "Caught up at version " + currentPosition + ". Initial replay took " + initialReplayDuration + "; " +
-                        "this is longer than expected limit of " + maxInitialReplayDuration + ".");
+                        "this is longer than expected limit of " + initialReplay.getWarning() + ".");
             }
         } else {
             throw new RuntimeException("Not stale and no replay completed");
         }
-    }
-
-    private Status classifyInitialStaleness(Duration staleFor) {
-        return staleFor.compareTo(criticalInitialReplayDuration) > 0 ? CRITICAL
-                : staleFor.compareTo(maxInitialReplayDuration) > 0 ? WARNING
-                : OK;
-    }
-
-    private Status classifyStaleness(Duration staleFor) {
-        return staleFor.compareTo(STALENESS_CRITICAL_THRESHOLD) > 0 ? CRITICAL
-                : staleFor.compareTo(STALENESS_WARNING_THRESHOLD) > 0 ? WARNING
-                : OK;
     }
 
     @Override
