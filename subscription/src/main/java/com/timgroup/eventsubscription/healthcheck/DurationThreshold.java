@@ -6,13 +6,17 @@ import com.timgroup.tucker.info.Status;
 import java.time.Duration;
 import java.util.Objects;
 
+import static java.util.Objects.requireNonNull;
+
 public class DurationThreshold {
     private final Duration warning;
     private final Duration critical;
 
     public DurationThreshold(Duration warning, Duration critical) {
-        this.warning = warning;
-        this.critical = critical;
+        this.warning = requireNonNull(warning);
+        this.critical = requireNonNull(critical);
+        if (critical.compareTo(warning) < 0)
+            throw new IllegalArgumentException("Critical threshold must not be less than warning threshold");
     }
 
     public static DurationThreshold warningThresholdWithCriticalRatio(Duration warning, double criticalRatio) {
