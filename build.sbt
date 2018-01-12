@@ -39,7 +39,7 @@ val publishScala = Seq(
 )
 
 val eventstore_api = Project(id = "eventstore-api", base = file("api"))
-  .settings(libraryDependencies += "com.timgroup" % "Tucker" % "1.0.1493") // autobump
+  .settings(libraryDependencies += "com.timgroup" % "Tucker" % "1.0.1494") // autobump
   .settings(libraryDependencies ++= joda)
   .settings(libraryDependencies ++= JUnit)
   .settings(compatibleScalaTestDependency)
