@@ -129,8 +129,8 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
                                     resultSet.getBytes("data"),
                                     resultSet.getBytes("metadata")
                             )));
-                    currentPage = list.iterator();
                 }
+                currentPage = list.iterator();
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
