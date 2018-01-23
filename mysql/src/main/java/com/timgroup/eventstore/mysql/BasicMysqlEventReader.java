@@ -23,17 +23,13 @@ public class BasicMysqlEventReader implements EventReader {
 
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-        EventSpliterator spliterator = new EventSpliterator(
+        return stream(EventSpliterator.readAllEventSpliterator(
                 connectionProvider,
                 batchSize,
                 tableName,
                 (BasicMysqlEventStorePosition) positionExclusive,
-                "",
-                false,
                 false
-        );
-
-        return stream(spliterator, false);
+        ), false);
     }
 
     @Override
@@ -52,17 +48,13 @@ public class BasicMysqlEventReader implements EventReader {
     }
 
     private Stream<ResolvedEvent> readBackwards(BasicMysqlEventStorePosition positionExclusive, int theBatchSize) {
-        EventSpliterator spliterator = new EventSpliterator(
+        return stream(EventSpliterator.readAllEventSpliterator(
                 connectionProvider,
                 theBatchSize,
                 tableName,
                 positionExclusive,
-                "",
-                true,
-                false
-        );
-
-        return stream(spliterator, false);
+                true
+        ), false);
     }
 
     @Override

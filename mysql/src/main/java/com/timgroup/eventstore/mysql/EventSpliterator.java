@@ -7,37 +7,105 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Spliterator;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static java.lang.Integer.MIN_VALUE;
 import static java.lang.Long.MAX_VALUE;
 
-class EventSpliterator implements Spliterator<ResolvedEvent> {
+class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
     private final ConnectionProvider connectionProvider;
-    private final String queryString;
+    private final Function<T, String> queryStringGenerator;
+    private final Function<ResolvedEvent, T> locationPointerExtractor;
 
-    private BasicMysqlEventStorePosition lastPosition;
+    private T locationPointer;
     private Iterator<ResolvedEvent> currentPage = Collections.emptyIterator();
     private boolean streamExhausted = false;
 
-    EventSpliterator(ConnectionProvider connectionProvider,
-                     int batchSize,
-                     String tableName,
-                     BasicMysqlEventStorePosition startingPosition,
-                     String condition,
-                     boolean backwards,
-                     boolean forceCategoryIndex) {
-        this.connectionProvider = connectionProvider;
-        this.lastPosition = startingPosition;
-        this.queryString = "select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata" +
+    public static Spliterator<ResolvedEvent> readAllEventSpliterator(ConnectionProvider connectionProvider,
+                                                                     int batchSize,
+                                                                     String tableName,
+                                                                     BasicMysqlEventStorePosition startingPosition,
+                                                                     boolean backwards)
+    {
+        final String queryString = "select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata" +
+                " from " + tableName +
+                " where position " + (backwards ? "<" : ">") + " %s" +
+                " order by position " + (backwards ? "desc" : "asc") +
+                " limit " + batchSize;
+
+        return new EventSpliterator<>(
+                connectionProvider,
+                startingPosition,
+                position -> String.format(queryString, position.value),
+                resolvedEvent -> (BasicMysqlEventStorePosition)resolvedEvent.position()
+        );
+    }
+
+    public static Spliterator<ResolvedEvent> readCategoryEventSpliterator(ConnectionProvider connectionProvider,
+                                                                          int batchSize,
+                                                                          String tableName,
+                                                                          String category,
+                                                                          BasicMysqlEventStorePosition startingPosition,
+                                                                          boolean backwards,
+                                                                          boolean forceCategoryIndex)
+    {
+        final String queryString = "select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata" +
                 " from " + tableName +
                 (forceCategoryIndex ? " FORCE INDEX (stream_category_2)" : "") +
                 " where position " + (backwards ? "<" : ">") + " %s" +
-                (condition.isEmpty() ? "" : " and " + condition) +
+                " and stream_category = '" + category + "'" +
                 " order by position " + (backwards ? "desc" : "asc") +
                 " limit " + batchSize;
+
+        return new EventSpliterator<>(
+                connectionProvider,
+                startingPosition,
+                position -> String.format(queryString, position.value),
+                resolvedEvent -> (BasicMysqlEventStorePosition) resolvedEvent.position()
+        );
+    }
+
+
+    public static Spliterator<ResolvedEvent> readStreamEventSpliterator(ConnectionProvider connectionProvider,
+                                                                        int batchSize,
+                                                                        String tableName,
+                                                                        StreamId streamId,
+                                                                        long startingEventNumber,
+                                                                        boolean backwards)
+    {
+        final String queryString = "select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata" +
+                " from " + tableName +
+                " where event_number " + (backwards ? "<" : ">") + " %d" +
+                " and stream_category = '" + streamId.category() + "'" +
+                " and stream_id = '" + streamId.id() + "'" +
+                " order by event_number " + (backwards ? "desc" : "asc") +
+                " limit " + batchSize;
+
+        return new EventSpliterator<>(
+                connectionProvider,
+                startingEventNumber,
+                eventNumber -> String.format(queryString, eventNumber),
+                resolvedEvent -> resolvedEvent.eventRecord().eventNumber()
+        );
+    }
+
+    private EventSpliterator(
+            ConnectionProvider connectionProvider,
+            T startingLocation,
+            Function<T, String> queryStringGenerator,
+            Function<ResolvedEvent, T> locationPointerExtractor)
+    {
+        this.connectionProvider = connectionProvider;
+        this.locationPointer = startingLocation;
+        this.queryStringGenerator = queryStringGenerator;
+        this.locationPointerExtractor = locationPointerExtractor;
     }
 
     @Override
@@ -45,7 +113,7 @@ class EventSpliterator implements Spliterator<ResolvedEvent> {
         if (!currentPage.hasNext() && !streamExhausted) {
             try (Connection connection = connectionProvider.getConnection();
                  Statement statement = streamingStatementFrom(connection);
-                 ResultSet resultSet = statement.executeQuery(String.format(queryString, lastPosition.value))
+                 ResultSet resultSet = statement.executeQuery(queryStringGenerator.apply(locationPointer))
             ) {
 
                 List<ResolvedEvent> list = new ArrayList<>();
@@ -71,7 +139,7 @@ class EventSpliterator implements Spliterator<ResolvedEvent> {
         if (currentPage.hasNext()) {
             ResolvedEvent next = currentPage.next();
             action.accept(next);
-            lastPosition = ((BasicMysqlEventStorePosition) next.position());
+            locationPointer = locationPointerExtractor.apply(next);
             return true;
         } else {
             streamExhausted = true;

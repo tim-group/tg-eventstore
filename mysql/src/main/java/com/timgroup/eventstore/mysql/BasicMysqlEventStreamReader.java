@@ -29,17 +29,14 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
     @Override
     public Stream<ResolvedEvent> readStreamForwards(StreamId streamId, long eventNumber) {
         ensureStreamExists(streamId);
-        EventSpliterator spliterator = new EventSpliterator(
+        return stream(EventSpliterator.readStreamEventSpliterator(
                 connectionProvider,
                 batchSize,
                 tableName,
-                EMPTY_STORE_POSITION,
-                format("stream_category = '%s' and stream_id = '%s' and event_number > %s", streamId.category(), streamId.id(), eventNumber),
-                false,
+                streamId,
+                eventNumber,
                 false
-        );
-
-        return stream(spliterator, false);
+        ), false);
     }
 
     @Override
@@ -68,17 +65,15 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
 
     private Stream<ResolvedEvent> readBackwards(StreamId streamId, long eventNumber, int theBatchSize) {
         ensureStreamExists(streamId);
-        EventSpliterator spliterator = new EventSpliterator(
+
+        return stream(EventSpliterator.readStreamEventSpliterator(
                 connectionProvider,
                 theBatchSize,
                 tableName,
-                new BasicMysqlEventStorePosition(Long.MAX_VALUE),
-                format("stream_category = '%s' and stream_id = '%s' and event_number < %s", streamId.category(), streamId.id(), eventNumber),
-                true,
-                false
-        );
-
-        return stream(spliterator, false);
+                streamId,
+                eventNumber,
+                true
+        ), false);
     }
 
     private void ensureStreamExists(StreamId streamId) throws NoSuchStreamException {

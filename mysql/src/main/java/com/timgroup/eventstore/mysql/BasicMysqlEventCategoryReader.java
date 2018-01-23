@@ -30,17 +30,15 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
 
     @Override
     public Stream<ResolvedEvent> readCategoryForwards(String category, Position positionExclusive) {
-        EventSpliterator spliterator = new EventSpliterator(
+        return stream(EventSpliterator.readCategoryEventSpliterator(
                 connectionProvider,
                 batchSize,
                 tableName,
+                category,
                 (BasicMysqlEventStorePosition) positionExclusive,
-                format("stream_category = '%s'", category),
                 false,
                 forceCategoryIndex
-        );
-
-        return stream(spliterator, false);
+        ), false);
     }
 
     @Override
@@ -73,16 +71,14 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
     }
 
     private Stream<ResolvedEvent> readBackwards(String category, BasicMysqlEventStorePosition positionExclusive, int theBatchSize) {
-        EventSpliterator spliterator = new EventSpliterator(
+        return stream(EventSpliterator.readCategoryEventSpliterator(
                 connectionProvider,
                 theBatchSize,
                 tableName,
+                category,
                 positionExclusive,
-                format("stream_category = '%s'", category),
                 true,
                 forceCategoryIndex
-        );
-
-        return stream(spliterator, false);
+        ), false);
     }
 }
