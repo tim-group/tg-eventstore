@@ -70,7 +70,7 @@ val eventstore_mysql = Project(id = "eventstore-mysql", base = file("mysql"))
     libraryDependencies += "com.typesafe" % "config" % "1.2.1",
     libraryDependencies += "c3p0" % "c3p0" % "0.9.1.2",
     libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.20" % "test",
-    libraryDependencies += "com.timgroup" % "tim-logger" % "1.5.1083" // autobump
+    libraryDependencies += "com.timgroup" % "tim-logger" % "1.5.1084" // autobump
   )
   .settings(libraryDependencies ++= JUnit)
   .settings(
@@ -93,7 +93,7 @@ val eventstore_mysql_legacy = Project(id = "eventstore-mysql-legacy", base = fil
     libraryDependencies += "com.typesafe" % "config" % "1.2.1",
     libraryDependencies += "c3p0" % "c3p0" % "0.9.1.2",
     libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.20" % "test",
-    libraryDependencies += "com.timgroup" % "tim-logger" % "1.5.1083" // autobump
+    libraryDependencies += "com.timgroup" % "tim-logger" % "1.5.1084" // autobump
   )
   .settings((test in Test) <<= (test in Test) dependsOn (createDb in eventstore_mysql))
   .settings(overridePublishSettings)
