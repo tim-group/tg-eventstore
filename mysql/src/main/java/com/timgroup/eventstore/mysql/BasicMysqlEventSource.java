@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.mysql;
 
+import com.codahale.metrics.MetricRegistry;
 import com.mchange.v2.c3p0.PooledDataSource;
 import com.timgroup.eventstore.api.*;
 import com.timgroup.tucker.info.Component;
@@ -20,20 +21,22 @@ public class BasicMysqlEventSource implements EventSource {
     private final String tableName;
     private final int batchSize;
     private final String name;
+    private final MetricRegistry metricRegistry;
 
-    public BasicMysqlEventSource(ConnectionProvider connectionProvider, String tableName, int batchSize, String name) {
+    public BasicMysqlEventSource(ConnectionProvider connectionProvider, String tableName, int batchSize, String name, MetricRegistry metricRegistry) {
         this.connectionProvider = connectionProvider;
         this.tableName = tableName;
         this.batchSize = batchSize;
         this.name = name;
+        this.metricRegistry = metricRegistry;
     }
 
-    public BasicMysqlEventSource(ConnectionProvider connectionProvider, String tableName, int batchSize) {
-        this(connectionProvider, tableName, batchSize, "EventStore");
+    public BasicMysqlEventSource(ConnectionProvider connectionProvider, String tableName, int batchSize, MetricRegistry metricRegistry) {
+        this(connectionProvider, tableName, batchSize, "EventStore", metricRegistry);
     }
 
-    public BasicMysqlEventSource(ConnectionProvider connectionProvider, String tableName) {
-        this(connectionProvider, tableName, DefaultBatchSize);
+    public BasicMysqlEventSource(ConnectionProvider connectionProvider, String tableName, MetricRegistry metricRegistry) {
+        this(connectionProvider, tableName, DefaultBatchSize, metricRegistry);
     }
 
     @Override
@@ -77,65 +80,170 @@ public class BasicMysqlEventSource implements EventSource {
                 '}';
     }
 
+    /**
+     * @deprecated  replaced by {@link #pooledMasterDbEventSource(Config config, String tableName, String name, MetricRegistry metricRegistry)}
+     */
+    @Deprecated
     public static PooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name) {
-        return pooledMasterDbEventSource(config, tableName, name, DefaultBatchSize);
+        return pooledMasterDbEventSource(config, tableName, name, null);
     }
 
+    public static PooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name, MetricRegistry metricRegistry) {
+        return pooledMasterDbEventSource(config, tableName, name, DefaultBatchSize, metricRegistry);
+    }
+
+    /**
+     * @deprecated  replaced by {@link #pooledMasterDbEventSource(Config config, String tableName, String name, int batchSize, MetricRegistry metricRegistry)}
+     */
+    @Deprecated
     public static PooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name, int batchSize) {
-        return pooledMasterDbEventSource(StacksConfiguredDataSource.pooledMasterDb(config), tableName, name, batchSize);
+        return pooledMasterDbEventSource(config, tableName, name, batchSize, null);
     }
 
+    public static PooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name, int batchSize, MetricRegistry metricRegistry) {
+        return pooledMasterDbEventSource(StacksConfiguredDataSource.pooledMasterDb(config, metricRegistry), tableName, name, batchSize, metricRegistry);
+    }
+
+    /**
+     * @deprecated  replaced by {@link #pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name, MetricRegistry metricRegistry)}
+     */
+    @Deprecated
     public static PooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name) {
-        return pooledMasterDbEventSource(properties, configPrefix, tableName, name, DefaultBatchSize);
+        return pooledMasterDbEventSource(properties, configPrefix, tableName, name, null);
     }
 
+    public static PooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name, MetricRegistry metricRegistry) {
+        return pooledMasterDbEventSource(properties, configPrefix, tableName, name, DefaultBatchSize, metricRegistry);
+    }
+
+    /**
+     * @deprecated  replaced by {@link #pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize, MetricRegistry metricRegistry)}
+     */
+    @Deprecated
     public static PooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize) {
-        return pooledMasterDbEventSource(StacksConfiguredDataSource.pooledMasterDb(properties, configPrefix), tableName, name, batchSize);
+        return pooledMasterDbEventSource(properties, configPrefix, tableName, name, batchSize, null);
     }
 
+    public static PooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize, MetricRegistry metricRegistry) {
+        return pooledMasterDbEventSource(StacksConfiguredDataSource.pooledMasterDb(properties, configPrefix, metricRegistry), tableName, name, batchSize, metricRegistry);
+    }
+
+    /**
+     * @deprecated  replaced by {@link #pooledMasterDbEventSource(PooledDataSource dataSource, String tableName, String name, MetricRegistry metricRegistry)}
+     */
+    @Deprecated
     public static PooledMysqlEventSource pooledMasterDbEventSource(PooledDataSource dataSource, String tableName, String name) {
-        return pooledMasterDbEventSource(dataSource, tableName, name, DefaultBatchSize);
+        return pooledMasterDbEventSource(dataSource, tableName, name, null);
     }
 
+    public static PooledMysqlEventSource pooledMasterDbEventSource(PooledDataSource dataSource, String tableName, String name, MetricRegistry metricRegistry) {
+        return pooledMasterDbEventSource(dataSource, tableName, name, DefaultBatchSize, metricRegistry);
+    }
+
+    /**
+     * @deprecated  replaced by {@link #pooledReadOnlyDbEventSource(Config config, String tableName, String name, MetricRegistry metricRegistry)}
+     */
+    @Deprecated
     public static PooledMysqlEventSource pooledReadOnlyDbEventSource(Config config, String tableName, String name) {
-        return pooledReadOnlyDbEventSource(config, tableName, name, DefaultBatchSize);
+        return pooledReadOnlyDbEventSource(config, tableName, name, null);
     }
 
+    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(Config config, String tableName, String name, MetricRegistry metricRegistry) {
+        return pooledReadOnlyDbEventSource(config, tableName, name, DefaultBatchSize, metricRegistry);
+    }
+
+    /**
+     * @deprecated  replaced by {@link #pooledReadOnlyDbEventSource(Config config, String tableName, String name, int batchSize, MetricRegistry metricRegistry)}
+     */
+    @Deprecated
     public static PooledMysqlEventSource pooledReadOnlyDbEventSource(Config config, String tableName, String name, int batchSize) {
-        return new PooledMysqlEventSource(StacksConfiguredDataSource.pooledReadOnlyDb(config), tableName, batchSize, name);
+        return pooledReadOnlyDbEventSource(config, tableName, name, batchSize, null);
     }
 
+    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(Config config, String tableName, String name, int batchSize, MetricRegistry metricRegistry) {
+        return new PooledMysqlEventSource(StacksConfiguredDataSource.pooledReadOnlyDb(config, metricRegistry), tableName, batchSize, name, metricRegistry);
+    }
+
+    /**
+     * @deprecated  replaced by {@link #pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name, MetricRegistry metricRegistry)}
+     */
+    @Deprecated
     public static PooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name) {
-        return pooledReadOnlyDbEventSource(properties, configPrefix, tableName, name, DefaultBatchSize);
+        return pooledReadOnlyDbEventSource(properties, configPrefix, tableName, name, null);
     }
 
+    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name, MetricRegistry metricRegistry) {
+        return pooledReadOnlyDbEventSource(properties, configPrefix, tableName, name, DefaultBatchSize, metricRegistry);
+    }
+
+    /**
+     * @deprecated  replaced by {@link #pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize, MetricRegistry metricRegistry)}
+     */
+    @Deprecated
     public static PooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize) {
-        return new PooledMysqlEventSource(StacksConfiguredDataSource.pooledReadOnlyDb(properties, configPrefix), tableName, batchSize, name);
+        return pooledReadOnlyDbEventSource(properties, configPrefix, tableName, name, batchSize, null);
     }
 
+    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize, MetricRegistry metricRegistry) {
+        return new PooledMysqlEventSource(StacksConfiguredDataSource.pooledReadOnlyDb(properties, configPrefix, metricRegistry), tableName, batchSize, name, metricRegistry);
+    }
+
+    /**
+     * @deprecated  replaced by {@link #pooledReadOnlyDbEventSource(PooledDataSource dataSource, String tableName, String name, MetricRegistry metricRegistry)}
+     */
+    @Deprecated
     public static PooledMysqlEventSource pooledReadOnlyDbEventSource(PooledDataSource dataSource, String tableName, String name) {
-        return new PooledMysqlEventSource(dataSource, tableName, DefaultBatchSize, name);
+        return pooledReadOnlyDbEventSource(dataSource, tableName, name, null);
     }
 
+    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(PooledDataSource dataSource, String tableName, String name, MetricRegistry metricRegistry) {
+        return new PooledMysqlEventSource(dataSource, tableName, DefaultBatchSize, name, metricRegistry);
+    }
+
+    /**
+     * @deprecated  replaced by {@link #pooledReadOnlyDbEventSource(PooledDataSource dataSource, String tableName, String name, int batchSize, MetricRegistry metricRegistry)}
+     */
+    @Deprecated
     public static PooledMysqlEventSource pooledReadOnlyDbEventSource(PooledDataSource dataSource, String tableName, String name, int batchSize) {
-        return new PooledMysqlEventSource(dataSource, tableName, batchSize, name);
+        return pooledReadOnlyDbEventSource(dataSource, tableName, name, batchSize, null);
     }
 
+    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(PooledDataSource dataSource, String tableName, String name, int batchSize, MetricRegistry metricRegistry) {
+        return new PooledMysqlEventSource(dataSource, tableName, batchSize, name, metricRegistry);
+    }
+
+    /**
+     * @deprecated  replaced by {@link #pooledMasterDbEventSource(PooledDataSource dataSource, String tableName, String name, int batchSize, MetricRegistry metricRegistry)}
+     */
+    @Deprecated
     public static PooledMysqlEventSource pooledMasterDbEventSource(PooledDataSource dataSource, String tableName, String name, int batchSize) {
+        return pooledMasterDbEventSource(dataSource, tableName, name, batchSize, null);
+    }
+
+    public static PooledMysqlEventSource pooledMasterDbEventSource(PooledDataSource dataSource, String tableName, String name, int batchSize, MetricRegistry metricRegistry) {
         try {
             new BasicMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
         } catch (Exception e) {
             LoggerFactory.getLogger(BasicMysqlEventSource.class).warn("Failed to ensure ES scheme is created", e);
         }
 
-        return new PooledMysqlEventSource(dataSource, tableName, batchSize, name);
+        return new PooledMysqlEventSource(dataSource, tableName, batchSize, name, metricRegistry);
     }
+
 
     public static final class PooledMysqlEventSource extends BasicMysqlEventSource implements AutoCloseable {
         private final PooledDataSource dataSource;
 
+        /**
+         * @deprecated  replaced by {@link #PooledMysqlEventSource(PooledDataSource dataSource, String tableName, int defaultBatchSize, String name, MetricRegistry metricRegistry)}
+         */
+        @Deprecated
         public PooledMysqlEventSource(PooledDataSource dataSource, String tableName, int defaultBatchSize, String name) {
-            super(dataSource::getConnection, tableName, defaultBatchSize, name);
+            this(dataSource, tableName, defaultBatchSize, name, null);
+        }
+
+        public PooledMysqlEventSource(PooledDataSource dataSource, String tableName, int defaultBatchSize, String name, MetricRegistry metricRegistry) {
+            super(dataSource::getConnection, tableName, defaultBatchSize, name, metricRegistry);
             this.dataSource = dataSource;
         }
 
