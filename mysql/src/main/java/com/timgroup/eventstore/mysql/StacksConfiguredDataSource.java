@@ -184,7 +184,7 @@ public final class StacksConfiguredDataSource {
         dataSource.setMaxConnectionAge(30);
         dataSource.setPreferredTestQuery("SELECT 1");
 
-        configureToSendMetrics(dataSource, metricRegistry);
+        configureToSendMetrics(dataSource, database, metricRegistry);
 
         try {
             Class.forName(driver);
@@ -194,17 +194,17 @@ public final class StacksConfiguredDataSource {
         return dataSource;
     }
 
-    private static void configureToSendMetrics(PooledDataSource dataSource, MetricRegistry optionalMetricRegistry) {
+    private static void configureToSendMetrics(PooledDataSource dataSource, String databaseName, MetricRegistry optionalMetricRegistry) {
         Optional.ofNullable(optionalMetricRegistry).ifPresent(metricRegistry -> {
-            sendTo(metricRegistry, "activeConnections", dataSource::getNumBusyConnectionsDefaultUser);
-            sendTo(metricRegistry, "idleConnections", dataSource::getNumIdleConnectionsDefaultUser);
-            sendTo(metricRegistry, "totalConnections", dataSource::getNumConnectionsDefaultUser);
-            sendTo(metricRegistry, "unclosedOrphanedConnections", dataSource::getNumUnclosedOrphanedConnectionsDefaultUser);
+            sendTo(metricRegistry, databaseName, "activeConnections", dataSource::getNumBusyConnectionsDefaultUser);
+            sendTo(metricRegistry, databaseName, "idleConnections", dataSource::getNumIdleConnectionsDefaultUser);
+            sendTo(metricRegistry, databaseName, "totalConnections", dataSource::getNumConnectionsDefaultUser);
+            sendTo(metricRegistry, databaseName, "unclosedOrphanedConnections", dataSource::getNumUnclosedOrphanedConnectionsDefaultUser);
         });
     }
 
-    private static void sendTo(MetricRegistry metrics, String name, DataSourceMetric source) {
-        metrics.register(String.format("database.dataSource.%s.value", name), (Gauge<Integer>) () -> {
+    private static void sendTo(MetricRegistry metrics, String databaseName, String name, DataSourceMetric source) {
+        metrics.register(String.format("database.%s.dataSource.%s.value", databaseName,name), (Gauge<Integer>) () -> {
             try {
                 return source.get();
             } catch (SQLException e) {
