@@ -204,7 +204,7 @@ public final class StacksConfiguredDataSource {
     }
 
     private static void sendTo(MetricRegistry metrics, String databaseName, String name, DataSourceMetric source) {
-        metrics.register(String.format("database.%s.dataSource.%s.value", databaseName,name), (Gauge<Integer>) () -> {
+        metrics.gauge(String.format("database.%s.dataSource.%s.value", databaseName, name), () -> () -> {
             try {
                 return source.get();
             } catch (SQLException e) {
