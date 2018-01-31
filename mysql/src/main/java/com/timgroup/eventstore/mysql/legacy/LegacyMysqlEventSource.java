@@ -1,6 +1,5 @@
 package com.timgroup.eventstore.mysql.legacy;
 
-import com.codahale.metrics.Metric;
 import com.codahale.metrics.MetricRegistry;
 import com.mchange.v2.c3p0.PooledDataSource;
 import com.timgroup.eventstore.api.*;
@@ -226,7 +225,7 @@ public class LegacyMysqlEventSource implements EventSource {
     }
 
 
-    private static LegacyPooledMysqlEventSource pooledEventSource(PooledDataSource dataSource, String tableName, StreamId pretendStreamId, String name, int batchSize, MetricRegistry metricRegistry) {
+    public static LegacyPooledMysqlEventSource pooledEventSource(PooledDataSource dataSource, String tableName, StreamId pretendStreamId, String name, int batchSize, MetricRegistry metricRegistry) {
         try {
             new LegacyMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
         } catch (Exception e) {
