@@ -147,7 +147,7 @@ val eventstore_subscription = Project(id = "eventstore-subscription", base = fil
       "com.timgroup" % "tim-structured-events" % "0.4.1235", // autobump
       "com.timgroup" % "tim-structured-events-testing" % "0.4.1235" % "test", // autobump
       "org.mockito" % "mockito-core" % "1.9.5" % "test",
-      "com.youdevise" % "Matchers" % "0.0.1263" % "test" // autobump
+      "com.youdevise" % "Matchers" % "0.0.1264" % "test" // autobump
 ))
   .settings(overridePublishSettings)
   .settings(publishJavaOnly)
@@ -161,7 +161,7 @@ val eventstore_subscription_legacy = Project(id = "eventstore-subscription-legac
       "com.timgroup" % "tim-structured-events" % "0.4.1235", // autobump
       "com.timgroup" % "tim-structured-events-testing" % "0.4.1235" % "test", // autobump
       "org.mockito" % "mockito-core" % "1.9.5" % "test",
-      "com.youdevise" % "Matchers" % "0.0.1263" % "test" // autobump
+      "com.youdevise" % "Matchers" % "0.0.1264" % "test" // autobump
 ))
   .settings(overridePublishSettings)
   .settings(publishScala)
