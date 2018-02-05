@@ -1,5 +1,8 @@
 package com.timgroup.eventstore.mysql;
 
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.StreamId;
@@ -10,16 +13,21 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.Optional;
 
 import static java.lang.String.format;
 
 public class BasicMysqlEventStreamWriter implements EventStreamWriter {
     private final ConnectionProvider connectionProvider;
     private final String tableName;
+    private final Optional<Timer> timer;
+    private final Optional<Histogram> histogram;
 
-    public BasicMysqlEventStreamWriter(ConnectionProvider connectionProvider, String tableName) {
+    public BasicMysqlEventStreamWriter(ConnectionProvider connectionProvider, String databaseName, String tableName, MetricRegistry metricRegistry) {
         this.connectionProvider = connectionProvider;
         this.tableName = tableName;
+        this.timer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.write.time", databaseName, tableName)));
+        this.histogram = Optional.ofNullable(metricRegistry).map(r -> r.histogram(String.format("database.%s.name.%s.write.count", databaseName, tableName)));
     }
 
     @Override
@@ -68,7 +76,10 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
     }
 
     private void write(StreamId streamId, Collection<NewEvent> events, long currentEventNumber, Connection connection) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("insert into " + tableName + "(position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata) values(?, UTC_TIMESTAMP(), ?, ?, ?, ?, ?, ?)")) {
+        try (
+                Timer.Context c = timer.map(t -> t.time()).orElse(new Timer().time());
+                PreparedStatement statement = connection.prepareStatement("insert into " + tableName + "(position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata) values(?, UTC_TIMESTAMP(), ?, ?, ?, ?, ?, ?)")
+        ) {
 
             long currentPosition = currentPosition(connection);
 
@@ -90,6 +101,7 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
             if (affectedRows.length != events.size()) {
                 throw new RuntimeException("Expected to write " + events.size() + " events but wrote " + affectedRows.length);
             }
+            histogram.ifPresent(h -> h.update(events.size()));
         }
     }
 

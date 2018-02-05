@@ -2,12 +2,18 @@ package com.timgroup.eventstore.mysql;
 
 import com.codahale.metrics.MetricRegistry;
 import com.mchange.v2.c3p0.PooledDataSource;
-import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.EventCategoryReader;
+import com.timgroup.eventstore.api.EventReader;
+import com.timgroup.eventstore.api.EventSource;
+import com.timgroup.eventstore.api.EventStreamReader;
+import com.timgroup.eventstore.api.EventStreamWriter;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.component.DatabaseConnectionComponent;
 import com.typesafe.config.Config;
 import org.slf4j.LoggerFactory;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Properties;
@@ -18,6 +24,7 @@ public class BasicMysqlEventSource implements EventSource {
     private static final int DefaultBatchSize = 100000;
 
     private final ConnectionProvider connectionProvider;
+    private final String databaseName;
     private final String tableName;
     private final int batchSize;
     private final String name;
@@ -25,6 +32,7 @@ public class BasicMysqlEventSource implements EventSource {
 
     public BasicMysqlEventSource(ConnectionProvider connectionProvider, String tableName, int batchSize, String name, MetricRegistry metricRegistry) {
         this.connectionProvider = connectionProvider;
+        this.databaseName = databaseName(connectionProvider);
         this.tableName = tableName;
         this.batchSize = batchSize;
         this.name = name;
@@ -56,7 +64,7 @@ public class BasicMysqlEventSource implements EventSource {
 
     @Override
     public EventStreamWriter writeStream() {
-        return new BasicMysqlEventStreamWriter(connectionProvider, tableName);
+        return new BasicMysqlEventStreamWriter(connectionProvider, databaseName, tableName, metricRegistry);
     }
 
     @Override
@@ -254,6 +262,14 @@ public class BasicMysqlEventSource implements EventSource {
             } catch (SQLException e) {
                 LoggerFactory.getLogger(PooledMysqlEventSource.class).warn("Failed to close event source", e);
             }
+        }
+    }
+
+    private static String databaseName(ConnectionProvider connectionProvider) {
+        try (Connection connection = connectionProvider.getConnection()) {
+            return connection.getCatalog();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 }
