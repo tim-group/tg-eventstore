@@ -27,7 +27,7 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
         this.connectionProvider = connectionProvider;
         this.tableName = tableName;
         this.timer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.write.time", databaseName, tableName)));
-        this.histogram = Optional.ofNullable(metricRegistry).map(r -> r.histogram(String.format("database.%s.name.%s.write.count", databaseName, tableName)));
+        this.histogram = Optional.ofNullable(metricRegistry).map(r -> r.histogram(String.format("database.%s.%s.write.count", databaseName, tableName)));
     }
 
     @Override
