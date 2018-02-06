@@ -49,17 +49,17 @@ public class BasicMysqlEventSource implements EventSource {
 
     @Override
     public EventReader readAll() {
-        return new BasicMysqlEventReader(connectionProvider, tableName, batchSize);
+        return new BasicMysqlEventReader(connectionProvider, databaseName, tableName, batchSize, metricRegistry);
     }
 
     @Override
     public EventCategoryReader readCategory() {
-        return new BasicMysqlEventCategoryReader(connectionProvider, tableName, batchSize);
+        return new BasicMysqlEventCategoryReader(connectionProvider, databaseName, tableName, batchSize, metricRegistry);
     }
 
     @Override
     public EventStreamReader readStream() {
-        return new BasicMysqlEventStreamReader(connectionProvider, tableName, batchSize);
+        return new BasicMysqlEventStreamReader(connectionProvider, databaseName, tableName, batchSize, metricRegistry);
     }
 
     @Override

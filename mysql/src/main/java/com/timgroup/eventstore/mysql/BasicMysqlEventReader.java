@@ -1,5 +1,7 @@
 package com.timgroup.eventstore.mysql;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
@@ -14,11 +16,13 @@ public class BasicMysqlEventReader implements EventReader {
     private final ConnectionProvider connectionProvider;
     private final String tableName;
     private final int batchSize;
+    private final Optional<Timer> timer;
 
-    public BasicMysqlEventReader(ConnectionProvider connectionProvider, String tableName, int batchSize) {
+    public BasicMysqlEventReader(ConnectionProvider connectionProvider, String databaseName, String tableName, int batchSize, MetricRegistry metricRegistry) {
         this.connectionProvider = connectionProvider;
         this.tableName = tableName;
         this.batchSize = batchSize;
+        this.timer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.read_all.page_fetch_time", databaseName, tableName)));
     }
 
     @Override
@@ -28,7 +32,8 @@ public class BasicMysqlEventReader implements EventReader {
                 batchSize,
                 tableName,
                 (BasicMysqlEventStorePosition) positionExclusive,
-                false
+                false,
+                timer
         ), false);
     }
 
@@ -53,8 +58,8 @@ public class BasicMysqlEventReader implements EventReader {
                 theBatchSize,
                 tableName,
                 positionExclusive,
-                true
-        ), false);
+                true,
+                timer), false);
     }
 
     @Override

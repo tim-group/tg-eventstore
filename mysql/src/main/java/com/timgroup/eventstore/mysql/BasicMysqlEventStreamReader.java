@@ -1,5 +1,7 @@
 package com.timgroup.eventstore.mysql;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.NoSuchStreamException;
 import com.timgroup.eventstore.api.ResolvedEvent;
@@ -9,9 +11,9 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Optional;
 import java.util.stream.Stream;
 
-import static com.timgroup.eventstore.mysql.BasicMysqlEventStorePosition.EMPTY_STORE_POSITION;
 import static java.lang.String.format;
 import static java.util.stream.StreamSupport.stream;
 
@@ -19,11 +21,13 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
     private final ConnectionProvider connectionProvider;
     private final String tableName;
     private final int batchSize;
+    private final Optional<Timer> timer;
 
-    public BasicMysqlEventStreamReader(ConnectionProvider connectionProvider, String tableName, int batchSize) {
+    public BasicMysqlEventStreamReader(ConnectionProvider connectionProvider, String databaseName, String tableName, int batchSize, MetricRegistry metricRegistry) {
         this.connectionProvider = connectionProvider;
         this.tableName = tableName;
         this.batchSize = batchSize;
+        this.timer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.read_stream.page_fetch_time", databaseName, tableName)));
     }
 
     @Override
@@ -35,7 +39,8 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
                 tableName,
                 streamId,
                 eventNumber,
-                false
+                false,
+                timer
         ), false);
     }
 
@@ -72,8 +77,8 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
                 tableName,
                 streamId,
                 eventNumber,
-                true
-        ), false);
+                true,
+                timer), false);
     }
 
     private void ensureStreamExists(StreamId streamId) throws NoSuchStreamException {

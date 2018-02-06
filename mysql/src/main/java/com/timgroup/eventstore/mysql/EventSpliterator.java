@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.mysql;
 
+import com.codahale.metrics.Timer;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 
@@ -11,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -23,6 +25,7 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
     private final ConnectionProvider connectionProvider;
     private final Function<T, String> queryStringGenerator;
     private final Function<ResolvedEvent, T> locationPointerExtractor;
+    private final Optional<Timer> timer;
 
     private T locationPointer;
     private Iterator<ResolvedEvent> currentPage = Collections.emptyIterator();
@@ -32,7 +35,7 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
                                                                      int batchSize,
                                                                      String tableName,
                                                                      BasicMysqlEventStorePosition startingPosition,
-                                                                     boolean backwards)
+                                                                     boolean backwards, Optional<Timer> timer)
     {
         final String queryString = "select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata" +
                 " from " + tableName +
@@ -44,8 +47,8 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
                 connectionProvider,
                 startingPosition,
                 position -> String.format(queryString, position.value),
-                resolvedEvent -> (BasicMysqlEventStorePosition)resolvedEvent.position()
-        );
+                resolvedEvent -> (BasicMysqlEventStorePosition)resolvedEvent.position(),
+                timer);
     }
 
     public static Spliterator<ResolvedEvent> readCategoryEventSpliterator(ConnectionProvider connectionProvider,
@@ -54,7 +57,7 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
                                                                           String category,
                                                                           BasicMysqlEventStorePosition startingPosition,
                                                                           boolean backwards,
-                                                                          boolean forceCategoryIndex)
+                                                                          boolean forceCategoryIndex, Optional<Timer> timer)
     {
         final String queryString = "select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata" +
                 " from " + tableName +
@@ -68,8 +71,8 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
                 connectionProvider,
                 startingPosition,
                 position -> String.format(queryString, position.value),
-                resolvedEvent -> (BasicMysqlEventStorePosition) resolvedEvent.position()
-        );
+                resolvedEvent -> (BasicMysqlEventStorePosition) resolvedEvent.position(),
+                timer);
     }
 
 
@@ -78,7 +81,8 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
                                                                         String tableName,
                                                                         StreamId streamId,
                                                                         long startingEventNumber,
-                                                                        boolean backwards)
+                                                                        boolean backwards,
+                                                                        Optional<Timer> timer)
     {
         final String queryString = "select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata" +
                 " from " + tableName +
@@ -92,7 +96,8 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
                 connectionProvider,
                 startingEventNumber,
                 eventNumber -> String.format(queryString, eventNumber),
-                resolvedEvent -> resolvedEvent.eventRecord().eventNumber()
+                resolvedEvent -> resolvedEvent.eventRecord().eventNumber(),
+                timer
         );
     }
 
@@ -100,39 +105,43 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
             ConnectionProvider connectionProvider,
             T startingLocation,
             Function<T, String> queryStringGenerator,
-            Function<ResolvedEvent, T> locationPointerExtractor)
+            Function<ResolvedEvent, T> locationPointerExtractor,
+            Optional<Timer> timer)
     {
         this.connectionProvider = connectionProvider;
         this.locationPointer = startingLocation;
         this.queryStringGenerator = queryStringGenerator;
         this.locationPointerExtractor = locationPointerExtractor;
+        this.timer = timer;
     }
 
     @Override
     public boolean tryAdvance(Consumer<? super ResolvedEvent> action) {
         if (!currentPage.hasNext() && !streamExhausted) {
-            try (Connection connection = connectionProvider.getConnection();
-                 Statement statement = streamingStatementFrom(connection);
-                 ResultSet resultSet = statement.executeQuery(queryStringGenerator.apply(locationPointer))
-            ) {
+            try (Timer.Context c = timer.map(t -> t.time()).orElse(new Timer().time());) {
+                try (Connection connection = connectionProvider.getConnection();
+                     Statement statement = streamingStatementFrom(connection);
+                     ResultSet resultSet = statement.executeQuery(queryStringGenerator.apply(locationPointer))
+                ) {
 
-                List<ResolvedEvent> list = new ArrayList<>();
+                    List<ResolvedEvent> list = new ArrayList<>();
 
-                while (resultSet.next()) {
-                    list.add(new ResolvedEvent(
-                            new BasicMysqlEventStorePosition(resultSet.getLong("position")),
-                            eventRecord(
-                                    resultSet.getTimestamp("timestamp").toInstant(),
-                                    StreamId.streamId(resultSet.getString("stream_category"), resultSet.getString("stream_id")),
-                                    resultSet.getLong("event_number"),
-                                    resultSet.getString("event_type"),
-                                    resultSet.getBytes("data"),
-                                    resultSet.getBytes("metadata")
-                            )));
+                    while (resultSet.next()) {
+                        list.add(new ResolvedEvent(
+                                new BasicMysqlEventStorePosition(resultSet.getLong("position")),
+                                eventRecord(
+                                        resultSet.getTimestamp("timestamp").toInstant(),
+                                        StreamId.streamId(resultSet.getString("stream_category"), resultSet.getString("stream_id")),
+                                        resultSet.getLong("event_number"),
+                                        resultSet.getString("event_type"),
+                                        resultSet.getBytes("data"),
+                                        resultSet.getBytes("metadata")
+                                )));
+                    }
+                    currentPage = list.iterator();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
                 }
-                currentPage = list.iterator();
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
             }
         }
 

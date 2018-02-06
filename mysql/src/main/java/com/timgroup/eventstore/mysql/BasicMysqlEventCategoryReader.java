@@ -1,5 +1,7 @@
 package com.timgroup.eventstore.mysql;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
@@ -16,16 +18,18 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
     private final String tableName;
     private final int batchSize;
     private final boolean forceCategoryIndex;
+    private final Optional<Timer> timer;
 
-    public BasicMysqlEventCategoryReader(ConnectionProvider connectionProvider, String tableName, int batchSize) {
-        this(connectionProvider, tableName, batchSize, false);
+    public BasicMysqlEventCategoryReader(ConnectionProvider connectionProvider, String databaseName, String tableName, int batchSize, MetricRegistry metricRegistry) {
+        this(connectionProvider, databaseName, tableName, batchSize, false, metricRegistry);
     }
 
-    public BasicMysqlEventCategoryReader(ConnectionProvider connectionProvider, String tableName, int batchSize, boolean forceCategoryIndex) {
+    public BasicMysqlEventCategoryReader(ConnectionProvider connectionProvider, String databaseName, String tableName, int batchSize, boolean forceCategoryIndex, MetricRegistry metricRegistry) {
         this.connectionProvider = connectionProvider;
         this.tableName = tableName;
         this.batchSize = batchSize;
         this.forceCategoryIndex = forceCategoryIndex;
+        this.timer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.read_category.page_fetch_time", databaseName, tableName)));
     }
 
     @Override
@@ -37,7 +41,8 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
                 category,
                 (BasicMysqlEventStorePosition) positionExclusive,
                 false,
-                forceCategoryIndex
+                forceCategoryIndex,
+                timer
         ), false);
     }
 
@@ -78,7 +83,7 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
                 category,
                 positionExclusive,
                 true,
-                forceCategoryIndex
-        ), false);
+                forceCategoryIndex,
+                timer), false);
     }
 }
