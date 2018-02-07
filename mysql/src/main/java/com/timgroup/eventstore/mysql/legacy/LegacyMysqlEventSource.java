@@ -10,6 +10,7 @@ import com.timgroup.tucker.info.component.DatabaseConnectionComponent;
 import com.typesafe.config.Config;
 import org.slf4j.LoggerFactory;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Properties;
@@ -26,13 +27,15 @@ public class LegacyMysqlEventSource implements EventSource {
 
     private final LegacyMysqlEventReader eventReader;
     private final LegacyMysqlEventStreamWriter eventStreamWriter;
+    private final String database;
 
     public LegacyMysqlEventSource(ConnectionProvider connectionProvider, String tableName, StreamId pretendStreamId, int batchSize, String name, MetricRegistry metricRegistry) {
         this.connectionProvider = connectionProvider;
         this.tableName = tableName;
         this.name = name;
-        this.eventReader = new LegacyMysqlEventReader(connectionProvider, tableName, pretendStreamId, batchSize);
-        this.eventStreamWriter = new LegacyMysqlEventStreamWriter(connectionProvider, tableName, pretendStreamId);
+        this.database = databaseName(connectionProvider);
+        this.eventReader = new LegacyMysqlEventReader(connectionProvider, database, tableName, pretendStreamId, batchSize, metricRegistry);
+        this.eventStreamWriter = new LegacyMysqlEventStreamWriter(connectionProvider, database, tableName, pretendStreamId, metricRegistry);
     }
 
     public LegacyMysqlEventSource(ConnectionProvider connectionProvider, String tableName, int batchSize, MetricRegistry metricRegistry) {
@@ -250,6 +253,14 @@ public class LegacyMysqlEventSource implements EventSource {
             } catch (SQLException e) {
                 LoggerFactory.getLogger(LegacyPooledMysqlEventSource.class).warn("Failed to close event source", e);
             }
+        }
+    }
+
+    private static String databaseName(ConnectionProvider connectionProvider) {
+        try (Connection connection = connectionProvider.getConnection()) {
+            return connection.getCatalog();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 

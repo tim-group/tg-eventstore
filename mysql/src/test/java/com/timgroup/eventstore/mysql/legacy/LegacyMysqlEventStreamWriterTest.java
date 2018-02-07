@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.mysql.legacy;
 
+import com.codahale.metrics.MetricRegistry;
 import org.junit.Test;
 
 import static com.timgroup.eventstore.api.StreamId.streamId;
@@ -9,7 +10,7 @@ public class LegacyMysqlEventStreamWriterTest {
     @Test
     public void
     does_not_interact_with_database_when_no_events_are_written() {
-        LegacyMysqlEventStreamWriter writer = new LegacyMysqlEventStreamWriter(null, null, null);
+        LegacyMysqlEventStreamWriter writer = new LegacyMysqlEventStreamWriter(null, null, null, null, new MetricRegistry());
 
         writer.write(streamId("", ""), emptyList());
         writer.write(streamId("", ""), emptyList(), 5);

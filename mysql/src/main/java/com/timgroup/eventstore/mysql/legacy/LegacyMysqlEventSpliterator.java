@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.mysql.legacy;
 
+import com.codahale.metrics.Timer;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
@@ -18,13 +19,15 @@ final class LegacyMysqlEventSpliterator implements Spliterator<ResolvedEvent> {
     private final String queryString;
 
     private LegacyMysqlEventPosition lastPosition;
+    private final Optional<Timer> timer;
     private Iterator<ResolvedEvent> currentPage = Collections.emptyIterator();
     private boolean streamExhausted = false;
 
-    LegacyMysqlEventSpliterator(ConnectionProvider connectionProvider, int batchSize, String tableName, StreamId pretendStreamId, LegacyMysqlEventPosition startingPosition, boolean backwards) {
+    LegacyMysqlEventSpliterator(ConnectionProvider connectionProvider, int batchSize, String tableName, StreamId pretendStreamId, LegacyMysqlEventPosition startingPosition, boolean backwards, Optional<Timer> timer) {
         this.connectionProvider = connectionProvider;
         this.pretendStreamId = pretendStreamId;
         this.lastPosition = startingPosition;
+        this.timer = timer;
         this.queryString = "select version, effective_timestamp, eventType, body" +
                 " from " + tableName +
                 " where version " + (backwards ? "<" : ">") + " %s" +
@@ -35,29 +38,31 @@ final class LegacyMysqlEventSpliterator implements Spliterator<ResolvedEvent> {
     @Override
     public boolean tryAdvance(Consumer<? super ResolvedEvent> action) {
         if (!currentPage.hasNext() && !streamExhausted) {
-            try (Connection connection = connectionProvider.getConnection();
-                 Statement statement = streamingStatementFrom(connection);
-                 ResultSet resultSet = statement.executeQuery(String.format(queryString, lastPosition.legacyVersion))
-            ) {
-                List<ResolvedEvent> list = new ArrayList<>();
+            try (Timer.Context c = timer.map(Timer::time).orElse(new Timer().time())) {
+                try (Connection connection = connectionProvider.getConnection();
+                     Statement statement = streamingStatementFrom(connection);
+                     ResultSet resultSet = statement.executeQuery(String.format(queryString, lastPosition.legacyVersion))
+                ) {
+                    List<ResolvedEvent> list = new ArrayList<>();
 
-                while (resultSet.next()) {
-                    LegacyMysqlEventPosition position = LegacyMysqlEventPosition.fromLegacyVersion(resultSet.getLong("version"));
-                    Timestamp effectiveTimestamp = resultSet.getTimestamp("effective_timestamp");
-                    list.add(new ResolvedEvent(
-                            position,
-                            eventRecord(
-                                    effectiveTimestamp.toInstant(),
-                                    pretendStreamId,
-                                    position.toEventNumber(),
-                                    resultSet.getString("eventType"),
-                                    resultSet.getBytes("body"),
-                                    LegacyMysqlMetadataCodec.metadataFrom(effectiveTimestamp)
-                            )));
-                    currentPage = list.iterator();
+                    while (resultSet.next()) {
+                        LegacyMysqlEventPosition position = LegacyMysqlEventPosition.fromLegacyVersion(resultSet.getLong("version"));
+                        Timestamp effectiveTimestamp = resultSet.getTimestamp("effective_timestamp");
+                        list.add(new ResolvedEvent(
+                                position,
+                                eventRecord(
+                                        effectiveTimestamp.toInstant(),
+                                        pretendStreamId,
+                                        position.toEventNumber(),
+                                        resultSet.getString("eventType"),
+                                        resultSet.getBytes("body"),
+                                        LegacyMysqlMetadataCodec.metadataFrom(effectiveTimestamp)
+                                )));
+                        currentPage = list.iterator();
+                    }
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
                 }
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
             }
         }
 

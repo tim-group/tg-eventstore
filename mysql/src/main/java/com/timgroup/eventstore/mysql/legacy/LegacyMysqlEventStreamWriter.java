@@ -1,5 +1,8 @@
 package com.timgroup.eventstore.mysql.legacy;
 
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.StreamId;
@@ -11,6 +14,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.Optional;
 
 import static java.lang.String.format;
 
@@ -18,11 +22,15 @@ public final class LegacyMysqlEventStreamWriter implements EventStreamWriter {
     private final ConnectionProvider connectionProvider;
     private final String tableName;
     private final StreamId pretendStreamId;
+    private final Optional<Timer> timer;
+    private final Optional<Histogram> histogram;
 
-    public LegacyMysqlEventStreamWriter(ConnectionProvider connectionProvider, String tableName, StreamId pretendStreamId) {
+    public LegacyMysqlEventStreamWriter(ConnectionProvider connectionProvider, String databaseName, String tableName, StreamId pretendStreamId, MetricRegistry metricRegistry) {
         this.connectionProvider = connectionProvider;
         this.tableName = tableName;
         this.pretendStreamId = pretendStreamId;
+        this.timer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.write.time", databaseName, tableName)));
+        this.histogram = Optional.ofNullable(metricRegistry).map(r -> r.histogram(String.format("database.%s.%s.write.count", databaseName, tableName)));
     }
 
     @Override
@@ -80,7 +88,12 @@ public final class LegacyMysqlEventStreamWriter implements EventStreamWriter {
     }
 
     private void write(Connection connection, long currentPosition, Collection<NewEvent> events) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("insert into " + tableName + "(version, effective_timestamp, eventType, body) values(?, ?, ?, ?)")) {
+
+        try (
+                Timer.Context c = timer.map(t -> t.time()).orElse(new Timer().time());
+                PreparedStatement statement = connection.prepareStatement("insert into " + tableName + "(version, effective_timestamp, eventType, body) values(?, ?, ?, ?)")
+        )
+        {
             for (NewEvent event : events) {
                 statement.setLong(1, ++currentPosition);
                 statement.setTimestamp(2, LegacyMysqlMetadataCodec.effectiveTimestampFrom(event));
@@ -94,6 +107,7 @@ public final class LegacyMysqlEventStreamWriter implements EventStreamWriter {
             if (affectedRows.length != events.size()) {
                 throw new RuntimeException("Expected to write " + events.size() + " events but wrote " + affectedRows.length);
             }
+            histogram.ifPresent(h -> h.update(events.size()));
         }
     }
 

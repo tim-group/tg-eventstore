@@ -1,5 +1,7 @@
 package com.timgroup.eventstore.mysql.legacy;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventStreamReader;
@@ -24,12 +26,14 @@ public final class LegacyMysqlEventReader implements EventReader, EventStreamRea
     private final String tableName;
     private final StreamId pretendStreamId;
     private final int batchSize;
+    private final Optional<Timer> timer;
 
-    public LegacyMysqlEventReader(ConnectionProvider connectionProvider, String tableName, StreamId pretendStreamId, int batchSize) {
+    public LegacyMysqlEventReader(ConnectionProvider connectionProvider, String database, String tableName, StreamId pretendStreamId, int batchSize, MetricRegistry metricRegistry) {
         this.connectionProvider = connectionProvider;
         this.tableName = tableName;
         this.pretendStreamId = pretendStreamId;
         this.batchSize = batchSize;
+        this.timer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.read.page_fetch_time", database, tableName)));
     }
 
     @Override
@@ -56,8 +60,8 @@ public final class LegacyMysqlEventReader implements EventReader, EventStreamRea
                     tableName,
                     pretendStreamId,
                     (LegacyMysqlEventPosition)positionExclusive,
-                    false
-                ),
+                    false,
+                        timer),
                 false
         );
     }
@@ -152,7 +156,9 @@ public final class LegacyMysqlEventReader implements EventReader, EventStreamRea
                         tableName,
                         pretendStreamId,
                         positionExclusive,
-                        true
+                        true,
+                        timer
+
                 ),
                 false
         );
