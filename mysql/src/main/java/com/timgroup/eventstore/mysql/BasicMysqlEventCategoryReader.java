@@ -21,7 +21,7 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
     private final Optional<Timer> timer;
 
     public BasicMysqlEventCategoryReader(ConnectionProvider connectionProvider, String databaseName, String tableName, int batchSize, MetricRegistry metricRegistry) {
-        this(connectionProvider, databaseName, tableName, batchSize, false, metricRegistry);
+        this(connectionProvider, databaseName, tableName, batchSize, true, metricRegistry);
     }
 
     public BasicMysqlEventCategoryReader(ConnectionProvider connectionProvider, String databaseName, String tableName, int batchSize, boolean forceCategoryIndex, MetricRegistry metricRegistry) {
@@ -69,9 +69,11 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
     @Override
     public String toString() {
         return "BasicMysqlEventCategoryReader{" +
-                "tableName='" + tableName + '\'' +
+                "connectionProvider=" + connectionProvider +
+                ", tableName='" + tableName + '\'' +
                 ", batchSize=" + batchSize +
                 ", forceCategoryIndex=" + forceCategoryIndex +
+                ", timer=" + timer +
                 '}';
     }
 
