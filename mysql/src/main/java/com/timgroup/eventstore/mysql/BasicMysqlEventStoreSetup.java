@@ -55,8 +55,8 @@ public class BasicMysqlEventStoreSetup {
                         "event_type varchar(255) not null," +
                         "data blob not null, " +
                         "metadata blob not null," +
-                        "unique(stream_category, stream_id, event_number)," +
-                        "key(stream_category, position)" +
+                        "unique stream_category(stream_category, stream_id, event_number)," +
+                        "key stream_category_2(stream_category, position)" +
                         ")");
             }
         } catch (SQLException e) {
