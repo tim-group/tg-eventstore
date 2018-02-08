@@ -84,7 +84,7 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
     private void ensureStreamExists(StreamId streamId) throws NoSuchStreamException {
         try (Connection connection = connectionProvider.getConnection();
              Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(String.format("select position from %s where stream_category = '%s' and stream_id = '%s' limit 1", tableName, streamId.category(), streamId.id()))
+             ResultSet resultSet = statement.executeQuery(String.format("select position from %s force index(stream_category) where stream_category = '%s' and stream_id = '%s' limit 1", tableName, streamId.category(), streamId.id()))
         ) {
             if (!resultSet.first()) {
                 throw new NoSuchStreamException(streamId);
