@@ -17,18 +17,12 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
     private final ConnectionProvider connectionProvider;
     private final String tableName;
     private final int batchSize;
-    private final boolean forceCategoryIndex;
     private final Optional<Timer> timer;
 
     public BasicMysqlEventCategoryReader(ConnectionProvider connectionProvider, String databaseName, String tableName, int batchSize, MetricRegistry metricRegistry) {
-        this(connectionProvider, databaseName, tableName, batchSize, true, metricRegistry);
-    }
-
-    public BasicMysqlEventCategoryReader(ConnectionProvider connectionProvider, String databaseName, String tableName, int batchSize, boolean forceCategoryIndex, MetricRegistry metricRegistry) {
         this.connectionProvider = connectionProvider;
         this.tableName = tableName;
         this.batchSize = batchSize;
-        this.forceCategoryIndex = forceCategoryIndex;
         this.timer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.read_category.page_fetch_time", databaseName, tableName)));
     }
 
@@ -41,7 +35,6 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
                 category,
                 (BasicMysqlEventStorePosition) positionExclusive,
                 false,
-                forceCategoryIndex,
                 timer
         ), false);
     }
@@ -72,7 +65,6 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
                 "connectionProvider=" + connectionProvider +
                 ", tableName='" + tableName + '\'' +
                 ", batchSize=" + batchSize +
-                ", forceCategoryIndex=" + forceCategoryIndex +
                 ", timer=" + timer +
                 '}';
     }
@@ -85,7 +77,6 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
                 category,
                 positionExclusive,
                 true,
-                forceCategoryIndex,
                 timer), false);
     }
 }

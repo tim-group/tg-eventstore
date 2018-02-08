@@ -57,11 +57,11 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
                                                                           String category,
                                                                           BasicMysqlEventStorePosition startingPosition,
                                                                           boolean backwards,
-                                                                          boolean forceCategoryIndex, Optional<Timer> timer)
+                                                                          Optional<Timer> timer)
     {
         final String queryString = "select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata" +
                 " from " + tableName +
-                (forceCategoryIndex ? " FORCE INDEX (stream_category_2)" : "") +
+                " FORCE INDEX (stream_category_2)" +
                 " where position " + (backwards ? "<" : ">") + " %s" +
                 " and stream_category = '" + category + "'" +
                 " order by position " + (backwards ? "desc" : "asc") +
