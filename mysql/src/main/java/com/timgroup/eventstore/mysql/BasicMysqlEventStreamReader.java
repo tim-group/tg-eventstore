@@ -15,7 +15,6 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import static java.lang.String.format;
 import static java.util.stream.StreamSupport.stream;
 
 public class BasicMysqlEventStreamReader implements EventStreamReader {

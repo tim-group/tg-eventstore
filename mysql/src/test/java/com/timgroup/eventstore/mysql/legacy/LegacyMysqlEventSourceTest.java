@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.mysql.legacy;
 
+import com.codahale.metrics.MetricRegistry;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.EventStreamReader;
@@ -84,7 +85,7 @@ public final class LegacyMysqlEventSourceTest {
 
     private Instant timeBeforeTest;
 
-    private final LegacyMysqlEventSource eventSource = LegacyMysqlEventSource.pooledMasterDbEventSource(config, tableName, stream_1,"test");
+    private final LegacyMysqlEventSource eventSource = LegacyMysqlEventSource.pooledMasterDbEventSource(config, tableName, stream_1,"test", new MetricRegistry());
 
     @Before
     public void captureTime() {

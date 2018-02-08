@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.mysql;
 
+import com.codahale.metrics.MetricRegistry;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.JavaEventStoreTest;
 import com.typesafe.config.Config;
@@ -34,10 +35,10 @@ public class BasicMysqlEventSourceTest extends JavaEventStoreTest {
                     "password=\n" +
                     "driver=com.mysql.jdbc.Driver", defaults().setSyntax(PROPERTIES));
 
-    private final BasicMysqlEventSource eventSource = BasicMysqlEventSource.pooledMasterDbEventSource(config, tableName, "test");
+    private final BasicMysqlEventSource eventSource = BasicMysqlEventSource.pooledMasterDbEventSource(config, tableName, "test", new MetricRegistry());
 
     @Before
-    public void createTables() throws SQLException {
+    public void createTables() {
         BasicMysqlEventStoreSetup setup = new BasicMysqlEventStoreSetup(connectionProvider, tableName);
         setup.drop();
         setup.lazyCreate();
