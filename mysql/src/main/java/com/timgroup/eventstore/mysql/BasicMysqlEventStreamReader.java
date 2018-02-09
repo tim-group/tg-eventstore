@@ -23,13 +23,13 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
     private final String tableName;
     private final int batchSize;
     private final Optional<Timer> timer;
-    private final Function<StreamId, Timer> streamValidationTimer;
+    private final Optional<Timer> streamValidationTimer;
 
     public BasicMysqlEventStreamReader(ConnectionProvider connectionProvider, String databaseName, String tableName, int batchSize, MetricRegistry metricRegistry) {
         this.connectionProvider = connectionProvider;
         this.tableName = tableName;
         this.batchSize = batchSize;
-        this.streamValidationTimer = streamId -> Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.ensure_%s_%s_exists_validation.time", databaseName, tableName, streamId.category(), streamId.id()))).orElse(new Timer());
+        this.streamValidationTimer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.ensure_stream_exists_validation.time", databaseName, tableName)));
         this.timer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.read_stream.page_fetch_time", databaseName, tableName)));
     }
 
@@ -87,7 +87,7 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
     }
 
     private void ensureStreamExists(StreamId streamId) throws NoSuchStreamException {
-        try (Timer.Context c = streamValidationTimer.apply(streamId).time()) {
+        try (Timer.Context c = streamValidationTimer.orElse(new Timer()).time()) {
             try (Connection connection = connectionProvider.getConnection();
                  Statement statement = connection.createStatement();
                  ResultSet resultSet = statement.executeQuery(String.format("select position from %s force index(stream_category) where stream_category = '%s' and stream_id = '%s' limit 1", tableName, streamId.category(), streamId.id()))
