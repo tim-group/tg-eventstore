@@ -40,7 +40,7 @@ val publishScala = Seq(
 
 val eventstore_api = Project(id = "eventstore-api", base = file("api"))
   .settings(
-    libraryDependencies += "com.timgroup" % "Tucker" % "1.0.1495", // autobump
+    libraryDependencies += "com.timgroup" % "Tucker" % "1.0.1496", // autobump
     libraryDependencies += "io.dropwizard.metrics" % "metrics-core" % "3.2.3")
   .settings(libraryDependencies ++= joda)
   .settings(libraryDependencies ++= JUnit)
