@@ -62,11 +62,11 @@ public class ChaserHealth extends Component implements ChaserListener {
         if (timestamp != null) {
             Duration duration = Duration.between(timestamp, Instant.now(clock));
             if (duration.compareTo(criticalThreshold) > 0) {
-                return new Report(CRITICAL, format("potentially stale. Last up-to-date at at %s. (%s ago).", timestamp, duration));
+                return new Report(CRITICAL, format("potentially stale. Last up-to-date at %s. (%s ago).", timestamp, duration));
             } else if (duration.compareTo(warningThreshold) > 0) {
-                return new Report(WARNING, format("potentially stale. Last up-to-date at at %s. (%s ago).", timestamp, duration));
+                return new Report(WARNING, format("potentially stale. Last up-to-date at %s. (%s ago).", timestamp, duration));
             } else {
-                return new Report(OK, format("up-to-date at at %s. (%s ago). Current version: %s", timestamp, duration, currentPosition));
+                return new Report(OK, format("up-to-date at %s. (%s ago). Current version: %s", timestamp, duration, currentPosition));
             }
         }
 
