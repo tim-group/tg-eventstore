@@ -1,6 +1,5 @@
 package com.timgroup.eventstore.mysql;
 
-import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 import com.mchange.v2.c3p0.PooledDataSource;
@@ -19,6 +18,7 @@ public final class StacksConfiguredDataSource {
     private static final Logger logger = LoggerFactory.getLogger(StacksConfiguredDataSource.class);
 
     public static final int DEFAULT_MAX_POOLSIZE = 15;
+    public static final int DEFAULT_SOCKET_TIMEOUT_MS = 15000;
 
     private StacksConfiguredDataSource() { /* prevent instantiation */ }
 
@@ -43,7 +43,7 @@ public final class StacksConfiguredDataSource {
     }
 
     public static PooledDataSource pooledMasterDb(Properties properties, String configPrefix, int maxPoolSize, MetricRegistry metricRegistry) {
-        return getPooledDataSource(properties, configPrefix, "hostname", maxPoolSize, metricRegistry);
+        return getPooledDataSource(properties, configPrefix, "hostname", maxPoolSize, DEFAULT_SOCKET_TIMEOUT_MS, metricRegistry);
     }
 
     /**
@@ -67,10 +67,14 @@ public final class StacksConfiguredDataSource {
     }
 
     public static PooledDataSource pooledReadOnlyDb(Properties properties, String configPrefix, int maxPoolSize, MetricRegistry metricRegistry) {
-        return getPooledDataSource(properties, configPrefix, "read_only_cluster", maxPoolSize, metricRegistry);
+        return pooledReadOnlyDb(properties, configPrefix, maxPoolSize, DEFAULT_SOCKET_TIMEOUT_MS, metricRegistry);
     }
 
-    private static PooledDataSource getPooledDataSource(Properties properties, String configPrefix, String host_propertyname, int maxPoolSize, MetricRegistry metricRegistry) {
+    public static PooledDataSource pooledReadOnlyDb(Properties properties, String configPrefix, int maxPoolSize, int socketTimeoutMs, MetricRegistry metricRegistry) {
+        return getPooledDataSource(properties, configPrefix, "read_only_cluster", maxPoolSize, socketTimeoutMs, metricRegistry);
+    }
+
+    private static PooledDataSource getPooledDataSource(Properties properties, String configPrefix, String host_propertyname, int maxPoolSize, int socketTimeoutMs, MetricRegistry metricRegistry) {
         String prefix = configPrefix;
 
         if (properties.getProperty(prefix + host_propertyname) == null) {
@@ -88,6 +92,7 @@ public final class StacksConfiguredDataSource {
                 properties.getProperty(prefix + "database"),
                 properties.getProperty(prefix + "driver"),
                 maxPoolSize,
+                socketTimeoutMs,
                 metricRegistry
         );
     }
@@ -121,6 +126,7 @@ public final class StacksConfiguredDataSource {
                 config.getString("database"),
                 config.getString("driver"),
                 maxPoolSize,
+                DEFAULT_SOCKET_TIMEOUT_MS,
                 metricRegistry
         );
     }
@@ -154,6 +160,7 @@ public final class StacksConfiguredDataSource {
                 config.getString("database"),
                 config.getString("driver"),
                 maxPoolSize,
+                DEFAULT_SOCKET_TIMEOUT_MS,
                 metricRegistry
         );
     }
@@ -166,10 +173,11 @@ public final class StacksConfiguredDataSource {
             String database,
             String driver,
             int maxPoolsize,
+            int socketTimeoutMs,
             MetricRegistry metricRegistry)
     {
         ComboPooledDataSource dataSource = new ComboPooledDataSource();
-        dataSource.setJdbcUrl(format("jdbc:mysql://%s:%d/%s?rewriteBatchedStatements=true&connectTimeout=5000&socketTimeout=15000",
+        dataSource.setJdbcUrl(format("jdbc:mysql://%s:%d/%s?rewriteBatchedStatements=true&connectTimeout=5000&socketTimeout=" + socketTimeoutMs,
                 hostname,
                 port,
                 database));
