@@ -1,0 +1,7 @@
+plugins {
+    id "com.timgroup.jarmangit" version "1.1.86" apply false
+}
+
+ext {
+    buildNumber = System.getenv("BUILD_NUMBER") ?: System.getenv("TRAVIS_BUILD_NUMBER")
+}

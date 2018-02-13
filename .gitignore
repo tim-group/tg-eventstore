@@ -2,3 +2,5 @@
 .idea_modules
 target
 project/target
+.gradle
+build
