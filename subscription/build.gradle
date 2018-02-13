@@ -1,0 +1,90 @@
+plugins {
+    id "java-library"
+    id "com.timgroup.jarmangit"
+    id "maven-publish"
+}
+
+group = 'com.timgroup'
+if (buildNumber) version = '0.0.' + buildNumber
+
+repositories {
+    maven {
+        name "nexus"
+        url "${repoUrl}/groups/public"
+    }
+}
+
+dependencies {
+    api project(":api")
+    api "joda-time:joda-time:2.3"
+    implementation "com.lmax:disruptor:3.3.2"
+    implementation "com.timgroup:tim-structured-events:0.4.1235" // autobump
+    implementation "com.google.guava:guava:19.0"
+    implementation "com.fasterxml.jackson.core:jackson-databind:2.7.2"
+
+    testCompile project(path: ":api", configuration: "testlib")
+    testCompile project(":memory")
+    testCompile "junit:junit:4.12"
+    testCompile "org.hamcrest:hamcrest-core:1.3"
+    testCompile "org.hamcrest:hamcrest-library:1.3"
+    testCompile "com.timgroup:clocks-testing:1.0.1080" // autobump
+    testCompile "com.timgroup:tim-structured-events-testing:0.4.1235" // autobump
+    testCompile "org.mockito:mockito-core:1.9.5"
+    testCompile "com.youdevise:Matchers:0.0.1264" // autobump
+}
+
+tasks.withType(JavaCompile).all {
+    sourceCompatibility = "1.8"
+    targetCompatibility = "1.8"
+    options.encoding = "UTF-8"
+    options.incremental = true
+    options.deprecation = true
+    options.compilerArgs << "-parameters"
+}
+
+tasks.withType(Jar).all {
+    manifest {
+        attributes(
+                'Implementation-Title': project.name,
+                'Implementation-Version': project.version,
+                'Implementation-Vendor': 'TIM Group Ltd'
+        )
+    }
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+assemble.dependsOn(sourcesJar)
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+assemble.dependsOn(javadocJar)
+
+publishing {
+    repositories {
+        if (project.hasProperty("repoUrl")) {
+            maven {
+                name "nexus"
+                url "${project.repoUrl}/repositories/yd-release-candidates"
+                credentials {
+                    username = project.repoUsername
+                    password = project.repoPassword
+                }
+            }
+        }
+    }
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId "eventstore-subscription"
+            from components.java
+            artifact(sourcesJar)
+            artifact(javadocJar)
+        }
+    }
+}
