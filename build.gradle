@@ -1,5 +1,25 @@
 plugins {
     id "com.timgroup.jarmangit" version "1.1.86" apply false
+    id "com.github.maiflai.scalatest" version "0.19" apply false
+}
+
+if (project.hasProperty('scalaTarget')) {
+    ext.scalaVersion = scalaTarget
+    if (scalaTarget =~ /^2\.9\./) {
+        ext.scalaApiVersion = scalaTarget
+    } else {
+        def matcher = scalaTarget =~ /(\d+\.\d+)\.(\d+)/
+        if (matcher.matches()) {
+            ext.scalaApiVersion = matcher.group(1)
+        } else {
+            ext.scalaApiVersion = scalaTarget
+        }
+    }
+    logger.info "Scala: using (specified) library " + ext.scalaVersion + " and API version " + ext.scalaApiVersion
+} else {
+    ext.scalaVersion = '2.12.4'
+    ext.scalaApiVersion = '2.12'
+    logger.info "Scala: using (default) library " + ext.scalaVersion + " and API version " + ext.scalaApiVersion
 }
 
 ext {
