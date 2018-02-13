@@ -19,7 +19,7 @@ dependencies {
     implementation "com.google.guava:guava:19.0"
     implementation "com.fasterxml.jackson.core:jackson-databind:2.7.2"
 
-    testCompile project(path: ":api", configuration: "testlib")
+    testCompile project(":api:testlib")
     testCompile project(":memory")
     testCompile "junit:junit:4.12"
     testCompile "org.hamcrest:hamcrest-core:1.3"

@@ -10,6 +10,7 @@ pluginManagement {
 rootProject.name = "tg-eventstore"
 
 include "api"
+include "api:testlib"
 include "api-legacy"
 include "memory"
 include "memory-legacy"
