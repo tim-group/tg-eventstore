@@ -9,10 +9,6 @@ plugins {
 group = 'com.timgroup'
 if (buildNumber) version = '0.0.' + buildNumber
 
-configurations {
-    testlib
-}
-
 repositories {
     maven {
         name "nexus"
@@ -75,17 +71,6 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
 }
 
 assemble.dependsOn(javadocJar)
-
-task testlibJar(type: Jar, dependsOn: testClasses) {
-    classifier = 'testlib'
-    from sourceSets.test.output
-}
-
-assemble.dependsOn(testlibJar)
-
-artifacts {
-    testlib testlibJar
-}
 
 publishing {
     repositories {
