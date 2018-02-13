@@ -25,3 +25,22 @@ if (project.hasProperty('scalaTarget')) {
 ext {
     buildNumber = System.getenv("BUILD_NUMBER") ?: System.getenv("TRAVIS_BUILD_NUMBER")
 }
+
+task createDb {
+    doFirst {
+        def mysql_exec = { db, cmd ->
+            project.exec {
+                if (db) {
+                    commandLine("mysql", db, "-e$cmd")
+                }
+                else {
+                    commandLine("mysql", "-e$cmd")
+                }
+                environment("MYSQL_HOST", "127.0.0.1")
+            }
+        }
+        mysql_exec(null, "drop database if exists sql_eventstore")
+        mysql_exec(null, "create database sql_eventstore")
+        mysql_exec("sql_eventstore", "CREATE TABLE Event(eventType VARCHAR(255), body BLOB, version INT PRIMARY KEY, effective_timestamp datetime)")
+    }
+}
