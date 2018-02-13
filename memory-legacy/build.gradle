@@ -9,10 +9,6 @@ plugins {
 group = 'com.timgroup'
 if (buildNumber) version = '0.0.' + buildNumber
 
-configurations {
-    testlib
-}
-
 repositories {
     maven {
         name "nexus"
@@ -27,11 +23,11 @@ sourceSets.test.scala.srcDir "src/test/java"
 sourceSets.test.java.srcDirs = []
 
 dependencies {
-    compile project(":api")
-    compile "joda-time:joda-time:2.3"
-    compile "org.scala-lang:scala-library:$scalaVersion"
+    compile project(":api-legacy")
+    compile project(":memory")
     compileOnly "org.joda:joda-convert:1.3.1"
 
+    testCompile project(path: ":api-legacy", configuration: "testlib")
     testCompile "junit:junit:4.12"
     testCompile "org.hamcrest:hamcrest-core:1.3"
     testCompile "org.hamcrest:hamcrest-library:1.3"
@@ -76,17 +72,6 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
 
 assemble.dependsOn(javadocJar)
 
-task testlibJar(type: Jar, dependsOn: testClasses) {
-    classifier = 'testlib'
-    from sourceSets.test.output
-}
-
-assemble.dependsOn(testlibJar)
-
-artifacts {
-    testlib testlibJar
-}
-
 publishing {
     repositories {
         if (project.hasProperty("repoUrl")) {
@@ -102,7 +87,7 @@ publishing {
     }
     publications {
         mavenJava(MavenPublication) {
-            artifactId "eventstore-api-legacy_${scalaApiVersion}"
+            artifactId "eventstore-memory-legacy_${scalaApiVersion}"
             from components.java
             artifact(sourcesJar)
             artifact(javadocJar)
