@@ -11,3 +11,4 @@ rootProject.name = "tg-eventstore"
 
 include "api"
 include "api-legacy"
+include "memory"
