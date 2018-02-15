@@ -11,6 +11,7 @@ import org.junit.rules.ExpectedException;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
@@ -29,7 +30,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.LongStream.range;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -85,7 +85,7 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     cannot_read_from_stream_after_reaching_end_despite_writing_more_events() {
-        eventSource().writeStream().write(stream_1, asList(
+        eventSource().writeStream().write(stream_1, singletonList(
                 event_1
         ));
 
@@ -94,7 +94,7 @@ public abstract class JavaEventStoreTest {
         it.next();
         assertThat(it.hasNext(), is(false));
 
-        eventSource().writeStream().write(stream_1, asList(
+        eventSource().writeStream().write(stream_1, singletonList(
                 event_2
         ));
         assertThat(it.hasNext(), is(false));
@@ -103,8 +103,8 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     can_read_and_write_to_streams_independently() {
-        eventSource().writeStream().write(stream_1, asList(event_1));
-        eventSource().writeStream().write(stream_2, asList(event_2));
+        eventSource().writeStream().write(stream_1, singletonList(event_1));
+        eventSource().writeStream().write(stream_2, singletonList(event_2));
 
         assertThat(eventSource().readStream().readStreamForwards(stream_1).map(ResolvedEvent::eventRecord).collect(toList()), contains(
                 objectWith(EventRecord::eventNumber, 0L).and(EventRecord::streamId, stream_1)
@@ -139,10 +139,10 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     can_read_event_stream_backwards() {
-        eventSource().writeStream().write(stream_1, asList(anEvent()));
-        eventSource().writeStream().write(stream_3, asList(anEvent()));
-        eventSource().writeStream().write(stream_2, asList(anEvent()));
-        eventSource().writeStream().write(stream_1, asList(anEvent()));
+        eventSource().writeStream().write(stream_1, singletonList(anEvent()));
+        eventSource().writeStream().write(stream_3, singletonList(anEvent()));
+        eventSource().writeStream().write(stream_2, singletonList(anEvent()));
+        eventSource().writeStream().write(stream_1, singletonList(anEvent()));
 
         assertThat(eventSource().readStream().readStreamBackwards(stream_1).map(ResolvedEvent::eventRecord).collect(toList()), contains(
                 objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 1L),
@@ -153,10 +153,10 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     can_continue_reading_stream_backwards_from_position() {
-        eventSource().writeStream().write(stream_1, asList(anEvent()));
-        eventSource().writeStream().write(stream_3, asList(anEvent()));
-        eventSource().writeStream().write(stream_2, asList(anEvent()));
-        eventSource().writeStream().write(stream_1, asList(anEvent()));
+        eventSource().writeStream().write(stream_1, singletonList(anEvent()));
+        eventSource().writeStream().write(stream_3, singletonList(anEvent()));
+        eventSource().writeStream().write(stream_2, singletonList(anEvent()));
+        eventSource().writeStream().write(stream_1, singletonList(anEvent()));
 
         assertThat(eventSource().readStream().readStreamBackwards(stream_1, 1L).map(ResolvedEvent::eventRecord).collect(toList()), contains(
                 objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 0L)
@@ -166,9 +166,9 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     can_continue_reading_stream_backwards_from_position_at_beginning_of_stream() {
-        eventSource().writeStream().write(stream_1, asList(event_1));
-        eventSource().writeStream().write(stream_2, asList(event_2));
-        eventSource().writeStream().write(stream_3, asList(event_3));
+        eventSource().writeStream().write(stream_1, singletonList(event_1));
+        eventSource().writeStream().write(stream_2, singletonList(event_2));
+        eventSource().writeStream().write(stream_3, singletonList(event_3));
 
         assertThat(eventSource().readStream().readStreamBackwards(stream_1, 0L).collect(toList()), empty());
     }
@@ -212,9 +212,9 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     can_read_all_events() {
-        eventSource().writeStream().write(stream_1, asList(event_1));
-        eventSource().writeStream().write(stream_2, asList(event_2));
-        eventSource().writeStream().write(stream_3, asList(event_3));
+        eventSource().writeStream().write(stream_1, singletonList(event_1));
+        eventSource().writeStream().write(stream_2, singletonList(event_2));
+        eventSource().writeStream().write(stream_3, singletonList(event_3));
 
         assertThat(eventSource().readAll().readAllForwards().map(ResolvedEvent::eventRecord).collect(toList()), contains(
                 objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 0L),
@@ -226,9 +226,9 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     can_continue_reading_all_from_position() {
-        eventSource().writeStream().write(stream_1, asList(event_1));
-        eventSource().writeStream().write(stream_2, asList(event_2));
-        eventSource().writeStream().write(stream_3, asList(event_3));
+        eventSource().writeStream().write(stream_1, singletonList(event_1));
+        eventSource().writeStream().write(stream_2, singletonList(event_2));
+        eventSource().writeStream().write(stream_3, singletonList(event_3));
 
         try (Stream<ResolvedEvent> stream = eventSource().readAll().readAllForwards()) {
             Position position = stream.limit(1).reduce((a, b) -> b).get().position();
@@ -243,9 +243,9 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     can_continue_reading_all_from_position_at_end_of_stream() {
-        eventSource().writeStream().write(stream_1, asList(event_1));
-        eventSource().writeStream().write(stream_2, asList(event_2));
-        eventSource().writeStream().write(stream_3, asList(event_3));
+        eventSource().writeStream().write(stream_1, singletonList(event_1));
+        eventSource().writeStream().write(stream_2, singletonList(event_2));
+        eventSource().writeStream().write(stream_3, singletonList(event_3));
 
         try (Stream<ResolvedEvent> stream = eventSource().readAll().readAllForwards()) {
             Position position = stream.reduce((a, b) -> b).get().position();
@@ -257,9 +257,9 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     can_read_all_events_backwards() {
-        eventSource().writeStream().write(stream_1, asList(event_1));
-        eventSource().writeStream().write(stream_2, asList(event_2));
-        eventSource().writeStream().write(stream_3, asList(event_3));
+        eventSource().writeStream().write(stream_1, singletonList(event_1));
+        eventSource().writeStream().write(stream_2, singletonList(event_2));
+        eventSource().writeStream().write(stream_3, singletonList(event_3));
 
         assertThat(eventSource().readAll().readAllBackwards().map(ResolvedEvent::eventRecord).collect(toList()), contains(
                 objectWith(EventRecord::streamId, stream_3).and(EventRecord::eventNumber, 0L),
@@ -271,9 +271,9 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     can_continue_reading_all_backwards_from_position() {
-        eventSource().writeStream().write(stream_1, asList(event_1));
-        eventSource().writeStream().write(stream_2, asList(event_2));
-        eventSource().writeStream().write(stream_3, asList(event_3));
+        eventSource().writeStream().write(stream_1, singletonList(event_1));
+        eventSource().writeStream().write(stream_2, singletonList(event_2));
+        eventSource().writeStream().write(stream_3, singletonList(event_3));
 
         try (Stream<ResolvedEvent> stream = eventSource().readAll().readAllBackwards()) {
             Position position = stream.limit(1).reduce((a, b) -> b).get().position();
@@ -288,9 +288,9 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     can_continue_reading_all_backwards_from_position_at_beginning_of_stream() {
-        eventSource().writeStream().write(stream_1, asList(event_1));
-        eventSource().writeStream().write(stream_2, asList(event_2));
-        eventSource().writeStream().write(stream_3, asList(event_3));
+        eventSource().writeStream().write(stream_1, singletonList(event_1));
+        eventSource().writeStream().write(stream_2, singletonList(event_2));
+        eventSource().writeStream().write(stream_3, singletonList(event_3));
 
         try (Stream<ResolvedEvent> stream = eventSource().readAll().readAllBackwards()) {
             Position position = stream.reduce((a, b) -> b).get().position();
@@ -303,25 +303,25 @@ public abstract class JavaEventStoreTest {
     public void
     fails_if_expected_version_has_not_been_reached() {
         thrown.expect(WrongExpectedVersionException.class);
-        eventSource().writeStream().write(stream_1, asList(event_2), 0);
+        eventSource().writeStream().write(stream_1, singletonList(event_2), 0);
     }
 
     @Test
     public void
     fails_if_expected_version_has_passed() {
-        eventSource().writeStream().write(stream_1, asList(event_1));
-        eventSource().writeStream().write(stream_1, asList(event_2));
+        eventSource().writeStream().write(stream_1, singletonList(event_1));
+        eventSource().writeStream().write(stream_1, singletonList(event_2));
 
         thrown.expect(WrongExpectedVersionException.class);
-        eventSource().writeStream().write(stream_1, asList(event_3), 0);
+        eventSource().writeStream().write(stream_1, singletonList(event_3), 0);
     }
 
     @Test
     public void
     writes_when_expected_version_matches() {
-        eventSource().writeStream().write(stream_1, asList(event_1));
+        eventSource().writeStream().write(stream_1, singletonList(event_1));
 
-        eventSource().writeStream().write(stream_1, asList(event_2), 0);
+        eventSource().writeStream().write(stream_1, singletonList(event_2), 0);
 
         assertThat(eventSource().readStream().readStreamForwards(stream_1).map(ResolvedEvent::eventRecord).collect(toList()), contains(
                 objectWith(EventRecord::eventNumber, 0L),
@@ -331,7 +331,7 @@ public abstract class JavaEventStoreTest {
 
     @Test public void
     can_write_expecting_empty_stream() {
-        eventSource().writeStream().write(stream_1, asList(event_1), EmptyStreamEventNumber);
+        eventSource().writeStream().write(stream_1, singletonList(event_1), EmptyStreamEventNumber);
 
         assertThat(eventSource().readStream().readStreamForwards(stream_1).count(), is(1L));
     }
@@ -341,10 +341,10 @@ public abstract class JavaEventStoreTest {
     can_read_events_by_category() {
         NewEvent event1 = anEvent();
         NewEvent event4 = anEvent();
-        eventSource().writeStream().write(streamId(category_1, "Id1"), asList(event1));
-        eventSource().writeStream().write(streamId(category_3, "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(streamId(category_2, "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(streamId(category_1, "Id2"), asList(event4));
+        eventSource().writeStream().write(streamId(category_1, "Id1"), singletonList(event1));
+        eventSource().writeStream().write(streamId(category_3, "Id1"), singletonList(anEvent()));
+        eventSource().writeStream().write(streamId(category_2, "Id1"), singletonList(anEvent()));
+        eventSource().writeStream().write(streamId(category_1, "Id2"), singletonList(event4));
 
         assertThat(eventSource().readCategory().readCategoryForwards(category_1).map(ResolvedEvent::eventRecord).collect(toList()), contains(
                 objectWith(EventRecord::streamId, streamId(category_1, "Id1")),
@@ -357,14 +357,14 @@ public abstract class JavaEventStoreTest {
     can_continue_reading_from_position_of_category() {
         NewEvent event1 = anEvent();
         NewEvent event4 = anEvent();
-        eventSource().writeStream().write(streamId(category_1, "Id1"), asList(event1));
-        eventSource().writeStream().write(streamId(category_3, "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(streamId(category_2, "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(streamId(category_1, "Id2"), asList(event4));
+        eventSource().writeStream().write(streamId(category_1, "Id1"), singletonList(event1));
+        eventSource().writeStream().write(streamId(category_3, "Id1"), singletonList(anEvent()));
+        eventSource().writeStream().write(streamId(category_2, "Id1"), singletonList(anEvent()));
+        eventSource().writeStream().write(streamId(category_1, "Id2"), singletonList(event4));
 
         Position position = eventSource().readCategory().readCategoryForwards(category_1).collect(toList()).get(0).position();
 
-        assertThat(eventSource().readCategory().readCategoryForwards(category_1, position).map(ResolvedEvent::eventRecord).collect(toList()), Matchers.contains(
+        assertThat(eventSource().readCategory().readCategoryForwards(category_1, position).map(ResolvedEvent::eventRecord).collect(toList()), contains(
                 objectWith(EventRecord::streamId, streamId(category_1, "Id2"))
         ));
     }
@@ -374,10 +374,10 @@ public abstract class JavaEventStoreTest {
     can_continue_reading_from_position_at_end_of_category() {
         NewEvent event1 = anEvent();
         NewEvent event4 = anEvent();
-        eventSource().writeStream().write(streamId(category_1, "Id1"), asList(event1));
-        eventSource().writeStream().write(streamId(category_3, "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(streamId(category_2, "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(streamId(category_1, "Id2"), asList(event4));
+        eventSource().writeStream().write(streamId(category_1, "Id1"), singletonList(event1));
+        eventSource().writeStream().write(streamId(category_3, "Id1"), singletonList(anEvent()));
+        eventSource().writeStream().write(streamId(category_2, "Id1"), singletonList(anEvent()));
+        eventSource().writeStream().write(streamId(category_1, "Id2"), singletonList(event4));
 
         Position position = eventSource().readCategory().readCategoryForwards(category_1).reduce((a, b) -> b).get().position();
 
@@ -389,10 +389,10 @@ public abstract class JavaEventStoreTest {
     can_read_events_backwards_by_category() {
         NewEvent event1 = anEvent();
         NewEvent event4 = anEvent();
-        eventSource().writeStream().write(streamId(category_1, "Id1"), asList(event1));
-        eventSource().writeStream().write(streamId(category_3, "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(streamId(category_2, "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(streamId(category_1, "Id2"), asList(event4));
+        eventSource().writeStream().write(streamId(category_1, "Id1"), singletonList(event1));
+        eventSource().writeStream().write(streamId(category_3, "Id1"), singletonList(anEvent()));
+        eventSource().writeStream().write(streamId(category_2, "Id1"), singletonList(anEvent()));
+        eventSource().writeStream().write(streamId(category_1, "Id2"), singletonList(event4));
 
         assertThat(eventSource().readCategory().readCategoryBackwards(category_1).map(ResolvedEvent::eventRecord).collect(toList()), contains(
                 objectWith(EventRecord::streamId, streamId(category_1, "Id2")),
@@ -405,10 +405,10 @@ public abstract class JavaEventStoreTest {
     can_continue_reading_backwards_from_position_of_category() {
         NewEvent event1 = anEvent();
         NewEvent event4 = anEvent();
-        eventSource().writeStream().write(streamId(category_1, "Id1"), asList(event1));
-        eventSource().writeStream().write(streamId(category_3, "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(streamId(category_2, "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(streamId(category_1, "Id2"), asList(event4));
+        eventSource().writeStream().write(streamId(category_1, "Id1"), singletonList(event1));
+        eventSource().writeStream().write(streamId(category_3, "Id1"), singletonList(anEvent()));
+        eventSource().writeStream().write(streamId(category_2, "Id1"), singletonList(anEvent()));
+        eventSource().writeStream().write(streamId(category_1, "Id2"), singletonList(event4));
 
         Position position = eventSource().readCategory().readCategoryBackwards(category_1).collect(toList()).get(0).position();
 
@@ -422,10 +422,10 @@ public abstract class JavaEventStoreTest {
     can_continue_reading_backwards_from_position_at_beginning_of_category() {
         NewEvent event1 = anEvent();
         NewEvent event4 = anEvent();
-        eventSource().writeStream().write(streamId(category_1, "Id1"), asList(event1));
-        eventSource().writeStream().write(streamId(category_3, "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(streamId(category_2, "Id1"), asList(anEvent()));
-        eventSource().writeStream().write(streamId(category_1, "Id2"), asList(event4));
+        eventSource().writeStream().write(streamId(category_1, "Id1"), singletonList(event1));
+        eventSource().writeStream().write(streamId(category_3, "Id1"), singletonList(anEvent()));
+        eventSource().writeStream().write(streamId(category_2, "Id1"), singletonList(anEvent()));
+        eventSource().writeStream().write(streamId(category_1, "Id2"), singletonList(event4));
 
         Position position = eventSource().readCategory().readCategoryBackwards(category_1).reduce((a, b) -> b).get().position();
 
@@ -462,9 +462,9 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     can_read_last_event() {
-        eventSource().writeStream().write(stream_1, asList(event_1));
-        eventSource().writeStream().write(stream_2, asList(event_2));
-        eventSource().writeStream().write(stream_3, asList(event_3));
+        eventSource().writeStream().write(stream_1, singletonList(event_1));
+        eventSource().writeStream().write(stream_2, singletonList(event_2));
+        eventSource().writeStream().write(stream_3, singletonList(event_3));
 
         EventRecord eventRecord = eventSource().readAll().readLastEvent().map(ResolvedEvent::eventRecord).get();
 
@@ -474,9 +474,9 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     can_read_last_event_from_category() {
-        eventSource().writeStream().write(stream_1, asList(event_1));
-        eventSource().writeStream().write(stream_2, asList(event_2));
-        eventSource().writeStream().write(stream_3, asList(event_3));
+        eventSource().writeStream().write(stream_1, singletonList(event_1));
+        eventSource().writeStream().write(stream_2, singletonList(event_2));
+        eventSource().writeStream().write(stream_3, singletonList(event_3));
 
         EventRecord eventRecord = eventSource().readCategory().readLastEventInCategory(stream_1.category()).map(ResolvedEvent::eventRecord).get();
         assertThat(eventRecord, is(objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 0L)));
@@ -485,9 +485,9 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     can_read_last_event_from_stream() {
-        eventSource().writeStream().write(stream_1, asList(event_1));
-        eventSource().writeStream().write(stream_2, asList(event_2));
-        eventSource().writeStream().write(stream_3, asList(event_3));
+        eventSource().writeStream().write(stream_1, singletonList(event_1));
+        eventSource().writeStream().write(stream_2, singletonList(event_2));
+        eventSource().writeStream().write(stream_3, singletonList(event_3));
 
         EventRecord eventRecord = eventSource().readStream().readLastEventInStream(stream_2).eventRecord();
         assertThat(eventRecord, is(objectWith(EventRecord::streamId, stream_2).and(EventRecord::eventNumber, 0L)));
@@ -521,5 +521,10 @@ public abstract class JavaEventStoreTest {
 
     private static byte[] randomData() {
         return ("{\n  \"value\": \"" + UUID.randomUUID() + "\"\n}").getBytes(UTF_8);
+    }
+
+    @SafeVarargs
+    private static <E> Matcher<Iterable<? extends E>> contains(Matcher<? super E>... itemMatchers) {
+        return Matchers.contains(itemMatchers);
     }
 }
