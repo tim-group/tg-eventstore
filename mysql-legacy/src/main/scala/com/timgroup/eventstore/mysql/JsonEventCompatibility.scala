@@ -2,13 +2,11 @@ package com.timgroup.eventstore.mysql
 
 import java.io.IOException
 
-import scala.collection.JavaConversions._
-
-import com.timgroup.eventstore.api._
-
-import com.fasterxml.jackson.core._
 import com.fasterxml.jackson.databind._
 import com.fasterxml.jackson.databind.node._
+import com.timgroup.eventstore.api._
+
+import scala.collection.JavaConverters._
 
 /**
   * @deprecated uaw LegacyMysqlEventSource instead
@@ -80,7 +78,7 @@ object JsonEventCompatibility extends CompatibilityPredicate {
     (0 to (currentArray.size - 1)).foreach{ index => compareNodes(currentArray.get(index), newArray.get(index), ctx.appendIndex(index) ) }
   }
 
-  def sortedFields(obj: ObjectNode) = obj.fieldNames.toList.sorted.map(name => (name, obj.get(name)))
+  def sortedFields(obj: ObjectNode) = obj.fieldNames.asScala.toList.sorted.map(name => (name, obj.get(name)))
 
   def parse(input: EventData, errorMessage: String): ObjectNode = {
     try {

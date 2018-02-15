@@ -2,7 +2,7 @@ package com.timgroup.eventstore.api.legacy
 
 import com.timgroup.eventstore.api._
 
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 /**
   * @deprecated uaw LegacyMysqlEventSource instead
@@ -16,14 +16,14 @@ class LegacyEventStoreEventStreamWriterAdapter(eventstore: EventStore, pretendSt
     if (streamId != pretendStreamId) {
       throw new IllegalArgumentException("Attempting to save to stream " + streamId + " with legacy adapter.")
     }
-    eventstore.save(events.toList.map(toEventData))
+    eventstore.save(events.asScala.map(toEventData).toSeq)
   }
 
   override def write(streamId: StreamId, events: java.util.Collection[NewEvent], expectedVersion: Long): Unit = {
     if (streamId != pretendStreamId) {
       throw new IllegalArgumentException("Attempting to save to stream " + streamId + " with legacy adapter.")
     }
-    eventstore.save(events.toList.map(toEventData), Some(expectedVersion))
+    eventstore.save(events.asScala.map(toEventData).toSeq, Some(expectedVersion))
   }
 
   override def toString = s"LegacyEventStoreEventStreamWriterAdapter{eventstore=$eventstore,previousStreamId=$pretendStreamId}"

@@ -4,8 +4,10 @@ import java.util.stream.Stream
 
 import com.timgroup.eventstore.api._
 
+import scala.collection.JavaConverters._
+
 class InMemoryEventStore(now: Clock = SystemClock) extends EventStore {
-  var events = Vector[EventInStream]()
+  var events: IndexedSeq[EventInStream] = Vector()
 
   def saveWithTime(now: Clock = SystemClock, newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit =  {
     val currentVersion = events.size
@@ -40,7 +42,7 @@ class InMemoryEventStore(now: Clock = SystemClock) extends EventStore {
   }
 
   override def streamingFromAll(version: Long): Stream[EventInStream] = {
-    scala.collection.JavaConversions.seqAsJavaList(fromAll(version).toList).stream()
+    fromAll(version).toList.asJava.stream()
   }
 
   def clear(): Unit = {
