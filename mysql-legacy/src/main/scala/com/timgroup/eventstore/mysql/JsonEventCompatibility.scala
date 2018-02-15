@@ -21,7 +21,7 @@ object JsonEventCompatibility extends CompatibilityPredicate {
     if (currentEvent.body == newEvent.body) return true
     val currentDocument = parse(currentEvent, "Invalid JSON produced for event stream")
     val newDocument = parse(newEvent, "Invalid JSON retrieved from event stream")
-    compareObjects(currentDocument, newDocument, new Context(currentEvent.eventType, version, currentDocument, newDocument))
+    compareObjects(currentDocument, newDocument, Context(currentEvent.eventType, version, currentDocument, newDocument))
     true
   }
 
@@ -29,7 +29,7 @@ object JsonEventCompatibility extends CompatibilityPredicate {
     (currentNode, newNode) match {
       case(currentObject : ObjectNode, newObject : ObjectNode) => compareObjects(currentObject, newObject, ctx)
       case(currentArray : ArrayNode, newArray : ArrayNode) => compareArrays(currentArray, newArray, ctx)
-      case(_, _) if (currentNode != newNode) => throw ctx.idempotentWriteFailure("Event documents do not match")
+      case(_, _) if currentNode != newNode => throw ctx.idempotentWriteFailure("Event documents do not match")
       case _ => Unit
     }
   }
@@ -39,15 +39,15 @@ object JsonEventCompatibility extends CompatibilityPredicate {
       case Both(fieldName, currentNode, newNode) => compareNodes(currentNode, newNode, ctx.appendField(fieldName))
       case Left(fieldName, currentNode) =>
         if (!currentNode.isNull) throw ctx.appendField(fieldName).idempotentWriteFailure("Element in current version, but not new version")
-      case Right(fieldName, newNode) => Unit
+      case Right(_, _) => Unit
     }
 
   class MergeTraversable[K : Ordering, V](val left: Seq[(K, V)], val right: Seq[(K, V)]) extends Traversable[Merged[K, V]] {
-    val ordering = implicitly[Ordering[K]]
-    def foreach[U](f: Merged[K, V] => U) = {
+    private val ordering = implicitly[Ordering[K]]
+    def foreach[U](f: Merged[K, V] => U): Unit = {
       var leftPtr = left
       var rightPtr = right
-      while (!leftPtr.isEmpty && !rightPtr.isEmpty) {
+      while (leftPtr.nonEmpty && rightPtr.nonEmpty) {
         val n = ordering.compare(leftPtr.head._1, rightPtr.head._1)
         if (n < 0) {
           f(Left(leftPtr.head._1, leftPtr.head._2))
@@ -75,10 +75,10 @@ object JsonEventCompatibility extends CompatibilityPredicate {
 
   def compareArrays(currentArray: ArrayNode, newArray: ArrayNode, ctx: Context): Unit = {
     if (currentArray.size != newArray.size()) throw ctx.idempotentWriteFailure("Array lengths do not match")
-    (0 to (currentArray.size - 1)).foreach{ index => compareNodes(currentArray.get(index), newArray.get(index), ctx.appendIndex(index) ) }
+    (0 until currentArray.size).foreach{ index => compareNodes(currentArray.get(index), newArray.get(index), ctx.appendIndex(index) ) }
   }
 
-  def sortedFields(obj: ObjectNode) = obj.fieldNames.asScala.toList.sorted.map(name => (name, obj.get(name)))
+  private def sortedFields(obj: ObjectNode) = obj.fieldNames.asScala.toList.sorted.map(name => (name, obj.get(name)))
 
   def parse(input: EventData, errorMessage: String): ObjectNode = {
     try {
