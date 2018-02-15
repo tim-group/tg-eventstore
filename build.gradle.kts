@@ -23,7 +23,7 @@ val scalaTargetVersion =
 val scalaVersion by extra(scalaTargetVersion.version)
 val scalaApiVersion by extra(scalaTargetVersion.apiVersion)
 
-val buildNumber: String by extra(System.getenv("BUILD_NUMBER") ?: System.getenv("TRAVIS_BUILD_NUMBER"))
+val buildNumber: String? by extra(System.getenv("BUILD_NUMBER") ?: System.getenv("TRAVIS_BUILD_NUMBER"))
 
 task("createDb") {
     doLast {
