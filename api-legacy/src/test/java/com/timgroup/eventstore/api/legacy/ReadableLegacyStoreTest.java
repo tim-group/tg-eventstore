@@ -1,23 +1,18 @@
 package com.timgroup.eventstore.api.legacy;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.function.Consumer;
-import java.util.stream.Stream;
-
-import com.timgroup.eventstore.api.EventInStream;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import org.junit.Test;
-import scala.Function1;
-import scala.runtime.AbstractFunction1;
-import scala.runtime.BoxedUnit;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Stream;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertEquals;
@@ -27,7 +22,7 @@ public class ReadableLegacyStoreTest {
     public void passes_all_events_to_event_handler() throws Exception {
         List<String> received = new ArrayList<>();
         new ReadableLegacyStore(events("red", "orange", "yellow"), TestEventReader::toPosition, TestEventReader::toVersion)
-                .streamingFromAll(0).forEach(e -> received.add(e.version() + ":" + new String(e.eventData().body().data(), UTF_8)));
+                .streamingFromAll(0).forEachOrdered(e -> received.add(e.version() + ":" + new String(e.eventData().body().data(), UTF_8)));
         assertEquals(Arrays.asList("1:red", "2:orange", "3:yellow"), received);
     }
 
@@ -35,7 +30,7 @@ public class ReadableLegacyStoreTest {
     public void passes_tail_events_to_event_handler() throws Exception {
         List<String> received = new ArrayList<>();
         new ReadableLegacyStore(events("red", "orange", "yellow"), TestEventReader::toPosition, TestEventReader::toVersion)
-                .streamingFromAll(1).forEach(e -> received.add(e.version() + ":" + new String(e.eventData().body().data(), UTF_8)));
+                .streamingFromAll(1).forEachOrdered(e -> received.add(e.version() + ":" + new String(e.eventData().body().data(), UTF_8)));
         assertEquals(Arrays.asList("2:orange", "3:yellow"), received);
     }
 
@@ -43,7 +38,7 @@ public class ReadableLegacyStoreTest {
     public void provides_all_events_as_event_stream() throws Exception {
         List<String> received = new ArrayList<>();
         new ReadableLegacyStore(events("red", "orange", "yellow"), TestEventReader::toPosition, TestEventReader::toVersion)
-                .streamingFromAll(0).forEach(e -> received.add(e.version() + ":" + new String(e.eventData().body().data(), UTF_8)));
+                .streamingFromAll(0).forEachOrdered(e -> received.add(e.version() + ":" + new String(e.eventData().body().data(), UTF_8)));
         assertEquals(Arrays.asList("1:red", "2:orange", "3:yellow"), received);
     }
 
@@ -51,7 +46,7 @@ public class ReadableLegacyStoreTest {
     public void provides_tail_events_as_event_stream() throws Exception {
         List<String> received = new ArrayList<>();
         new ReadableLegacyStore(events("red", "orange", "yellow"), TestEventReader::toPosition, TestEventReader::toVersion)
-                .streamingFromAll(1).forEach(e -> received.add(e.version() + ":" + new String(e.eventData().body().data(), UTF_8)));
+                .streamingFromAll(1).forEachOrdered(e -> received.add(e.version() + ":" + new String(e.eventData().body().data(), UTF_8)));
         assertEquals(Arrays.asList("2:orange", "3:yellow"), received);
     }
 

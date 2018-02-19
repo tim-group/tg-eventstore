@@ -96,7 +96,7 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
                     newEvent.type(),
                     newEvent.data(),
                     newEvent.metadata()
-            ))).forEach(this.events::add);
+            ))).forEachOrdered(this.events::add);
         }
     }
 

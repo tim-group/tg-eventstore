@@ -28,7 +28,7 @@ class BackfillStitchingEventStoreTest extends FunSpec with MustMatchers with Eve
     ))
 
     var events = Vector[EventData]()
-    eventStore.streamingFromAll(0).forEach(new Consumer[EventInStream] {
+    eventStore.streamingFromAll(0).forEachOrdered(new Consumer[EventInStream] {
       override def accept(evt: EventInStream): Unit = events = events :+ evt.eventData
     })
 
@@ -57,7 +57,7 @@ class BackfillStitchingEventStoreTest extends FunSpec with MustMatchers with Eve
     ))
 
     var events = Vector[EventData]()
-    eventStore.streamingFromAll(5).forEach(new Consumer[EventInStream] {
+    eventStore.streamingFromAll(5).forEachOrdered(new Consumer[EventInStream] {
       override def accept(evt: EventInStream): Unit = events = events :+ evt.eventData
     })
 

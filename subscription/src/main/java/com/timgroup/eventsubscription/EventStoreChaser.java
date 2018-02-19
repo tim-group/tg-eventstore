@@ -1,11 +1,11 @@
 package com.timgroup.eventsubscription;
 
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.ResolvedEvent;
+
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
-
-import com.timgroup.eventstore.api.Position;
-import com.timgroup.eventstore.api.ResolvedEvent;
 
 public class EventStoreChaser implements Runnable {
     private final Function<Position, Stream<ResolvedEvent>> eventSource;
@@ -29,7 +29,7 @@ public class EventStoreChaser implements Runnable {
     public void run() {
         try {
             try (Stream<ResolvedEvent> stream = eventSource.apply(lastPosition)) {
-                stream.forEach(nextEvent -> {
+                stream.forEachOrdered(nextEvent -> {
                     listener.chaserReceived(nextEvent.position());
                     lastPosition = nextEvent.position();
                     eventHandler.accept(nextEvent);

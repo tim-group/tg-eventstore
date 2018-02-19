@@ -68,7 +68,7 @@ public class CachingEventsTest {
         AtomicReference<Position> lastPosition = new AtomicReference<>();
         try (OutputStream outputStream = new GZIPOutputStream(new FileOutputStream(cacheFile));
              CacheEventWriter cacheEventWriter = new CacheEventWriter(outputStream, CODEC)) {
-            underlyingEventStore.readAllForwards(position).forEach(resolvedEvent -> {
+            underlyingEventStore.readAllForwards(position).forEachOrdered(resolvedEvent -> {
                 cacheEventWriter.write(resolvedEvent);
                 lastPosition.set(resolvedEvent.position());
             });
