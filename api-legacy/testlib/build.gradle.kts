@@ -1,3 +1,5 @@
+import com.timgroup.eventstore.gradle.*
+
 plugins {
     java
     scala
@@ -11,8 +13,7 @@ val repoUsername by project
 val repoPassword by project
 
 val buildNumber: String? by rootProject.extra
-val scalaVersion: String by rootProject.extra
-val scalaApiVersion: String by rootProject.extra
+val scalaTarget: ScalaTarget by rootProject.extra
 
 group = "com.timgroup"
 if (buildNumber != null) version = "0.0.$buildNumber"
@@ -36,7 +37,7 @@ dependencies {
     compile(project(":api-legacy"))
     compile("junit:junit:4.12")
     compile("org.hamcrest:hamcrest-core:1.3")
-    compile("org.scalatest:scalatest_$scalaApiVersion:3.0.1")
+    compile("org.scalatest:scalatest_${scalaTarget.apiVersion}:3.0.1")
     implementation("org.hamcrest:hamcrest-library:1.3")
 }
 
@@ -91,7 +92,7 @@ publishing {
     }
     (publications) {
         "mavenJava"(MavenPublication::class) {
-            artifactId = "eventstore-api-legacy-testlib_$scalaApiVersion"
+            artifactId = "eventstore-api-legacy-testlib_${scalaTarget.apiVersion}"
             from(components["java"])
             artifact(sourcesJar)
             artifact(javadocJar)

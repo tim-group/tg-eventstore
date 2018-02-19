@@ -1,3 +1,5 @@
+import com.timgroup.eventstore.gradle.*
+
 plugins {
     java
     scala
@@ -11,8 +13,7 @@ val repoUsername by project
 val repoPassword by project
 
 val buildNumber: String? by rootProject.extra
-val scalaVersion: String by rootProject.extra
-val scalaApiVersion: String by rootProject.extra
+val scalaTarget: ScalaTarget by rootProject.extra
 
 group = "com.timgroup"
 if (buildNumber != null) version = "0.0.$buildNumber"
@@ -43,7 +44,7 @@ dependencies {
     testCompile("org.hamcrest:hamcrest-core:1.3")
     testCompile("org.hamcrest:hamcrest-library:1.3")
     testCompile("com.timgroup:clocks-testing:1.0.1080") // autobump
-    testCompile("org.scalatest:scalatest_$scalaApiVersion:3.0.1")
+    testCompile("org.scalatest:scalatest_${scalaTarget.apiVersion}:3.0.1")
     testCompileOnly("org.joda:joda-convert:1.3.1")
     testRuntime("org.pegdown:pegdown:1.4.2")
 }
@@ -99,7 +100,7 @@ publishing {
     }
     (publications) {
         "mavenJava"(MavenPublication::class) {
-            artifactId = "eventstore-stitching-legacy_$scalaApiVersion"
+            artifactId = "eventstore-stitching-legacy_${scalaTarget.apiVersion}"
             from(components["java"])
             artifact(sourcesJar)
             artifact(javadocJar)

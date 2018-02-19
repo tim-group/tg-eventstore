@@ -1,27 +1,11 @@
+import com.timgroup.eventstore.gradle.*
+
 plugins {
     id("com.timgroup.jarmangit") version "1.1.86" apply false
     id("com.github.maiflai.scalatest") version "0.19" apply false
 }
 
-val scalaTarget by project
-
-data class ScalaTarget(val major: Int, val minor: Int, val patch: Int) {
-    val version: String
-        get() = "$major.$minor.$patch"
-    val apiVersion: String
-        get() = "$major.$minor"
-}
-
-val scalaTargetVersion =
-    if (scalaTarget != null) {
-        val matchResult = Regex("""(\d+)\.(\d+)\.(\d+)""").matchEntire(scalaTarget.toString()) ?: throw IllegalArgumentException("Invalid Scala target: $scalaTarget")
-        ScalaTarget(matchResult.groupValues[1].toInt(), matchResult.groupValues[2].toInt(), matchResult.groupValues[3].toInt())
-    }
-    else {
-        ScalaTarget(2, 12, 4)
-    }
-val scalaVersion by extra(scalaTargetVersion.version)
-val scalaApiVersion by extra(scalaTargetVersion.apiVersion)
+val scalaTarget by extra(determineScalaTarget())
 
 val buildNumber: String? by extra(System.getenv("BUILD_NUMBER") ?: System.getenv("TRAVIS_BUILD_NUMBER"))
 
