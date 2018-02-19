@@ -7,7 +7,7 @@ import com.timgroup.eventstore.api.EventRecord;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 
@@ -21,7 +21,7 @@ public final class BackdatingEventReader extends TransformingEventReader {
         super(underlying, toResolvedEventTransformer(new BackdatingTransformer(liveCutoverInclusive, destination)));
     }
 
-    private static final class BackdatingTransformer implements Function<EventRecord, EventRecord> {
+    private static final class BackdatingTransformer implements UnaryOperator<EventRecord> {
         private static final String EFFECTIVE_TIMESTAMP = "effective_timestamp";
 
         private final ObjectMapper json = new ObjectMapper();

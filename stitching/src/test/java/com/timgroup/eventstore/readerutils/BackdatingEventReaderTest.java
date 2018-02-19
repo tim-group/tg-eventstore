@@ -1,12 +1,12 @@
 package com.timgroup.eventstore.readerutils;
 
-import java.time.Instant;
-
 import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Test;
+
+import java.time.Instant;
 
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
@@ -18,7 +18,7 @@ import static java.util.stream.Collectors.toList;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertThat;
 
-@SuppressWarnings({"OptionalGetWithoutIsPresent", "ArraysAsListWithZeroOrOneArgument"})
+@SuppressWarnings("RedundantThrows")
 public final class BackdatingEventReaderTest {
     private final ManualClock clock = new ManualClock(Instant.parse("2017-01-02T12:00:00Z"), systemDefault());
     private final JavaInMemoryEventStore underlying = new JavaInMemoryEventStore(clock);
