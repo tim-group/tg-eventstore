@@ -18,7 +18,7 @@ dependencies {
     api project(":api")
     api "com.typesafe:config:1.2.1"
     api "com.mchange:c3p0:0.9.5.2"
-    implementation "com.timgroup:tim-logger:1.5.1084" // autobump
+    implementation "com.timgroup:tim-logger:1.5.1086" // autobump
     implementation "io.dropwizard.metrics:metrics-core:3.2.3"
 
     testCompile project(":api:testlib")
