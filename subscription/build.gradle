@@ -18,7 +18,7 @@ dependencies {
     api project(":api")
     api "joda-time:joda-time:2.3"
     implementation "com.lmax:disruptor:3.3.2"
-    implementation "com.timgroup:tim-structured-events:0.4.1235" // autobump
+    implementation "com.timgroup:tim-structured-events:0.4.1237" // autobump
     implementation "com.google.guava:guava:19.0"
     implementation "com.fasterxml.jackson.core:jackson-databind:2.7.2"
 
@@ -28,7 +28,7 @@ dependencies {
     testCompile "org.hamcrest:hamcrest-core:1.3"
     testCompile "org.hamcrest:hamcrest-library:1.3"
     testCompile "com.timgroup:clocks-testing:1.0.1080" // autobump
-    testCompile "com.timgroup:tim-structured-events-testing:0.4.1235" // autobump
+    testCompile "com.timgroup:tim-structured-events-testing:0.4.1237" // autobump
     testCompile "org.mockito:mockito-core:1.9.5"
     testCompile "com.youdevise:Matchers:0.0.1264" // autobump
 }
