@@ -1,9 +1,17 @@
 package com.timgroup.eventstore.stitching;
 
-import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.EventCategoryReader;
+import com.timgroup.eventstore.api.EventReader;
+import com.timgroup.eventstore.api.EventSource;
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.ResolvedEvent;
 
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.stream.Stream;
 
+@ParametersAreNonnullByDefault
 public final class BackfillStitchingEventReader implements EventReader, EventCategoryReader {
 
     private final StitchedPosition emptyStorePosition;
@@ -16,11 +24,14 @@ public final class BackfillStitchingEventReader implements EventReader, EventCat
         this.emptyStorePosition = new StitchedPosition(backfill.readAll().emptyStorePosition(), liveCutoffStartPosition);
     }
 
+    @Nonnull
     @Override
     public Position emptyStorePosition() {
         return emptyStorePosition;
     }
 
+    @Nonnull
+    @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
         StitchedPosition stitchedPosition = (StitchedPosition) positionExclusive;
@@ -39,6 +50,8 @@ public final class BackfillStitchingEventReader implements EventReader, EventCat
         }
     }
 
+    @Nonnull
+    @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readCategoryForwards(String category, Position positionExclusive) {
         StitchedPosition stitchedPosition = (StitchedPosition) positionExclusive;
@@ -57,6 +70,7 @@ public final class BackfillStitchingEventReader implements EventReader, EventCat
         }
     }
 
+    @Nonnull
     @Override
     public Position emptyCategoryPosition(String category) {
         return emptyStorePosition;

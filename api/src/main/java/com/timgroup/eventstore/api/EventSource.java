@@ -2,13 +2,14 @@ package com.timgroup.eventstore.api;
 
 import com.timgroup.tucker.info.Component;
 
+import javax.annotation.Nonnull;
 import java.util.Collection;
 
 public interface EventSource {
-    EventReader readAll();
-    EventCategoryReader readCategory();
-    EventStreamReader readStream();
-    EventStreamWriter writeStream();
-    PositionCodec positionCodec();
-    Collection<Component> monitoring();
+    @Nonnull EventReader readAll();
+    @Nonnull EventCategoryReader readCategory();
+    @Nonnull EventStreamReader readStream();
+    @Nonnull EventStreamWriter writeStream();
+    @Nonnull PositionCodec positionCodec();
+    @Nonnull Collection<Component> monitoring();
 }

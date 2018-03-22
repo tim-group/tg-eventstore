@@ -1,15 +1,17 @@
 package com.timgroup.eventsubscription.healthcheck;
 
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventsubscription.ChaserListener;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Report;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 
 import static com.timgroup.eventsubscription.healthcheck.EventSubscriptionStatus.parenthetical;
 import static com.timgroup.tucker.info.Status.CRITICAL;
@@ -18,6 +20,7 @@ import static com.timgroup.tucker.info.Status.OK;
 import static com.timgroup.tucker.info.Status.WARNING;
 import static java.lang.String.format;
 
+@ParametersAreNonnullByDefault
 public class ChaserHealth extends Component implements ChaserListener {
     private static final Logger LOG = LoggerFactory.getLogger(ChaserHealth.class);
     private static final Duration MIN_WARNING_THRESHOLD = Duration.ofSeconds(5);
@@ -29,7 +32,7 @@ public class ChaserHealth extends Component implements ChaserListener {
     private volatile Instant lastPollTimestamp;
     private volatile Position currentPosition;
 
-    public ChaserHealth(String name, String description, Clock clock) {
+    public ChaserHealth(String name, @Nullable String description, Clock clock) {
         this(name, description, clock, Duration.ofSeconds(1));
     }
 
@@ -49,7 +52,7 @@ public class ChaserHealth extends Component implements ChaserListener {
         this(name, null, clock, subscriptionRunFrequency);
     }
 
-    public ChaserHealth(String name, String description, Clock clock, Duration subscriptionRunFrequency) {
+    public ChaserHealth(String name, @Nullable String description, Clock clock, Duration subscriptionRunFrequency) {
         super("event-store-chaser-" + name, "Eventstore chaser health (" + parenthetical(name, description) + ")");
         this.clock = clock;
         this.warningThreshold = max(MIN_WARNING_THRESHOLD, subscriptionRunFrequency.multipliedBy(5));

@@ -7,6 +7,9 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import org.junit.Test;
 
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -61,6 +64,7 @@ public class ReadableLegacyStoreTest {
         return new TestEventReader(Arrays.asList(records));
     }
 
+    @ParametersAreNonnullByDefault
     private static final class TestEventReader implements EventReader {
         private final List<ResolvedEvent> events;
 
@@ -80,16 +84,21 @@ public class ReadableLegacyStoreTest {
             }
         }
 
+        @Nonnull
+        @CheckReturnValue
         @Override
         public Stream<ResolvedEvent> readAllForwards() {
             return events.stream();
         }
 
+        @Nonnull
+        @CheckReturnValue
         @Override
         public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
             return events.subList(((Pos) positionExclusive).index + 1, events.size()).stream();
         }
 
+        @Nonnull
         @Override
         public Position emptyStorePosition() {
             return toPosition(-1L);

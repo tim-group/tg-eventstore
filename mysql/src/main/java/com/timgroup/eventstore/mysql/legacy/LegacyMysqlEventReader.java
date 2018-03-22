@@ -11,6 +11,10 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
 
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -20,6 +24,7 @@ import java.util.stream.Stream;
 
 import static java.util.stream.StreamSupport.stream;
 
+@ParametersAreNonnullByDefault
 public final class LegacyMysqlEventReader implements EventReader, EventStreamReader, EventCategoryReader {
 
     private final ConnectionProvider connectionProvider;
@@ -28,7 +33,7 @@ public final class LegacyMysqlEventReader implements EventReader, EventStreamRea
     private final int batchSize;
     private final Optional<Timer> timer;
 
-    public LegacyMysqlEventReader(ConnectionProvider connectionProvider, String database, String tableName, StreamId pretendStreamId, int batchSize, MetricRegistry metricRegistry) {
+    public LegacyMysqlEventReader(ConnectionProvider connectionProvider, String database, String tableName, StreamId pretendStreamId, int batchSize, @Nullable MetricRegistry metricRegistry) {
         this.connectionProvider = connectionProvider;
         this.tableName = tableName;
         this.pretendStreamId = pretendStreamId;
@@ -36,21 +41,27 @@ public final class LegacyMysqlEventReader implements EventReader, EventStreamRea
         this.timer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.read.page_fetch_time", database, tableName)));
     }
 
+    @Nonnull
     @Override
     public Position emptyStorePosition() {
         return LegacyMysqlEventPosition.fromLegacyVersion(0);
     }
 
+    @Nonnull
     @Override
     public Position emptyCategoryPosition(String category) {
         return emptyStorePosition();
     }
 
+    @Nonnull
+    @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readAllForwards() {
         return readAllForwards(emptyStorePosition());
     }
 
+    @Nonnull
+    @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
         return stream(
@@ -66,6 +77,8 @@ public final class LegacyMysqlEventReader implements EventReader, EventStreamRea
         );
     }
 
+    @Nonnull
+    @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readStreamForwards(StreamId streamId, long eventNumber) {
         if (!streamId.equals(pretendStreamId)) {
@@ -75,6 +88,8 @@ public final class LegacyMysqlEventReader implements EventReader, EventStreamRea
         return readAllForwards(LegacyMysqlEventPosition.fromEventNumber(eventNumber));
     }
 
+    @Nonnull
+    @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readCategoryForwards(String category, Position positionExclusive) {
         if (!category.equals(pretendStreamId.category())) {
@@ -83,26 +98,34 @@ public final class LegacyMysqlEventReader implements EventReader, EventStreamRea
         return readAllForwards(positionExclusive);
     }
 
+    @Nonnull
+    @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readAllBackwards() {
         return readAllBackwards(LegacyMysqlEventPosition.fromLegacyVersion(Long.MAX_VALUE));
     }
 
+    @Nonnull
     @Override
     public Optional<ResolvedEvent> readLastEvent() {
         return readBackwards(LegacyMysqlEventPosition.fromLegacyVersion(Long.MAX_VALUE), 1).findFirst();
     }
 
+    @Nonnull
+    @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readAllBackwards(Position positionExclusive) {
         return readBackwards((LegacyMysqlEventPosition) positionExclusive, this.batchSize);
     }
 
+    @Nonnull
+    @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readCategoryBackwards(String category) {
         return readCategoryBackwards(category, LegacyMysqlEventPosition.fromLegacyVersion(Long.MAX_VALUE));
     }
 
+    @Nonnull
     @Override
     public Optional<ResolvedEvent> readLastEventInCategory(String category) {
         if (!category.equals(pretendStreamId.category())) {
@@ -111,6 +134,8 @@ public final class LegacyMysqlEventReader implements EventReader, EventStreamRea
         return readLastEvent();
     }
 
+    @Nonnull
+    @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readCategoryBackwards(String category, Position positionExclusive) {
         if (!category.equals(pretendStreamId.category())) {
@@ -119,16 +144,21 @@ public final class LegacyMysqlEventReader implements EventReader, EventStreamRea
         return readAllBackwards(positionExclusive);
     }
 
+    @Nonnull
+    @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readStreamBackwards(StreamId streamId) {
         return readStreamBackwards(streamId, LegacyMysqlEventPosition.fromLegacyVersion(Long.MAX_VALUE));
     }
 
+    @Nonnull
+    @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readStreamBackwards(StreamId streamId, long eventNumber) {
         return readStreamBackwards(streamId, LegacyMysqlEventPosition.fromEventNumber(eventNumber));
     }
 
+    @Nonnull
     @Override
     public ResolvedEvent readLastEventInStream(StreamId streamId) {
         if (!streamId.equals(pretendStreamId)) {

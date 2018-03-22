@@ -1,9 +1,5 @@
 package com.timgroup.eventstore.stitching;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
 import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventSource;
@@ -12,6 +8,11 @@ import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.tucker.info.Component;
+
+import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 public final class BackfillStitchingEventSource implements EventSource {
 
@@ -27,31 +28,37 @@ public final class BackfillStitchingEventSource implements EventSource {
         this.eventReader = new BackfillStitchingEventReader(backfill, live, liveCutoffStartPosition);
     }
 
+    @Nonnull
     @Override
     public EventReader readAll() {
         return this.eventReader;
     }
 
+    @Nonnull
     @Override
     public EventCategoryReader readCategory() {
         return this.eventReader;
     }
 
+    @Nonnull
     @Override
     public EventStreamReader readStream() {
         throw new UnsupportedOperationException("stitched store does not support reading streams");
     }
 
+    @Nonnull
     @Override
     public EventStreamWriter writeStream() {
         throw new UnsupportedOperationException("stitched store does not support writing");
     }
 
+    @Nonnull
     @Override
     public PositionCodec positionCodec() {
         return positionCodec;
     }
 
+    @Nonnull
     @Override
     public Collection<Component> monitoring() {
         List<Component> result = new ArrayList<>();

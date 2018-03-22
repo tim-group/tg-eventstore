@@ -4,9 +4,11 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventsubscription.ChaserListener;
 import com.timgroup.eventsubscription.EventProcessorListener;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.List;
 import java.util.Optional;
 
+@ParametersAreNonnullByDefault
 public class SubscriptionListenerAdapter implements ChaserListener, EventProcessorListener {
     private final Position startingPosition;
     private final List<SubscriptionListener> listeners;

@@ -8,6 +8,7 @@ import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.tucker.info.Component;
 
+import javax.annotation.Nonnull;
 import java.util.Collection;
 
 import static java.util.Collections.emptyList;
@@ -19,31 +20,37 @@ public class HttpGesEventSource implements EventSource {
         this.host = host;
     }
 
+    @Nonnull
     @Override
     public EventReader readAll() {
         return new HttpGesEventReader(host);
     }
 
+    @Nonnull
     @Override
     public EventCategoryReader readCategory() {
         return new HttpGesEventCategoryReader(readStream());
     }
 
+    @Nonnull
     @Override
     public EventStreamReader readStream() {
         return new HttpGesEventStreamReader(host);
     }
 
+    @Nonnull
     @Override
     public EventStreamWriter writeStream() {
         return new HttpGesEventStreamWriter(host);
     }
 
+    @Nonnull
     @Override
     public PositionCodec positionCodec() {
         return null;
     }
 
+    @Nonnull
     @Override
     public Collection<Component> monitoring() {
         return emptyList();

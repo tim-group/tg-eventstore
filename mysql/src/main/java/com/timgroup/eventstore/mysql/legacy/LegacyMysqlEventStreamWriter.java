@@ -9,6 +9,8 @@ import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.api.WrongExpectedVersionException;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
 
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -17,7 +19,9 @@ import java.util.Collection;
 import java.util.Optional;
 
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
+@ParametersAreNonnullByDefault
 public final class LegacyMysqlEventStreamWriter implements EventStreamWriter {
     private final ConnectionProvider connectionProvider;
     private final String tableName;
@@ -25,10 +29,10 @@ public final class LegacyMysqlEventStreamWriter implements EventStreamWriter {
     private final Optional<Timer> timer;
     private final Optional<Histogram> histogram;
 
-    public LegacyMysqlEventStreamWriter(ConnectionProvider connectionProvider, String databaseName, String tableName, StreamId pretendStreamId, MetricRegistry metricRegistry) {
-        this.connectionProvider = connectionProvider;
-        this.tableName = tableName;
-        this.pretendStreamId = pretendStreamId;
+    public LegacyMysqlEventStreamWriter(ConnectionProvider connectionProvider, String databaseName, String tableName, StreamId pretendStreamId, @Nullable MetricRegistry metricRegistry) {
+        this.connectionProvider = requireNonNull(connectionProvider);
+        this.tableName = requireNonNull(tableName);
+        this.pretendStreamId = requireNonNull(pretendStreamId);
         this.timer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.write.time", databaseName, tableName)));
         this.histogram = Optional.ofNullable(metricRegistry).map(r -> r.histogram(String.format("database.%s.%s.write.count", databaseName, tableName)));
     }

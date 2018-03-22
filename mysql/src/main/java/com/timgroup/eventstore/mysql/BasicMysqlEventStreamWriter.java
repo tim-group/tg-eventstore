@@ -8,6 +8,8 @@ import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.api.WrongExpectedVersionException;
 
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -16,16 +18,18 @@ import java.util.Collection;
 import java.util.Optional;
 
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
+@ParametersAreNonnullByDefault
 public class BasicMysqlEventStreamWriter implements EventStreamWriter {
     private final ConnectionProvider connectionProvider;
     private final String tableName;
     private final Optional<Timer> timer;
     private final Optional<Histogram> histogram;
 
-    public BasicMysqlEventStreamWriter(ConnectionProvider connectionProvider, String databaseName, String tableName, MetricRegistry metricRegistry) {
-        this.connectionProvider = connectionProvider;
-        this.tableName = tableName;
+    public BasicMysqlEventStreamWriter(ConnectionProvider connectionProvider, String databaseName, String tableName, @Nullable MetricRegistry metricRegistry) {
+        this.connectionProvider = requireNonNull(connectionProvider);
+        this.tableName = requireNonNull(tableName);
         this.timer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.write.time", databaseName, tableName)));
         this.histogram = Optional.ofNullable(metricRegistry).map(r -> r.histogram(String.format("database.%s.%s.write.count", databaseName, tableName)));
     }

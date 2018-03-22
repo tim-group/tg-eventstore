@@ -9,6 +9,8 @@ import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
 import com.timgroup.structuredevents.EventSink;
 import com.timgroup.structuredevents.Slf4jEventSink;
 
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -21,6 +23,7 @@ import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
 
+@ParametersAreNonnullByDefault
 public class SubscriptionBuilder<T> {
     private final String name;
     private Clock clock = Clock.systemUTC();
@@ -137,6 +140,7 @@ public class SubscriptionBuilder<T> {
         return this;
     }
 
+    @Nonnull
     public EventSubscription<T> build() {
         requireNonNull(reader);
         requireNonNull(startingPosition);

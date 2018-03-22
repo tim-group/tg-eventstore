@@ -1,10 +1,14 @@
 package com.timgroup.eventstore.merging;
 
 import com.google.common.collect.AbstractIterator;
+import com.google.common.collect.ImmutableList;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Iterator;
@@ -12,10 +16,11 @@ import java.util.List;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import static com.google.common.collect.ImmutableList.copyOf;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
+@ParametersAreNonnullByDefault
 final class MergedEventReader<T extends Comparable<T>> implements EventReader {
 
     private final Clock clock;
@@ -23,11 +28,13 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
     private final List<NamedReaderWithCodec> readers;
 
     public MergedEventReader(Clock clock, MergingStrategy<T> mergingStrategy, NamedReaderWithCodec... readers) {
-        this.clock = clock;
-        this.mergingStrategy = mergingStrategy;
-        this.readers = copyOf(readers);
+        this.clock = requireNonNull(clock);
+        this.mergingStrategy = requireNonNull(mergingStrategy);
+        this.readers = ImmutableList.copyOf(readers);
     }
 
+    @CheckReturnValue
+    @Nonnull
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
         MergedEventReaderPosition mergedPosition = (MergedEventReaderPosition) positionExclusive;
@@ -59,6 +66,7 @@ final class MergedEventReader<T extends Comparable<T>> implements EventReader {
         };
     }
 
+    @Nonnull
     @Override
     public Position emptyStorePosition() {
         String[] names = readers.stream().map(r -> r.name).collect(toList()).toArray(new String[0]);

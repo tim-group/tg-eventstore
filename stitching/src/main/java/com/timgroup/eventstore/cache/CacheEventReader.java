@@ -5,6 +5,9 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -22,6 +25,7 @@ import static java.util.stream.StreamSupport.stream;
 /**
  * Reads events from cache file and then an underylying event reader
  */
+@ParametersAreNonnullByDefault
 public class CacheEventReader implements EventReader {
     private final EventReader underlying;
     private final PositionCodec positionCodec;
@@ -35,6 +39,8 @@ public class CacheEventReader implements EventReader {
         this.cacheFileBaseName = cacheFileBaseName;
     }
 
+    @CheckReturnValue
+    @Nonnull
     @Override
     public Stream<ResolvedEvent> readAllForwards() {
         List<Supplier<DataInputStream>> cacheList = getCacheList();
@@ -64,6 +70,8 @@ public class CacheEventReader implements EventReader {
         return new CacheInputStreamSupplier(path.toFile(), compressed);
     }
 
+    @CheckReturnValue
+    @Nonnull
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
         if (positionExclusive.equals(emptyStorePosition())) {
@@ -73,6 +81,7 @@ public class CacheEventReader implements EventReader {
         }
     }
 
+    @Nonnull
     @Override
     public Position emptyStorePosition() {
         return underlying.emptyStorePosition();

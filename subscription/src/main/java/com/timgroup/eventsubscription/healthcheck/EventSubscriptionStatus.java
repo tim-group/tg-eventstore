@@ -8,6 +8,8 @@ import com.timgroup.tucker.info.Health;
 import com.timgroup.tucker.info.Report;
 import com.timgroup.tucker.info.Status;
 
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -17,6 +19,7 @@ import static com.timgroup.tucker.info.Status.CRITICAL;
 import static com.timgroup.tucker.info.Status.OK;
 import static com.timgroup.tucker.info.Status.WARNING;
 
+@ParametersAreNonnullByDefault
 public class EventSubscriptionStatus extends Component implements Health, SubscriptionListener {
     private final String name;
     private final Clock clock;
@@ -30,7 +33,7 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
     private volatile Report terminatedReport;
     private volatile Instant staleSince;
 
-    public EventSubscriptionStatus(String name, String description, Clock clock, DurationThreshold initialReplay, DurationThreshold staleness, EventSink eventSink) {
+    public EventSubscriptionStatus(String name, @Nullable String description, Clock clock, DurationThreshold initialReplay, DurationThreshold staleness, EventSink eventSink) {
         super("event-subscription-status-" + name, "Event subscription status (" + parenthetical(name, description) + ")");
         this.name = name;
         this.clock = clock;
@@ -112,7 +115,7 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
         terminatedReport = null;
     }
 
-    static String parenthetical(String name, String description) {
+    static String parenthetical(String name, @Nullable String description) {
         if (description != null) {
             return name + ": " + description;
         } else {

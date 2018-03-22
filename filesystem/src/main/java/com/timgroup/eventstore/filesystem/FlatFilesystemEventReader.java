@@ -1,18 +1,22 @@
 package com.timgroup.eventstore.filesystem;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.stream.Stream;
-
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.stream.Stream;
+
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static java.util.Comparator.comparing;
 
+@ParametersAreNonnullByDefault
 final class FlatFilesystemEventReader implements EventReader {
     private static final byte[] EMPTY_METADATA = new byte[0];
     private final Path directory;
@@ -25,6 +29,8 @@ final class FlatFilesystemEventReader implements EventReader {
         this.metadataSuffix = ".metadata" + filenameSuffix;
     }
 
+    @Nonnull
+    @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
         String afterFilename = ((FilesystemPosition) positionExclusive).getFilename();
@@ -39,6 +45,8 @@ final class FlatFilesystemEventReader implements EventReader {
         }
     }
 
+    @Nonnull
+    @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readAllBackwards() {
         try {
@@ -51,6 +59,8 @@ final class FlatFilesystemEventReader implements EventReader {
         }
     }
 
+    @Nonnull
+    @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readAllBackwards(Position positionExclusive) {
         String beforeFilename = ((FilesystemPosition) positionExclusive).getFilename();
@@ -108,6 +118,7 @@ final class FlatFilesystemEventReader implements EventReader {
         return dataPath.resolveSibling(builder.toString());
     }
 
+    @Nonnull
     @Override
     public Position emptyStorePosition() {
         return FilesystemPosition.EMPTY;

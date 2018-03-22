@@ -6,12 +6,13 @@ import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
-import com.timgroup.eventstore.writerutils.IdempotentEventStreamWriter;
 import com.timgroup.eventstore.memory.InMemoryEventSource;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
+import com.timgroup.eventstore.writerutils.IdempotentEventStreamWriter;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -165,6 +166,7 @@ public final class EventShovelTest {
 
         List<Long> expectedVersionsSeen = new ArrayList<>();
         InMemoryEventSource contendedOutputSource = new InMemoryEventSource(new JavaInMemoryEventStore(clock) {
+            @ParametersAreNonnullByDefault
             @Override
             public void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
                 if (!events.isEmpty()) {
@@ -187,6 +189,7 @@ public final class EventShovelTest {
 
         List<Integer> batchSizes = new ArrayList<>();
         InMemoryEventSource rememberingBatchsizesEventStore = new InMemoryEventSource(new JavaInMemoryEventStore(clock) {
+            @ParametersAreNonnullByDefault
             @Override
             public void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
                 batchSizes.add(events.size());

@@ -13,6 +13,8 @@ import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -87,15 +89,18 @@ public final class MergedEventSourceTest {
         Instant event2Instant = event1Instant.minusSeconds(1L);
 
         EventReader input = new EventReader() {
+            @Nonnull
+            @CheckReturnValue
             @Override
-            public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
+            public Stream<ResolvedEvent> readAllForwards(@Nonnull Position positionExclusive) {
                 return ImmutableList.of(
                         new ResolvedEvent(new Position() { }, eventRecord(event1Instant, streamId("a", "1"), 1L, "X", new byte[0], new byte[0])),
                         new ResolvedEvent(new Position() { }, eventRecord(event2Instant, streamId("b", "1"), 1L, "X", new byte[0], new byte[0]))
                 ).stream();
             }
 
-            @Override public Position emptyStorePosition() { return null; }
+            @Nonnull
+            @Override public Position emptyStorePosition() { return new Position() { }; }
         };
 
         EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(clock, ofSeconds(1L), new NamedReaderWithCodec("a", input, JavaInMemoryEventStore.CODEC)).readAll();

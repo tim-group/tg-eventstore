@@ -1,8 +1,10 @@
 package com.timgroup.eventstore.api;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Comparator;
 import java.util.function.Function;
 
+@ParametersAreNonnullByDefault
 public interface PositionCodec {
     Position deserializePosition(String string);
 

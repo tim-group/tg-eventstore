@@ -1,7 +1,14 @@
 package com.timgroup.eventstore.writerutils;
 
-import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.EventStreamReader;
+import com.timgroup.eventstore.api.EventStreamWriter;
+import com.timgroup.eventstore.api.NewEvent;
+import com.timgroup.eventstore.api.NoSuchStreamException;
+import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.api.StreamId;
+import com.timgroup.eventstore.api.WrongExpectedVersionException;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -10,9 +17,9 @@ import java.util.stream.Stream;
 
 import static com.timgroup.eventstore.api.EventStreamReader.EmptyStreamEventNumber;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 
-import com.timgroup.eventstore.writerutils.IdempotentEventStreamWriter.IsCompatible;
-
+@ParametersAreNonnullByDefault
 public final class IdempotentEventStreamWriter implements EventStreamWriter {
 
     public static class IncompatibleNewEventException extends RuntimeException {
@@ -35,9 +42,9 @@ public final class IdempotentEventStreamWriter implements EventStreamWriter {
     private final IsCompatible isCompatible;
 
     private IdempotentEventStreamWriter(EventStreamWriter underlying, EventStreamReader reader, IsCompatible isCompatible) {
-        this.underlying = underlying;
-        this.reader = reader;
-        this.isCompatible = isCompatible;
+        this.underlying = requireNonNull(underlying);
+        this.reader = requireNonNull(reader);
+        this.isCompatible = requireNonNull(isCompatible);
     }
 
     @Override

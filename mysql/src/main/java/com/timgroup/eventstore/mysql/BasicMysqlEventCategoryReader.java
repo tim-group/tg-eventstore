@@ -6,26 +6,33 @@ import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 import static com.timgroup.eventstore.mysql.BasicMysqlEventStorePosition.EMPTY_STORE_POSITION;
-import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.StreamSupport.stream;
 
+@ParametersAreNonnullByDefault
 public class BasicMysqlEventCategoryReader implements EventCategoryReader {
     private final ConnectionProvider connectionProvider;
     private final String tableName;
     private final int batchSize;
     private final Optional<Timer> timer;
 
-    public BasicMysqlEventCategoryReader(ConnectionProvider connectionProvider, String databaseName, String tableName, int batchSize, MetricRegistry metricRegistry) {
-        this.connectionProvider = connectionProvider;
-        this.tableName = tableName;
+    public BasicMysqlEventCategoryReader(ConnectionProvider connectionProvider, String databaseName, String tableName, int batchSize, @Nullable MetricRegistry metricRegistry) {
+        this.connectionProvider = requireNonNull(connectionProvider);
+        this.tableName = requireNonNull(tableName);
         this.batchSize = batchSize;
         this.timer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.read_category.page_fetch_time", databaseName, tableName)));
     }
 
+    @CheckReturnValue
+    @Nonnull
     @Override
     public Stream<ResolvedEvent> readCategoryForwards(String category, Position positionExclusive) {
         return stream(EventSpliterator.readCategoryEventSpliterator(
@@ -39,21 +46,27 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
         ), false);
     }
 
+    @CheckReturnValue
+    @Nonnull
     @Override
     public Stream<ResolvedEvent> readCategoryBackwards(String category) {
         return readCategoryBackwards(category, new BasicMysqlEventStorePosition(Long.MAX_VALUE));
     }
 
+    @CheckReturnValue
+    @Nonnull
     @Override
     public Stream<ResolvedEvent> readCategoryBackwards(String category, Position positionExclusive) {
         return readBackwards(category, (BasicMysqlEventStorePosition) positionExclusive, this.batchSize);
     }
 
+    @Nonnull
     @Override
     public Optional<ResolvedEvent> readLastEventInCategory(String category) {
         return readBackwards(category, new BasicMysqlEventStorePosition(Long.MAX_VALUE), 1).findFirst();
     }
 
+    @Nonnull
     @Override
     public Position emptyCategoryPosition(String category) {
         return EMPTY_STORE_POSITION;

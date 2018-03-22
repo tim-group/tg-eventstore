@@ -10,6 +10,9 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Instant;
 import java.util.Iterator;
 import java.util.stream.Stream;
@@ -21,6 +24,7 @@ import static java.util.Spliterator.ORDERED;
 import static java.util.Spliterators.spliteratorUnknownSize;
 import static scala.collection.JavaConverters.asJavaIteratorConverter;
 
+@ParametersAreNonnullByDefault
 public class LegacyEventStoreEventReaderAdapter implements EventReader, EventStreamReader {
     private final EventStore eventStore;
     private final StreamId pretendStreamId;
@@ -34,17 +38,23 @@ public class LegacyEventStoreEventReaderAdapter implements EventReader, EventStr
         this.pretendStreamId = pretendStreamId;
     }
 
+    @Nonnull
+    @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readAllForwards() {
         return readAllForwards(0);
     }
 
+    @Nonnull
+    @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
         long version = ((LegacyPositionAdapter) positionExclusive).version();
         return readAllForwards(version);
     }
 
+    @Nonnull
+    @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readStreamForwards(StreamId streamId, long eventNumber) {
         if (!streamId.equals(pretendStreamId)) {
@@ -65,6 +75,7 @@ public class LegacyEventStoreEventReaderAdapter implements EventReader, EventStr
         return StreamSupport.stream(spliteratorUnknownSize(events, ORDERED), false).map(this::toResolvedEvent);
     }
 
+    @Nonnull
     @Override
     public Position emptyStorePosition() {
         return new LegacyPositionAdapter(0);

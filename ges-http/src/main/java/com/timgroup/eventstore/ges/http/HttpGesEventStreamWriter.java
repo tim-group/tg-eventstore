@@ -13,6 +13,7 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -22,6 +23,7 @@ import java.util.UUID;
 import static java.lang.Long.MIN_VALUE;
 import static java.util.stream.Collectors.toList;
 
+@ParametersAreNonnullByDefault
 public class HttpGesEventStreamWriter implements EventStreamWriter {
     private final ObjectMapper mapper = new ObjectMapper();
     private final String host;

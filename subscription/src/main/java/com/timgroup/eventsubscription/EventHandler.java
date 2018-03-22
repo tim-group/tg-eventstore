@@ -1,12 +1,14 @@
 package com.timgroup.eventsubscription;
 
+import com.timgroup.eventstore.api.Position;
+import org.joda.time.DateTime;
+
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-import com.timgroup.eventstore.api.Position;
-import org.joda.time.DateTime;
-
+@ParametersAreNonnullByDefault
 public interface EventHandler<T> {
     default void apply(T deserialized) {}
 

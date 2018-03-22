@@ -13,6 +13,7 @@ import com.timgroup.tucker.info.component.DatabaseConnectionComponent;
 import com.typesafe.config.Config;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nonnull;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collection;
@@ -47,31 +48,37 @@ public class BasicMysqlEventSource implements EventSource {
         this(connectionProvider, tableName, DefaultBatchSize, metricRegistry);
     }
 
+    @Nonnull
     @Override
     public EventReader readAll() {
         return new BasicMysqlEventReader(connectionProvider, databaseName, tableName, batchSize, metricRegistry);
     }
 
+    @Nonnull
     @Override
     public EventCategoryReader readCategory() {
         return new BasicMysqlEventCategoryReader(connectionProvider, databaseName, tableName, batchSize, metricRegistry);
     }
 
+    @Nonnull
     @Override
     public EventStreamReader readStream() {
         return new BasicMysqlEventStreamReader(connectionProvider, databaseName, tableName, batchSize, metricRegistry);
     }
 
+    @Nonnull
     @Override
     public EventStreamWriter writeStream() {
         return new BasicMysqlEventStreamWriter(connectionProvider, databaseName, tableName, metricRegistry);
     }
 
+    @Nonnull
     @Override
     public PositionCodec positionCodec() {
         return BasicMysqlEventStorePosition.CODEC;
     }
 
+    @Nonnull
     @Override
     public Collection<Component> monitoring() {
         String id = "EventStore-" + this.name;

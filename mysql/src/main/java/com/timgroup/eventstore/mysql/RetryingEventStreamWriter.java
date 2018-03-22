@@ -5,21 +5,24 @@ import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.api.WrongExpectedVersionException;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Duration;
 import java.util.Collection;
 
 import static java.lang.Thread.sleep;
 import static java.time.Duration.ofMillis;
+import static java.util.Objects.requireNonNull;
 
+@ParametersAreNonnullByDefault
 public class RetryingEventStreamWriter implements EventStreamWriter {
     private final EventStreamWriter underlying;
     private final int count;
     private final Duration interval;
 
     private RetryingEventStreamWriter(EventStreamWriter underlying, int count, Duration interval) {
-        this.underlying = underlying;
+        this.underlying = requireNonNull(underlying);
         this.count = count;
-        this.interval = interval;
+        this.interval = requireNonNull(interval);
     }
 
     @Override

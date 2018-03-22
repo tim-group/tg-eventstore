@@ -1,22 +1,27 @@
 package com.timgroup.eventstore.readerutils;
 
-import java.util.Objects;
-import java.util.Spliterator;
-import java.util.function.Consumer;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
-
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.Objects;
+import java.util.Spliterator;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static java.lang.Long.parseLong;
 import static java.util.Comparator.comparing;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.StreamSupport.stream;
 
+@ParametersAreNonnullByDefault
 public final class RekeyingEventReader implements EventReader {
 
     private final EventReader underlying;
@@ -24,15 +29,17 @@ public final class RekeyingEventReader implements EventReader {
     private final StreamId newStreamId;
 
     private RekeyingEventReader(EventReader underlying, PositionCodec underlyingPositionCodec, StreamId newStreamId) {
-        this.underlying = underlying;
-        this.underlyingPositionCodec = underlyingPositionCodec;
-        this.newStreamId = newStreamId;
+        this.underlying = requireNonNull(underlying);
+        this.underlyingPositionCodec = requireNonNull(underlyingPositionCodec);
+        this.newStreamId = requireNonNull(newStreamId);
     }
 
     public static RekeyingEventReader rekeying(EventReader underlying, PositionCodec underlyingPositionCodec, StreamId newKey) {
         return new RekeyingEventReader(underlying, underlyingPositionCodec, newKey);
     }
 
+    @CheckReturnValue
+    @Nonnull
     @Override
     public final Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
         RekeyedStreamPosition rekeyedEventPosition = (RekeyedStreamPosition)positionExclusive;
@@ -42,6 +49,7 @@ public final class RekeyingEventReader implements EventReader {
                 .onClose(events::close);
     }
 
+    @Nonnull
     @Override
     public final Position emptyStorePosition() {
         return new RekeyedStreamPosition(underlying.emptyStorePosition(), -1L);

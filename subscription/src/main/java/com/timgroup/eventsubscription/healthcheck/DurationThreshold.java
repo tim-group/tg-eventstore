@@ -3,11 +3,13 @@ package com.timgroup.eventsubscription.healthcheck;
 import com.timgroup.tucker.info.Report;
 import com.timgroup.tucker.info.Status;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Duration;
 import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
+@ParametersAreNonnullByDefault
 public class DurationThreshold {
     private final Duration warning;
     private final Duration critical;

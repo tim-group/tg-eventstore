@@ -1,8 +1,10 @@
 package com.timgroup.eventsubscription;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@ParametersAreNonnullByDefault
 public class NamedThreadFactory implements ThreadFactory {
     private final AtomicInteger count = new AtomicInteger();
     private final String name;

@@ -3,10 +3,14 @@ package com.timgroup.eventsubscription;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import static java.util.Objects.requireNonNull;
+
+@ParametersAreNonnullByDefault
 public class EventStoreChaser implements Runnable {
     private final Function<Position, Stream<ResolvedEvent>> eventSource;
     private final Consumer<ResolvedEvent> eventHandler;
@@ -19,10 +23,10 @@ public class EventStoreChaser implements Runnable {
             Position startingPosition,
             Consumer<ResolvedEvent> eventHandler,
             ChaserListener listener) {
-        this.eventSource = eventSource;
-        this.eventHandler = eventHandler;
-        this.listener = listener;
-        this.lastPosition = startingPosition;
+        this.eventSource = requireNonNull(eventSource);
+        this.eventHandler = requireNonNull(eventHandler);
+        this.listener = requireNonNull(listener);
+        this.lastPosition = requireNonNull(startingPosition);
     }
 
     @Override

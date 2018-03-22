@@ -1,11 +1,5 @@
 package com.timgroup.eventstore.clock;
 
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.stream.LongStream;
-import java.util.stream.Stream;
-
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
@@ -13,24 +7,38 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.merging.NamedReaderWithCodec;
 
-import static com.timgroup.eventstore.api.EventRecord.eventRecord;
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
+import static com.timgroup.eventstore.api.EventRecord.eventRecord;
+import static java.util.Objects.requireNonNull;
+
+@ParametersAreNonnullByDefault
 public class TimeReader implements EventReader, PositionCodec {
     private final Instant start;
     private final Duration accuracy;
     private final Clock clock;
 
     public TimeReader(Instant start, Duration accuracy, Clock clock) {
-        this.start = start;
-        this.accuracy = accuracy;
-        this.clock = clock;
+        this.start = requireNonNull(start);
+        this.accuracy = requireNonNull(accuracy);
+        this.clock = requireNonNull(clock);
     }
 
+    @Nonnull
     public static NamedReaderWithCodec timePassedEventStream(Instant start, Duration accuracy, Clock clock) {
         TimeReader timeReader = new TimeReader(start, accuracy, clock);
         return new NamedReaderWithCodec("Clock", timeReader, timeReader);
     }
 
+    @CheckReturnValue
+    @Nonnull
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
         long now = clock.millis();
@@ -50,6 +58,7 @@ public class TimeReader implements EventReader, PositionCodec {
                 )));
     }
 
+    @Nonnull
     @Override
     public Position emptyStorePosition() {
         return new TimePosition(start.toEpochMilli());

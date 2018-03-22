@@ -13,6 +13,9 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
@@ -22,6 +25,7 @@ import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKN
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+@ParametersAreNonnullByDefault
 public class HttpGesEventStreamReader implements EventStreamReader {
     private final String host;
 
@@ -29,6 +33,8 @@ public class HttpGesEventStreamReader implements EventStreamReader {
         this.host = host;
     }
 
+    @CheckReturnValue
+    @Nonnull
     @Override
     public Stream<ResolvedEvent> readStreamForwards(StreamId streamId, long eventNumber) {
         try {

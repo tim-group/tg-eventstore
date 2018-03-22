@@ -1,13 +1,15 @@
 package com.timgroup.eventstore.stitching;
 
-import java.util.Objects;
-import java.util.regex.Pattern;
-
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+import java.util.Objects;
+import java.util.regex.Pattern;
+
 import static java.util.Comparator.comparing;
 
+@ParametersAreNonnullByDefault
 final class StitchedPosition implements Position {
     private static final String STITCH_SEPARATOR = "~~~";
     private static final Pattern STITCH_PATTERN = Pattern.compile(Pattern.quote(STITCH_SEPARATOR));

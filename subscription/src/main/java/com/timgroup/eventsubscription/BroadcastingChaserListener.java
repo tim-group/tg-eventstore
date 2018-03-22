@@ -2,6 +2,9 @@ package com.timgroup.eventsubscription;
 
 import com.timgroup.eventstore.api.Position;
 
+import javax.annotation.ParametersAreNonnullByDefault;
+
+@ParametersAreNonnullByDefault
 public class BroadcastingChaserListener implements ChaserListener {
     private final ChaserListener[] listeners;
 

@@ -8,6 +8,7 @@ import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Clock;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -60,10 +61,12 @@ public class RetryingEventStreamWriterTest {
 
         try {
             retrying(new EventStreamWriter() {
+                @ParametersAreNonnullByDefault
                 @Override
                 public void write(StreamId streamId, Collection<NewEvent> events) {
                 }
 
+                @ParametersAreNonnullByDefault
                 @Override
                 public void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
                     writeCount.incrementAndGet();
@@ -80,6 +83,7 @@ public class RetryingEventStreamWriterTest {
         return new EventStreamWriter() {
             private int remaining = count;
 
+            @ParametersAreNonnullByDefault
             @Override
             public void write(StreamId streamId, Collection<NewEvent> events) {
                 if (remaining == 0) {
@@ -90,6 +94,7 @@ public class RetryingEventStreamWriterTest {
                 }
             }
 
+            @ParametersAreNonnullByDefault
             @Override
             public void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
                 if (remaining == 0) {

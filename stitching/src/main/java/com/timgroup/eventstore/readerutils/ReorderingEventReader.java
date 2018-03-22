@@ -6,6 +6,9 @@ import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -13,28 +16,32 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import static java.util.Objects.requireNonNull;
 import static java.util.Spliterator.ORDERED;
 import static java.util.Spliterators.spliteratorUnknownSize;
 import static java.util.stream.Stream.concat;
 import static java.util.stream.StreamSupport.stream;
 
-
+@ParametersAreNonnullByDefault
 public final class ReorderingEventReader<T extends Comparable<T>> implements EventReader {
     private final EventReader underlying;
     private final T cutoffSortKey;
     private final Function<ResolvedEvent, T> sortKeyExtractor;
 
     public ReorderingEventReader(EventReader underlying, T cutoffSortKey, Function<ResolvedEvent, T> sortKeyExtractor) {
-        this.underlying = underlying;
-        this.cutoffSortKey = cutoffSortKey;
-        this.sortKeyExtractor = sortKeyExtractor;
+        this.underlying = requireNonNull(underlying);
+        this.cutoffSortKey = requireNonNull(cutoffSortKey);
+        this.sortKeyExtractor = requireNonNull(sortKeyExtractor);
     }
 
+    @Nonnull
     @Override
     public Position emptyStorePosition() {
         return underlying.emptyStorePosition();
     }
 
+    @CheckReturnValue
+    @Nonnull
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
         try(Stream<ResolvedEvent> allForwards = underlying.readAllForwards(positionExclusive)) {

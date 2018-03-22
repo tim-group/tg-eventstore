@@ -1,18 +1,22 @@
 package com.timgroup.eventstore.mysql;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import static java.util.Objects.requireNonNull;
+
+@ParametersAreNonnullByDefault
 public class BasicMysqlEventStoreSetup {
     private final ConnectionProvider connectionProvider;
     private final String tableName;
 
     public BasicMysqlEventStoreSetup(ConnectionProvider connectionProvider, String tableName) {
-        this.connectionProvider = connectionProvider;
-        this.tableName = tableName;
+        this.connectionProvider = requireNonNull(connectionProvider);
+        this.tableName = requireNonNull(tableName);
     }
 
     public void drop() {

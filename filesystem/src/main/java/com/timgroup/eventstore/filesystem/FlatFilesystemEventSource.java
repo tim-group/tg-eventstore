@@ -1,10 +1,5 @@
 package com.timgroup.eventstore.filesystem;
 
-import java.nio.file.Path;
-import java.time.Clock;
-import java.util.Collection;
-import java.util.Collections;
-
 import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventSource;
@@ -12,6 +7,12 @@ import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.tucker.info.Component;
+
+import javax.annotation.Nonnull;
+import java.nio.file.Path;
+import java.time.Clock;
+import java.util.Collection;
+import java.util.Collections;
 
 public final class FlatFilesystemEventSource implements EventSource {
     private final Path directory;
@@ -24,32 +25,38 @@ public final class FlatFilesystemEventSource implements EventSource {
         this.filenameSuffix = filenameSuffix;
     }
 
+    @Nonnull
     @Override
     public EventReader readAll() {
         return new FlatFilesystemEventReader(directory, filenameSuffix);
     }
 
+    @Nonnull
     @Override
     public EventCategoryReader readCategory() {
         return new FilteringCategoryReader(readAll());
     }
 
+    @Nonnull
     @Override
     public EventStreamReader readStream() {
         FlatFilesystemEventReader eventReader = new FlatFilesystemEventReader(directory, filenameSuffix);
         return new FilteringStreamReader(eventReader, eventReader::streamExists);
     }
 
+    @Nonnull
     @Override
     public EventStreamWriter writeStream() {
         return new FlatFilesystemEventStreamWriter(directory, clock, filenameSuffix);
     }
 
+    @Nonnull
     @Override
     public PositionCodec positionCodec() {
         return FilesystemPosition.CODEC;
     }
 
+    @Nonnull
     @Override
     public Collection<Component> monitoring() {
         return Collections.emptyList();

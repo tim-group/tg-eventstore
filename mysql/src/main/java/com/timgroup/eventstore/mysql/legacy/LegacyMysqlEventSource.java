@@ -2,7 +2,13 @@ package com.timgroup.eventstore.mysql.legacy;
 
 import com.codahale.metrics.MetricRegistry;
 import com.mchange.v2.c3p0.PooledDataSource;
-import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.EventCategoryReader;
+import com.timgroup.eventstore.api.EventReader;
+import com.timgroup.eventstore.api.EventSource;
+import com.timgroup.eventstore.api.EventStreamReader;
+import com.timgroup.eventstore.api.EventStreamWriter;
+import com.timgroup.eventstore.api.PositionCodec;
+import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
 import com.timgroup.eventstore.mysql.StacksConfiguredDataSource;
 import com.timgroup.tucker.info.Component;
@@ -10,6 +16,7 @@ import com.timgroup.tucker.info.component.DatabaseConnectionComponent;
 import com.typesafe.config.Config;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nonnull;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collection;
@@ -46,31 +53,37 @@ public class LegacyMysqlEventSource implements EventSource {
         this(connectionProvider, tableName, DEFAULT_BATCH_SIZE, metricRegistry);
     }
 
+    @Nonnull
     @Override
     public EventReader readAll() {
         return eventReader;
     }
 
+    @Nonnull
     @Override
     public EventCategoryReader readCategory() {
         return eventReader;
     }
 
+    @Nonnull
     @Override
     public EventStreamReader readStream() {
         return eventReader;
     }
 
+    @Nonnull
     @Override
     public EventStreamWriter writeStream() {
         return eventStreamWriter;
     }
 
+    @Nonnull
     @Override
     public PositionCodec positionCodec() {
         return LegacyMysqlEventPosition.CODEC;
     }
 
+    @Nonnull
     @Override
     public Collection<Component> monitoring() {
         String id = "EventStore-" + this.name;

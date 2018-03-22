@@ -13,6 +13,8 @@ import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.util.stream.Stream;
 
@@ -20,6 +22,7 @@ import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKN
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static org.apache.http.auth.AuthScope.ANY;
 
+@ParametersAreNonnullByDefault
 public class HttpGesEventReader implements EventReader {
     private final String host;
 
@@ -27,6 +30,7 @@ public class HttpGesEventReader implements EventReader {
         this.host = host;
     }
 
+    @Nonnull
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
         try {
@@ -69,6 +73,7 @@ public class HttpGesEventReader implements EventReader {
             throw new RuntimeException(e);
         }    }
 
+    @Nonnull
     @Override
     public Position emptyStorePosition() {
         return null;

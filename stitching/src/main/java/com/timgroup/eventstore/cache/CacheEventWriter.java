@@ -5,17 +5,21 @@ import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import static java.util.Objects.requireNonNull;
+
+@ParametersAreNonnullByDefault
 public class CacheEventWriter implements AutoCloseable {
     private final PositionCodec positionCodec;
     private final DataOutputStream output;
 
     public CacheEventWriter(OutputStream outputStream, PositionCodec positionCodec) {
-        this.positionCodec = positionCodec;
-        this.output = new DataOutputStream(outputStream);
+        this.positionCodec = requireNonNull(positionCodec);
+        this.output = new DataOutputStream(requireNonNull(outputStream));
     }
 
     public void write(ResolvedEvent resolvedEvent) {

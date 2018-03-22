@@ -13,6 +13,9 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.api.WrongExpectedVersionException;
 
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -24,6 +27,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@ParametersAreNonnullByDefault
 public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamReader, EventCategoryReader, EventReader {
     public static final PositionCodec CODEC = PositionCodec.ofComparable(InMemoryEventStorePosition.class,
             str -> new InMemoryEventStorePosition(Long.parseLong(str)),
@@ -41,18 +45,24 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     }
 
     @Override
+    @Nonnull
+    @CheckReturnValue
     public Stream<ResolvedEvent> readStreamForwards(StreamId streamId, long eventNumberExclusive) {
         ensureStreamExists(streamId);
         return internalReadStream(streamId, eventNumberExclusive);
     }
 
     @Override
+    @Nonnull
+    @CheckReturnValue
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
         InMemoryEventStorePosition inMemoryPosition = (InMemoryEventStorePosition) positionExclusive;
         return events.stream().skip(inMemoryPosition.eventNumber);
     }
 
     @Override
+    @Nonnull
+    @CheckReturnValue
     public Stream<ResolvedEvent> readAllBackwards() {
         List<ResolvedEvent> reversed = new ArrayList<>(events);
         Collections.reverse(reversed);
@@ -60,6 +70,8 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     }
 
     @Override
+    @Nonnull
+    @CheckReturnValue
     public Stream<ResolvedEvent> readAllBackwards(Position positionExclusive) {
         InMemoryEventStorePosition inMemoryPosition = (InMemoryEventStorePosition) positionExclusive;
         List<ResolvedEvent> reversed = events.stream().limit(inMemoryPosition.eventNumber - 1).collect(Collectors.toList());
@@ -73,6 +85,8 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     }
 
     @Override
+    @Nonnull
+    @CheckReturnValue
     public Position emptyStorePosition() {
         return new InMemoryEventStorePosition(0);
     }
@@ -101,27 +115,37 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     }
 
     @Override
+    @Nonnull
+    @CheckReturnValue
     public Stream<ResolvedEvent> readCategoryForwards(String category, Position position) {
         return readAllForwards(position).filter(evt -> evt.eventRecord().streamId().category().equals(category));
     }
 
     @Override
+    @Nonnull
+    @CheckReturnValue
     public Stream<ResolvedEvent> readCategoryBackwards(String category) {
         return readAllBackwards().filter(evt -> evt.eventRecord().streamId().category().equals(category));
     }
 
     @Override
+    @Nonnull
+    @CheckReturnValue
     public Stream<ResolvedEvent> readCategoryBackwards(String category, Position position) {
         return readAllBackwards(position).filter(evt -> evt.eventRecord().streamId().category().equals(category));
     }
 
     @Override
+    @Nonnull
+    @CheckReturnValue
     public Stream<ResolvedEvent> readStreamBackwards(StreamId streamId) {
         ensureStreamExists(streamId);
         return readAllBackwards().filter(evt -> evt.eventRecord().streamId().equals(streamId));
     }
 
     @Override
+    @Nonnull
+    @CheckReturnValue
     public Stream<ResolvedEvent> readStreamBackwards(StreamId streamId, long eventNumberExclusive) {
         ensureStreamExists(streamId);
         return readAllBackwards()
@@ -130,6 +154,7 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     }
 
     @Override
+    @Nonnull
     public Position emptyCategoryPosition(String category) {
         return emptyStorePosition();
     }
@@ -142,9 +167,11 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     }
 
     private void ensureStreamExists(StreamId streamId) {
-        internalReadStream(streamId, Long.MIN_VALUE)
+        if (!internalReadStream(streamId, Long.MIN_VALUE)
                 .findAny()
-                .orElseThrow(() -> new NoSuchStreamException(streamId));
+                .isPresent()) {
+            throw new NoSuchStreamException(streamId);
+        }
     }
 
     private Stream<ResolvedEvent> internalReadStream(StreamId streamId, long eventNumberExclusive) {
