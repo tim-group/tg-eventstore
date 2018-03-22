@@ -9,7 +9,7 @@ import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Optional;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
@@ -18,23 +18,24 @@ import static java.util.Objects.requireNonNull;
 public class TransformingEventReader implements EventReader {
 
     private final EventReader underlying;
-    private final Function<ResolvedEvent, ResolvedEvent> transformer;
+    private final UnaryOperator<ResolvedEvent> transformer;
 
-    protected TransformingEventReader(EventReader underlying, Function<ResolvedEvent, ResolvedEvent> transformer) {
+    protected TransformingEventReader(EventReader underlying, UnaryOperator<ResolvedEvent> transformer) {
         this.underlying = requireNonNull(underlying);
         this.transformer = requireNonNull(transformer);
     }
 
-    public static TransformingEventReader transformEventRecords(EventReader underlying, Function<EventRecord, EventRecord> transformer) {
+    public static TransformingEventReader transformEventRecords(EventReader underlying, UnaryOperator<EventRecord> transformer) {
         return transformResolvedEvents(underlying, toResolvedEventTransformer(transformer));
     }
 
-    public static TransformingEventReader transformResolvedEvents(EventReader underlying, Function<ResolvedEvent, ResolvedEvent> transformer) {
+    public static TransformingEventReader transformResolvedEvents(EventReader underlying, UnaryOperator<ResolvedEvent> transformer) {
         return new TransformingEventReader(underlying, transformer);
     }
 
 
-    public static Function<ResolvedEvent, ResolvedEvent> toResolvedEventTransformer(Function<EventRecord, EventRecord> transformer) {
+    public static UnaryOperator<ResolvedEvent> toResolvedEventTransformer(UnaryOperator<EventRecord> transformer) {
+        requireNonNull(transformer);
         return re -> new ResolvedEvent(re.position(), transformer.apply(re.eventRecord()));
     }
 
