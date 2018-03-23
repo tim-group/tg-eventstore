@@ -8,7 +8,6 @@ import com.timgroup.eventstore.api.StreamId;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Objects;
 import java.util.Spliterator;
 import java.util.function.Consumer;
@@ -21,7 +20,6 @@ import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.StreamSupport.stream;
 
-@ParametersAreNonnullByDefault
 public final class RekeyingEventReader implements EventReader {
 
     private final EventReader underlying;

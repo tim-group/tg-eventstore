@@ -8,6 +8,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static java.lang.Long.MAX_VALUE;
+import static java.util.Objects.requireNonNull;
 
 final class BackfillStitchingEventForwardsSpliterator implements Spliterator<ResolvedEvent> {
 
@@ -20,7 +21,7 @@ final class BackfillStitchingEventForwardsSpliterator implements Spliterator<Res
     private BackfillStitchingEventForwardsSpliterator(Stream<ResolvedEvent> backfillStream, Stream<ResolvedEvent> liveStream, StitchedPosition startingPositionExclusive) {
         this.backfillSpliterator = backfillStream.spliterator();
         this.liveSpliterator = liveStream.spliterator();
-        this.lastPosition = startingPositionExclusive;
+        this.lastPosition = requireNonNull(startingPositionExclusive);
     }
 
     static Stream<ResolvedEvent> stitchedStreamFrom(Stream<ResolvedEvent> backfillStream, Stream<ResolvedEvent> liveStream, StitchedPosition startingPositionExclusive) {

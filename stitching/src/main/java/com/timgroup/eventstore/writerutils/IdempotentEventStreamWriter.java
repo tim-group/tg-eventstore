@@ -8,7 +8,6 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.api.WrongExpectedVersionException;
 
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -19,7 +18,6 @@ import static com.timgroup.eventstore.api.EventStreamReader.EmptyStreamEventNumb
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
-@ParametersAreNonnullByDefault
 public final class IdempotentEventStreamWriter implements EventStreamWriter {
 
     public static class IncompatibleNewEventException extends RuntimeException {

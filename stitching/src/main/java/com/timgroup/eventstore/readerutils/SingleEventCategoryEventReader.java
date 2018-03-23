@@ -8,13 +8,11 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
 
-@ParametersAreNonnullByDefault
 public final class SingleEventCategoryEventReader implements EventReader {
 
     private final EventCategoryReader underlying;

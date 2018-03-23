@@ -13,18 +13,18 @@ import static java.util.Objects.requireNonNull;
 
 public interface MergingStrategy<T extends Comparable<T>> {
 
-    @Nonnull T toComparable(@Nonnull ResolvedEvent event);
+    @Nonnull T toComparable(ResolvedEvent event);
 
     @Nonnull default Duration delay() { return Duration.ZERO; }
 
-    @Nonnull default MergingStrategy<T> withDelay(@Nonnull Duration delay) {
+    @Nonnull default MergingStrategy<T> withDelay(Duration delay) {
         return new DelayedMergingStrategy<>(delay, this);
     }
 
     final class StreamIndexMergingStrategy implements MergingStrategy<Integer> {
         @Nonnull
         @Override
-        public Integer toComparable(@Nonnull ResolvedEvent event) {
+        public Integer toComparable(ResolvedEvent event) {
             return 0;
         }
     }
@@ -34,7 +34,7 @@ public interface MergingStrategy<T extends Comparable<T>> {
 
         @Nonnull
         @Override
-        public Instant toComparable(@Nonnull ResolvedEvent event) {
+        public Instant toComparable(ResolvedEvent event) {
             return effectiveTimestampFrom(event);
         }
 
@@ -59,7 +59,7 @@ public interface MergingStrategy<T extends Comparable<T>> {
 
         @Nonnull
         @Override
-        public T toComparable(@Nonnull ResolvedEvent event) {
+        public T toComparable(ResolvedEvent event) {
             return delegate.toComparable(event);
         }
 

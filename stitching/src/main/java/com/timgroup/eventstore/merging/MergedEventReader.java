@@ -8,7 +8,6 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Iterator;
@@ -20,7 +19,6 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
-@ParametersAreNonnullByDefault
 final class MergedEventReader<T extends Comparable<T>> implements EventReader {
 
     private final Clock clock;

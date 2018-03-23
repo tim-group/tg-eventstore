@@ -7,14 +7,12 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
 
-@ParametersAreNonnullByDefault
 public class TransformingEventReader implements EventReader {
 
     private final EventReader underlying;

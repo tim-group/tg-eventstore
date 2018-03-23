@@ -9,6 +9,8 @@ import java.io.InputStream;
 import java.util.function.Supplier;
 import java.util.zip.GZIPInputStream;
 
+import static java.util.Objects.requireNonNull;
+
 public class CacheInputStreamSupplier implements Supplier<DataInputStream> {
 
     private final File cacheFile;
@@ -20,7 +22,7 @@ public class CacheInputStreamSupplier implements Supplier<DataInputStream> {
     }
 
     public CacheInputStreamSupplier(File cacheFile, boolean compressed) {
-        this.cacheFile = cacheFile;
+        this.cacheFile = requireNonNull(cacheFile);
         this.compressed = compressed;
     }
 

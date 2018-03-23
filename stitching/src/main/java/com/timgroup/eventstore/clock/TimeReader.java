@@ -9,7 +9,6 @@ import com.timgroup.eventstore.merging.NamedReaderWithCodec;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -19,7 +18,6 @@ import java.util.stream.Stream;
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static java.util.Objects.requireNonNull;
 
-@ParametersAreNonnullByDefault
 public class TimeReader implements EventReader, PositionCodec {
     private final Instant start;
     private final Duration accuracy;

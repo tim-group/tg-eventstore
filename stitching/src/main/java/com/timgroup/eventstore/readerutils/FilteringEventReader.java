@@ -6,7 +6,6 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -14,7 +13,6 @@ import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
 
-@ParametersAreNonnullByDefault
 public final class FilteringEventReader implements EventReader {
 
     private final EventReader underlying;

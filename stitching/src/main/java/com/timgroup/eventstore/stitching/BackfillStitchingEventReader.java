@@ -11,6 +11,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.stream.Stream;
 
+import static java.util.Objects.requireNonNull;
+
 @ParametersAreNonnullByDefault
 public final class BackfillStitchingEventReader implements EventReader, EventCategoryReader {
 
@@ -20,7 +22,7 @@ public final class BackfillStitchingEventReader implements EventReader, EventCat
 
     public BackfillStitchingEventReader(EventSource backfill, EventSource live, Position liveCutoffStartPosition) {
         this.backfill = backfill;
-        this.live = live;
+        this.live = requireNonNull(live);
         this.emptyStorePosition = new StitchedPosition(backfill.readAll().emptyStorePosition(), liveCutoffStartPosition);
     }
 

@@ -17,7 +17,6 @@ import com.timgroup.eventstore.writerutils.IdempotentEventStreamWriter.Incompati
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.component.SimpleValueComponent;
 
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
@@ -37,7 +36,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 
-@ParametersAreNonnullByDefault
 public final class EventShovel {
     private static final String SHOVEL_POSITION_METADATA_FIELD = "shovel_position";
 

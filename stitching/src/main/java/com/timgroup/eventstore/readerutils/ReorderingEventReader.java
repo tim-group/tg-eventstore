@@ -8,7 +8,6 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -22,7 +21,6 @@ import static java.util.Spliterators.spliteratorUnknownSize;
 import static java.util.stream.Stream.concat;
 import static java.util.stream.StreamSupport.stream;
 
-@ParametersAreNonnullByDefault
 public final class ReorderingEventReader<T extends Comparable<T>> implements EventReader {
     private final EventReader underlying;
     private final T cutoffSortKey;

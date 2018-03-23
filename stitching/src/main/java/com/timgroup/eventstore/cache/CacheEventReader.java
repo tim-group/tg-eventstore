@@ -7,7 +7,6 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,7 +24,6 @@ import static java.util.stream.StreamSupport.stream;
 /**
  * Reads events from cache file and then an underylying event reader
  */
-@ParametersAreNonnullByDefault
 public class CacheEventReader implements EventReader {
     private final EventReader underlying;
     private final PositionCodec positionCodec;
