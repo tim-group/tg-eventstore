@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.api;
 
+import javax.annotation.Nonnull;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Arrays;
@@ -18,7 +19,7 @@ public final class EventRecord {
     private EventRecord(Instant timestamp, StreamId streamId, long eventNumber, String eventType, byte[] data, byte[] metadata) {
         this.timestamp = requireNonNull(timestamp);
         this.streamId = requireNonNull(streamId);
-        this.eventNumber = requireNonNull(eventNumber);
+        this.eventNumber = eventNumber;
         this.eventType = requireNonNull(eventType);
         this.data = requireNonNull(data);
         this.metadata = requireNonNull(metadata);
@@ -32,6 +33,7 @@ public final class EventRecord {
         return new ResolvedEvent(position, this);
     }
 
+    @Nonnull
     public String locator() {
         return String.format("<%s/%s/%s>(%s)",
                 streamId().category(),
@@ -83,22 +85,27 @@ public final class EventRecord {
         return eventNumber;
     }
 
+    @Nonnull
     public StreamId streamId() {
         return streamId;
     }
 
+    @Nonnull
     public String eventType() {
         return eventType;
     }
 
+    @Nonnull
     public Instant timestamp() {
         return timestamp;
     }
 
+    @Nonnull
     public byte[] data() {
         return data;
     }
 
+    @Nonnull
     public byte[] metadata() {
         return metadata;
     }

@@ -1,5 +1,7 @@
 package com.timgroup.eventstore.api;
 
+import javax.annotation.Nonnull;
+
 import static java.util.Objects.requireNonNull;
 
 public final class StreamId {
@@ -18,10 +20,12 @@ public final class StreamId {
         return new StreamId(category, id);
     }
 
+    @Nonnull
     public String category() {
         return category;
     }
 
+    @Nonnull
     public String id() {
         return id;
     }

@@ -2,10 +2,8 @@ package com.timgroup.eventstore.api;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.stream.Stream;
 
-@ParametersAreNonnullByDefault
 public interface EventStreamReader {
     long EmptyStreamEventNumber = -1;
 

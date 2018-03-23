@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.api;
 
+import javax.annotation.Nonnull;
 import java.time.Instant;
 import java.util.Arrays;
 
@@ -60,14 +61,17 @@ public final class NewEvent {
                 '}';
     }
 
+    @Nonnull
     public String type() {
         return type;
     }
 
+    @Nonnull
     public byte[] data() {
         return data;
     }
 
+    @Nonnull
     public byte[] metadata() {
         return metadata;
     }

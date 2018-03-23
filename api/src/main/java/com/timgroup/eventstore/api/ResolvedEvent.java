@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.api;
 
+import javax.annotation.Nonnull;
 import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
@@ -35,14 +36,17 @@ public final class ResolvedEvent {
                 '}';
     }
 
+    @Nonnull
     public String locator() {
         return String.format("@%s%s", position, eventRecord.locator());
     }
 
+    @Nonnull
     public Position position() {
         return position;
     }
 
+    @Nonnull
     public EventRecord eventRecord() {
         return eventRecord;
     }

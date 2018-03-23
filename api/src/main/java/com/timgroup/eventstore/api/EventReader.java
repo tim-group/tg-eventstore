@@ -2,11 +2,9 @@ package com.timgroup.eventstore.api;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-@ParametersAreNonnullByDefault
 public interface EventReader {
     @Nonnull
     @CheckReturnValue
