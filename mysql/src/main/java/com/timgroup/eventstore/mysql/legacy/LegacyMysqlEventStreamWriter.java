@@ -10,7 +10,6 @@ import com.timgroup.eventstore.api.WrongExpectedVersionException;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
 
 import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -21,7 +20,6 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-@ParametersAreNonnullByDefault
 public final class LegacyMysqlEventStreamWriter implements EventStreamWriter {
     private final ConnectionProvider connectionProvider;
     private final String tableName;

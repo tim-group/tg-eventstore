@@ -14,6 +14,7 @@ import com.typesafe.config.Config;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collection;
@@ -31,7 +32,7 @@ public class BasicMysqlEventSource implements EventSource {
     private final String name;
     private final MetricRegistry metricRegistry;
 
-    public BasicMysqlEventSource(ConnectionProvider connectionProvider, String tableName, int batchSize, String name, MetricRegistry metricRegistry) {
+    public BasicMysqlEventSource(ConnectionProvider connectionProvider, String tableName, int batchSize, String name, @Nullable MetricRegistry metricRegistry) {
         this.connectionProvider = connectionProvider;
         this.databaseName = databaseName(connectionProvider);
         this.tableName = tableName;
@@ -103,7 +104,7 @@ public class BasicMysqlEventSource implements EventSource {
         return pooledMasterDbEventSource(config, tableName, name, null);
     }
 
-    public static PooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name, MetricRegistry metricRegistry) {
+    public static PooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name, @Nullable MetricRegistry metricRegistry) {
         return pooledMasterDbEventSource(config, tableName, name, DefaultBatchSize, metricRegistry);
     }
 
@@ -115,7 +116,7 @@ public class BasicMysqlEventSource implements EventSource {
         return pooledMasterDbEventSource(config, tableName, name, batchSize, null);
     }
 
-    public static PooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name, int batchSize, MetricRegistry metricRegistry) {
+    public static PooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name, int batchSize, @Nullable MetricRegistry metricRegistry) {
         return pooledMasterDbEventSource(StacksConfiguredDataSource.pooledMasterDb(config, metricRegistry), tableName, name, batchSize, metricRegistry);
     }
 
@@ -127,7 +128,7 @@ public class BasicMysqlEventSource implements EventSource {
         return pooledMasterDbEventSource(properties, configPrefix, tableName, name, null);
     }
 
-    public static PooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name, MetricRegistry metricRegistry) {
+    public static PooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name, @Nullable MetricRegistry metricRegistry) {
         return pooledMasterDbEventSource(properties, configPrefix, tableName, name, DefaultBatchSize, metricRegistry);
     }
 
@@ -139,7 +140,7 @@ public class BasicMysqlEventSource implements EventSource {
         return pooledMasterDbEventSource(properties, configPrefix, tableName, name, batchSize, null);
     }
 
-    public static PooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize, MetricRegistry metricRegistry) {
+    public static PooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize, @Nullable MetricRegistry metricRegistry) {
         return pooledMasterDbEventSource(StacksConfiguredDataSource.pooledMasterDb(properties, configPrefix, metricRegistry), tableName, name, batchSize, metricRegistry);
     }
 
@@ -151,7 +152,7 @@ public class BasicMysqlEventSource implements EventSource {
         return pooledMasterDbEventSource(dataSource, tableName, name, null);
     }
 
-    public static PooledMysqlEventSource pooledMasterDbEventSource(PooledDataSource dataSource, String tableName, String name, MetricRegistry metricRegistry) {
+    public static PooledMysqlEventSource pooledMasterDbEventSource(PooledDataSource dataSource, String tableName, String name, @Nullable MetricRegistry metricRegistry) {
         return pooledMasterDbEventSource(dataSource, tableName, name, DefaultBatchSize, metricRegistry);
     }
 
@@ -163,7 +164,7 @@ public class BasicMysqlEventSource implements EventSource {
         return pooledReadOnlyDbEventSource(config, tableName, name, null);
     }
 
-    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(Config config, String tableName, String name, MetricRegistry metricRegistry) {
+    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(Config config, String tableName, String name, @Nullable MetricRegistry metricRegistry) {
         return pooledReadOnlyDbEventSource(config, tableName, name, DefaultBatchSize, metricRegistry);
     }
 
@@ -175,7 +176,7 @@ public class BasicMysqlEventSource implements EventSource {
         return pooledReadOnlyDbEventSource(config, tableName, name, batchSize, null);
     }
 
-    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(Config config, String tableName, String name, int batchSize, MetricRegistry metricRegistry) {
+    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(Config config, String tableName, String name, int batchSize, @Nullable MetricRegistry metricRegistry) {
         return new PooledMysqlEventSource(StacksConfiguredDataSource.pooledReadOnlyDb(config, metricRegistry), tableName, batchSize, name, metricRegistry);
     }
 
@@ -187,7 +188,7 @@ public class BasicMysqlEventSource implements EventSource {
         return pooledReadOnlyDbEventSource(properties, configPrefix, tableName, name, null);
     }
 
-    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name, MetricRegistry metricRegistry) {
+    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name, @Nullable MetricRegistry metricRegistry) {
         return pooledReadOnlyDbEventSource(properties, configPrefix, tableName, name, DefaultBatchSize, metricRegistry);
     }
 
@@ -199,7 +200,7 @@ public class BasicMysqlEventSource implements EventSource {
         return pooledReadOnlyDbEventSource(properties, configPrefix, tableName, name, batchSize, null);
     }
 
-    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize, MetricRegistry metricRegistry) {
+    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize, @Nullable MetricRegistry metricRegistry) {
         return new PooledMysqlEventSource(StacksConfiguredDataSource.pooledReadOnlyDb(properties, configPrefix, metricRegistry), tableName, batchSize, name, metricRegistry);
     }
 
@@ -211,7 +212,7 @@ public class BasicMysqlEventSource implements EventSource {
         return pooledReadOnlyDbEventSource(dataSource, tableName, name, null);
     }
 
-    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(PooledDataSource dataSource, String tableName, String name, MetricRegistry metricRegistry) {
+    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(PooledDataSource dataSource, String tableName, String name, @Nullable MetricRegistry metricRegistry) {
         return new PooledMysqlEventSource(dataSource, tableName, DefaultBatchSize, name, metricRegistry);
     }
 
@@ -223,7 +224,7 @@ public class BasicMysqlEventSource implements EventSource {
         return pooledReadOnlyDbEventSource(dataSource, tableName, name, batchSize, null);
     }
 
-    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(PooledDataSource dataSource, String tableName, String name, int batchSize, MetricRegistry metricRegistry) {
+    public static PooledMysqlEventSource pooledReadOnlyDbEventSource(PooledDataSource dataSource, String tableName, String name, int batchSize, @Nullable MetricRegistry metricRegistry) {
         return new PooledMysqlEventSource(dataSource, tableName, batchSize, name, metricRegistry);
     }
 
@@ -235,7 +236,7 @@ public class BasicMysqlEventSource implements EventSource {
         return pooledMasterDbEventSource(dataSource, tableName, name, batchSize, null);
     }
 
-    public static PooledMysqlEventSource pooledMasterDbEventSource(PooledDataSource dataSource, String tableName, String name, int batchSize, MetricRegistry metricRegistry) {
+    public static PooledMysqlEventSource pooledMasterDbEventSource(PooledDataSource dataSource, String tableName, String name, int batchSize, @Nullable MetricRegistry metricRegistry) {
         try {
             new BasicMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
         } catch (Exception e) {
@@ -257,7 +258,7 @@ public class BasicMysqlEventSource implements EventSource {
             this(dataSource, tableName, defaultBatchSize, name, null);
         }
 
-        public PooledMysqlEventSource(PooledDataSource dataSource, String tableName, int defaultBatchSize, String name, MetricRegistry metricRegistry) {
+        public PooledMysqlEventSource(PooledDataSource dataSource, String tableName, int defaultBatchSize, String name, @Nullable MetricRegistry metricRegistry) {
             super(dataSource::getConnection, tableName, defaultBatchSize, name, metricRegistry);
             this.dataSource = dataSource;
         }

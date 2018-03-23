@@ -14,7 +14,6 @@ import com.timgroup.eventstore.mysql.ConnectionProvider;
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -24,7 +23,6 @@ import java.util.stream.Stream;
 
 import static java.util.stream.StreamSupport.stream;
 
-@ParametersAreNonnullByDefault
 public final class LegacyMysqlEventReader implements EventReader, EventStreamReader, EventCategoryReader {
 
     private final ConnectionProvider connectionProvider;

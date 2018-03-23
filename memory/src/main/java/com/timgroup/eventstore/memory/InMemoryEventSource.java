@@ -9,13 +9,11 @@ import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.tucker.info.Component;
 
 import javax.annotation.Nonnull;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Collection;
 import java.util.Collections;
 
 import static java.util.Objects.requireNonNull;
 
-@ParametersAreNonnullByDefault
 public class InMemoryEventSource implements EventSource {
     private final JavaInMemoryEventStore eventStore;
 

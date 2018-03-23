@@ -7,6 +7,7 @@ import com.typesafe.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.sql.SQLException;
 import java.util.Optional;
 import java.util.Properties;
@@ -30,7 +31,7 @@ public final class StacksConfiguredDataSource {
         return pooledMasterDb(properties, configPrefix, null);
     }
 
-    public static PooledDataSource pooledMasterDb(Properties properties, String configPrefix, MetricRegistry metricRegistry) {
+    public static PooledDataSource pooledMasterDb(Properties properties, String configPrefix, @Nullable MetricRegistry metricRegistry) {
         return pooledMasterDb(properties, configPrefix, DEFAULT_MAX_POOLSIZE, metricRegistry);
     }
 
@@ -42,7 +43,7 @@ public final class StacksConfiguredDataSource {
         return pooledMasterDb(properties, configPrefix, maxPoolSize, null);
     }
 
-    public static PooledDataSource pooledMasterDb(Properties properties, String configPrefix, int maxPoolSize, MetricRegistry metricRegistry) {
+    public static PooledDataSource pooledMasterDb(Properties properties, String configPrefix, int maxPoolSize, @Nullable MetricRegistry metricRegistry) {
         return getPooledDataSource(properties, configPrefix, "hostname", maxPoolSize, DEFAULT_SOCKET_TIMEOUT_MS, metricRegistry);
     }
 
@@ -54,7 +55,7 @@ public final class StacksConfiguredDataSource {
         return pooledReadOnlyDb(properties, configPrefix, null);
     }
 
-    public static PooledDataSource pooledReadOnlyDb(Properties properties, String configPrefix, MetricRegistry metricRegistry) {
+    public static PooledDataSource pooledReadOnlyDb(Properties properties, String configPrefix, @Nullable MetricRegistry metricRegistry) {
         return pooledReadOnlyDb(properties, configPrefix, DEFAULT_MAX_POOLSIZE, metricRegistry);
     }
 
@@ -66,15 +67,15 @@ public final class StacksConfiguredDataSource {
         return pooledReadOnlyDb(properties, configPrefix, maxPoolSize, null);
     }
 
-    public static PooledDataSource pooledReadOnlyDb(Properties properties, String configPrefix, int maxPoolSize, MetricRegistry metricRegistry) {
+    public static PooledDataSource pooledReadOnlyDb(Properties properties, String configPrefix, int maxPoolSize, @Nullable MetricRegistry metricRegistry) {
         return pooledReadOnlyDb(properties, configPrefix, maxPoolSize, DEFAULT_SOCKET_TIMEOUT_MS, metricRegistry);
     }
 
-    public static PooledDataSource pooledReadOnlyDb(Properties properties, String configPrefix, int maxPoolSize, int socketTimeoutMs, MetricRegistry metricRegistry) {
+    public static PooledDataSource pooledReadOnlyDb(Properties properties, String configPrefix, int maxPoolSize, int socketTimeoutMs, @Nullable MetricRegistry metricRegistry) {
         return getPooledDataSource(properties, configPrefix, "read_only_cluster", maxPoolSize, socketTimeoutMs, metricRegistry);
     }
 
-    private static PooledDataSource getPooledDataSource(Properties properties, String configPrefix, String host_propertyname, int maxPoolSize, int socketTimeoutMs, MetricRegistry metricRegistry) {
+    private static PooledDataSource getPooledDataSource(Properties properties, String configPrefix, String host_propertyname, int maxPoolSize, int socketTimeoutMs, @Nullable MetricRegistry metricRegistry) {
         String prefix = configPrefix;
 
         if (properties.getProperty(prefix + host_propertyname) == null) {
@@ -105,7 +106,7 @@ public final class StacksConfiguredDataSource {
         return pooledMasterDb(config, DEFAULT_MAX_POOLSIZE, null);
     }
 
-    public static PooledDataSource pooledMasterDb(Config config, MetricRegistry metricRegistry) {
+    public static PooledDataSource pooledMasterDb(Config config, @Nullable MetricRegistry metricRegistry) {
         return pooledMasterDb(config, DEFAULT_MAX_POOLSIZE, metricRegistry);
     }
 
@@ -117,7 +118,7 @@ public final class StacksConfiguredDataSource {
         return pooledMasterDb(config, maxPoolSize, null);
     }
 
-    public static PooledDataSource pooledMasterDb(Config config, int maxPoolSize, MetricRegistry metricRegistry) {
+    public static PooledDataSource pooledMasterDb(Config config, int maxPoolSize, @Nullable MetricRegistry metricRegistry) {
         return pooled(
                 config.getString("hostname"),
                 config.getInt("port"),
@@ -139,7 +140,7 @@ public final class StacksConfiguredDataSource {
         return pooledReadOnlyDb(config, null);
     }
 
-    public static PooledDataSource pooledReadOnlyDb(Config config, MetricRegistry metricRegistry) {
+    public static PooledDataSource pooledReadOnlyDb(Config config, @Nullable MetricRegistry metricRegistry) {
         return pooledReadOnlyDb(config, DEFAULT_MAX_POOLSIZE, metricRegistry);
     }
 
@@ -151,7 +152,7 @@ public final class StacksConfiguredDataSource {
         return pooledReadOnlyDb(config, maxPoolSize, null);
     }
 
-    public static PooledDataSource pooledReadOnlyDb(Config config, int maxPoolSize, MetricRegistry metricRegistry) {
+    public static PooledDataSource pooledReadOnlyDb(Config config, int maxPoolSize, @Nullable MetricRegistry metricRegistry) {
         return pooled(
                 config.getString("read_only_cluster"),
                 config.getInt("port"),
@@ -174,7 +175,7 @@ public final class StacksConfiguredDataSource {
             String driver,
             int maxPoolsize,
             int socketTimeoutMs,
-            MetricRegistry metricRegistry)
+            @Nullable MetricRegistry metricRegistry)
     {
         ComboPooledDataSource dataSource = new ComboPooledDataSource();
         dataSource.setJdbcUrl(format("jdbc:mysql://%s:%d/%s?rewriteBatchedStatements=true&connectTimeout=5000&socketTimeout=" + socketTimeoutMs,
@@ -202,7 +203,7 @@ public final class StacksConfiguredDataSource {
         return dataSource;
     }
 
-    private static void configureToSendMetrics(PooledDataSource dataSource, String databaseName, MetricRegistry optionalMetricRegistry) {
+    private static void configureToSendMetrics(PooledDataSource dataSource, String databaseName, @Nullable MetricRegistry optionalMetricRegistry) {
         Optional.ofNullable(optionalMetricRegistry).ifPresent(metricRegistry -> {
             sendTo(metricRegistry, databaseName, "activeConnections", dataSource::getNumBusyConnectionsDefaultUser);
             sendTo(metricRegistry, databaseName, "idleConnections", dataSource::getNumIdleConnectionsDefaultUser);

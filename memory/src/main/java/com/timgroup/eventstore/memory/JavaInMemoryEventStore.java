@@ -15,7 +15,6 @@ import com.timgroup.eventstore.api.WrongExpectedVersionException;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -27,7 +26,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@ParametersAreNonnullByDefault
 public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamReader, EventCategoryReader, EventReader {
     public static final PositionCodec CODEC = PositionCodec.ofComparable(InMemoryEventStorePosition.class,
             str -> new InMemoryEventStorePosition(Long.parseLong(str)),

@@ -9,7 +9,6 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -17,7 +16,6 @@ import static com.timgroup.eventstore.mysql.BasicMysqlEventStorePosition.EMPTY_S
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.StreamSupport.stream;
 
-@ParametersAreNonnullByDefault
 public class BasicMysqlEventReader implements EventReader {
     private final ConnectionProvider connectionProvider;
     private final String tableName;
