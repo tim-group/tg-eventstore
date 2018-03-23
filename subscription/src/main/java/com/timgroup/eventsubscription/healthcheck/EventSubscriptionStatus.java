@@ -9,7 +9,6 @@ import com.timgroup.tucker.info.Report;
 import com.timgroup.tucker.info.Status;
 
 import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -19,7 +18,6 @@ import static com.timgroup.tucker.info.Status.CRITICAL;
 import static com.timgroup.tucker.info.Status.OK;
 import static com.timgroup.tucker.info.Status.WARNING;
 
-@ParametersAreNonnullByDefault
 public class EventSubscriptionStatus extends Component implements Health, SubscriptionListener {
     private final String name;
     private final Clock clock;

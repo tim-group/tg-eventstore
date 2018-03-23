@@ -19,7 +19,6 @@ import com.timgroup.tucker.info.Health;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -36,7 +35,6 @@ import static com.lmax.disruptor.dsl.ProducerType.SINGLE;
 import static java.util.Collections.unmodifiableCollection;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-@ParametersAreNonnullByDefault
 public class EventSubscription<T> {
     private static final Logger LOG = LoggerFactory.getLogger(EventSubscription.class);
     private final EventSubscriptionStatus subscriptionStatus;

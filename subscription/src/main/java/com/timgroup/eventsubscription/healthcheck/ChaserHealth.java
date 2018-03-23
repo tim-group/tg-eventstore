@@ -8,7 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -20,7 +19,6 @@ import static com.timgroup.tucker.info.Status.OK;
 import static com.timgroup.tucker.info.Status.WARNING;
 import static java.lang.String.format;
 
-@ParametersAreNonnullByDefault
 public class ChaserHealth extends Component implements ChaserListener {
     private static final Logger LOG = LoggerFactory.getLogger(ChaserHealth.class);
     private static final Duration MIN_WARNING_THRESHOLD = Duration.ofSeconds(5);

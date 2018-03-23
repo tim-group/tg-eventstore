@@ -1,0 +1,4 @@
+@ParametersAreNonnullByDefault
+package com.timgroup.eventsubscription.healthcheck;
+
+import javax.annotation.ParametersAreNonnullByDefault;

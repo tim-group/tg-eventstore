@@ -3,14 +3,12 @@ package com.timgroup.eventsubscription;
 import com.timgroup.eventstore.api.EventRecord;
 
 import javax.annotation.Nonnull;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static java.util.Objects.requireNonNull;
 
-@ParametersAreNonnullByDefault
 public interface Deserializer<T> {
     @Nonnull T deserialize(EventRecord event);
 

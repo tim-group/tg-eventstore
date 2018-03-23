@@ -10,11 +10,9 @@ import com.timgroup.structuredevents.EventSink;
 import com.timgroup.structuredevents.Slf4jEventSink;
 
 import javax.annotation.Nonnull;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
@@ -23,7 +21,6 @@ import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
 
-@ParametersAreNonnullByDefault
 public class SubscriptionBuilder<T> {
     private final String name;
     private Clock clock = Clock.systemUTC();
@@ -49,12 +46,12 @@ public class SubscriptionBuilder<T> {
     }
 
     public SubscriptionBuilder<T> deserializingUsing(Deserializer<? extends T> deserializer) {
-        this.deserializer = deserializer;
+        this.deserializer = requireNonNull(deserializer);
         return this;
     }
 
     public SubscriptionBuilder<T> withClock(Clock clock) {
-        this.clock = clock;
+        this.clock = requireNonNull(clock);
         return this;
     }
 
@@ -64,7 +61,7 @@ public class SubscriptionBuilder<T> {
     }
 
     public SubscriptionBuilder<T> withRunFrequency(Duration runFrequency) {
-        this.runFrequency = runFrequency;
+        this.runFrequency = requireNonNull(runFrequency);
         return this;
     }
 
@@ -74,12 +71,12 @@ public class SubscriptionBuilder<T> {
     }
 
     public SubscriptionBuilder<T> withMaxInitialReplayDuration(DurationThreshold initialReplay) {
-        this.initialReplay = initialReplay;
+        this.initialReplay = requireNonNull(initialReplay);
         return this;
     }
 
     public SubscriptionBuilder<T> withStalenessThreshold(DurationThreshold threshold) {
-        this.staleness = threshold;
+        this.staleness = requireNonNull(threshold);
         return this;
     }
 
@@ -106,12 +103,12 @@ public class SubscriptionBuilder<T> {
     }
 
     public SubscriptionBuilder<T> publishingTo(Collection<EventHandler<T>> handlers) {
-        this.handlers.addAll(handlers);
+        handlers.forEach(this::publishingTo);
         return this;
     }
 
     public SubscriptionBuilder<T> publishingTo(EventHandler<? super T> handler) {
-        this.handlers.add(handler);
+        this.handlers.add(requireNonNull(handler));
         return this;
     }
 
@@ -121,22 +118,24 @@ public class SubscriptionBuilder<T> {
     }
 
     public SubscriptionBuilder<T> withListeners(SubscriptionListener... listeners) {
-        this.listeners.addAll(Arrays.asList(listeners));
+        for (SubscriptionListener listener : listeners) {
+            withListener(listener);
+        }
         return this;
     }
 
     public SubscriptionBuilder<T> withListeners(Collection<SubscriptionListener> listeners) {
-        this.listeners.addAll(listeners);
+        listeners.forEach(this::withListener);
         return this;
     }
 
     public SubscriptionBuilder<T> withListener(SubscriptionListener listener) {
-        this.listeners.add(listener);
+        this.listeners.add(requireNonNull(listener));
         return this;
     }
 
     public SubscriptionBuilder<T> withEventSink(EventSink eventSink) {
-        this.eventSink = eventSink;
+        this.eventSink = requireNonNull(eventSink);
         return this;
     }
 

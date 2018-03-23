@@ -3,11 +3,9 @@ package com.timgroup.eventsubscription;
 import com.timgroup.eventstore.api.Position;
 import org.joda.time.DateTime;
 
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-@ParametersAreNonnullByDefault
 public class BroadcastingEventHandler<T> implements EventHandler<T> {
     private final List<EventHandler<? super T>> handlers;
 
