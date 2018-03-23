@@ -7,7 +7,6 @@ import com.timgroup.eventstore.api.StreamId;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,7 +15,6 @@ import java.util.stream.Stream;
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static java.util.Comparator.comparing;
 
-@ParametersAreNonnullByDefault
 final class FlatFilesystemEventReader implements EventReader {
     private static final byte[] EMPTY_METADATA = new byte[0];
     private final Path directory;

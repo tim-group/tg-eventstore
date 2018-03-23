@@ -8,13 +8,11 @@ import com.timgroup.eventstore.api.StreamId;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
 
-@ParametersAreNonnullByDefault
 final class FilteringStreamReader implements EventStreamReader {
     private final EventReader underlying;
     private final Predicate<? super StreamId> streamExistsPredicate;

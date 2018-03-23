@@ -5,7 +5,6 @@ import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.api.WrongExpectedVersionException;
 
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
@@ -16,7 +15,6 @@ import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-@ParametersAreNonnullByDefault
 final class FlatFilesystemEventStreamWriter implements EventStreamWriter {
     private final Path directory;
     private final Clock clock;
