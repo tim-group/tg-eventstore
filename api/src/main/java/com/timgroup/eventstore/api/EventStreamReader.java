@@ -27,7 +27,9 @@ public interface EventStreamReader {
     @CheckReturnValue
     default ResolvedEvent readLastEventInStream(StreamId streamId) {
         //noinspection ConstantConditions
-        return readStreamBackwards(streamId).findFirst().get();
+        try (Stream<ResolvedEvent> stream = readStreamBackwards(streamId)) {
+            return stream.findFirst().orElseThrow(() -> new NoSuchStreamException(streamId));
+        }
     }
 
     @Nonnull

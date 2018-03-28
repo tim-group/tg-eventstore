@@ -11,7 +11,6 @@ import org.junit.rules.ExpectedException;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
@@ -175,6 +174,17 @@ public abstract class JavaEventStoreTest {
 
     @Test
     public void
+    can_read_last_event_in_stream() {
+        eventSource().writeStream().write(stream_1, singletonList(anEvent()));
+        eventSource().writeStream().write(stream_3, singletonList(anEvent()));
+        eventSource().writeStream().write(stream_2, singletonList(anEvent()));
+        eventSource().writeStream().write(stream_1, singletonList(anEvent()));
+
+        assertThat(eventSource().readStream().readLastEventInStream(stream_1).eventRecord(), objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 1L));
+    }
+
+    @Test
+    public void
     throws_exception_when_stream_does_not_exist_on_stream_creation() {
         EventStreamReader eventStreamReader = eventSource().readStream();
 
@@ -207,6 +217,15 @@ public abstract class JavaEventStoreTest {
 
         thrown.expect(NoSuchStreamException.class);
         eventStreamReader.readStreamBackwards(stream_1, Long.MAX_VALUE);
+    }
+
+    @Test
+    public void
+    throws_exception_when_stream_does_not_exist_on_reading_last_event() {
+        EventStreamReader eventStreamReader = eventSource().readStream();
+
+        thrown.expect(NoSuchStreamException.class);
+        eventStreamReader.readLastEventInStream(stream_1);
     }
 
     @Test
