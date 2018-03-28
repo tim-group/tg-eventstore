@@ -44,3 +44,14 @@ task createDb {
         mysql_exec("sql_eventstore", "CREATE TABLE Event(eventType VARCHAR(255), body BLOB, version INT PRIMARY KEY, effective_timestamp datetime)")
     }
 }
+
+task publishScala {
+}
+
+subprojects {
+    afterEvaluate {
+        if (project.plugins.hasPlugin("scala")) {
+            rootProject.tasks["publishScala"].dependsOn(tasks["publish"])
+        }
+    }
+}
