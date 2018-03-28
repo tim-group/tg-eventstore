@@ -32,8 +32,8 @@ final class FlatFilesystemEventReader implements EventReader {
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
         String afterFilename = ((FilesystemPosition) positionExclusive).getFilename();
-        try (Stream<Path> pathStream = Files.list(directory)) {
-            return pathStream
+        try {
+            return Files.list(directory)
                     .filter(p -> p.getFileName().toString().endsWith(dataSuffix))
                     .filter(p -> p.getFileName().toString().compareTo(afterFilename) > 0)
                     .sorted(comparing(Path::getFileName))
@@ -47,8 +47,8 @@ final class FlatFilesystemEventReader implements EventReader {
     @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readAllBackwards() {
-        try (Stream<Path> pathStream = Files.list(directory)) {
-            return pathStream
+        try {
+            return Files.list(directory)
                     .filter(p -> p.getFileName().toString().endsWith(dataSuffix))
                     .sorted(comparing(Path::getFileName).reversed())
                     .map(this::readFile);
@@ -62,8 +62,8 @@ final class FlatFilesystemEventReader implements EventReader {
     @Override
     public Stream<ResolvedEvent> readAllBackwards(Position positionExclusive) {
         String beforeFilename = ((FilesystemPosition) positionExclusive).getFilename();
-        try (Stream<Path> pathStream = Files.list(directory)) {
-            return pathStream
+        try {
+            return Files.list(directory)
                     .filter(p -> p.getFileName().toString().endsWith(dataSuffix))
                     .filter(p -> p.getFileName().toString().compareTo(beforeFilename) < 0)
                     .sorted(comparing(Path::getFileName).reversed())
@@ -74,8 +74,8 @@ final class FlatFilesystemEventReader implements EventReader {
     }
 
     boolean streamExists(StreamId streamId) {
-        try (Stream<Path> pathStream = Files.list(directory)) {
-            return pathStream
+        try (Stream<Path> stream = Files.list(directory)) {
+            return stream
                     .filter(p -> p.getFileName().toString().endsWith(dataSuffix))
                     .anyMatch(p -> FilenameCodec.parse(p, (timestamp, fileStreamId, eventNumber, eventType) -> fileStreamId.equals(streamId)));
         } catch (IOException e) {
