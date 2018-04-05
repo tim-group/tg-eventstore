@@ -1,10 +1,11 @@
 package com.timgroup.eventstore.mysql.legacy;
 
-import java.util.Comparator;
-import java.util.Objects;
-
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
+
+import javax.annotation.Nullable;
+import java.util.Comparator;
+import java.util.Objects;
 
 final class LegacyMysqlEventPosition implements Position {
     final long legacyVersion;
@@ -26,7 +27,7 @@ final class LegacyMysqlEventPosition implements Position {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         LegacyMysqlEventPosition that = (LegacyMysqlEventPosition) o;

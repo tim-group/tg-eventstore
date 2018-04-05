@@ -1,9 +1,10 @@
 package com.timgroup.eventstore.filesystem;
 
-import java.util.Objects;
-
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
+
+import javax.annotation.Nullable;
+import java.util.Objects;
 
 final class FilesystemPosition implements Position, Comparable<FilesystemPosition> {
     static final PositionCodec CODEC = PositionCodec.ofComparable(FilesystemPosition.class,
@@ -31,7 +32,7 @@ final class FilesystemPosition implements Position, Comparable<FilesystemPositio
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         FilesystemPosition that = (FilesystemPosition) o;

@@ -3,6 +3,8 @@ package com.timgroup.eventstore.mysql;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 
+import javax.annotation.Nullable;
+
 final class BasicMysqlEventStorePosition implements Position, Comparable<BasicMysqlEventStorePosition> {
     static final BasicMysqlEventStorePosition EMPTY_STORE_POSITION = new BasicMysqlEventStorePosition(-1);
     static final PositionCodec CODEC = PositionCodec.ofComparable(BasicMysqlEventStorePosition.class,
@@ -25,7 +27,7 @@ final class BasicMysqlEventStorePosition implements Position, Comparable<BasicMy
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) return true;
         if (!(o instanceof BasicMysqlEventStorePosition)) return false;
 

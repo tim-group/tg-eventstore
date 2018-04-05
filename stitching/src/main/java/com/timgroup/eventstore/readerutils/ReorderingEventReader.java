@@ -8,6 +8,7 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -114,7 +115,7 @@ public final class ReorderingEventReader<T extends Comparable<T>> implements Eve
         }
 
         @Override
-        public boolean equals(Object o) {
+        public boolean equals(@Nullable Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             EventWithSortKey that = (EventWithSortKey) o;

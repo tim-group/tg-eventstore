@@ -3,6 +3,7 @@ package com.timgroup.eventsubscription.healthcheck;
 import com.timgroup.tucker.info.Report;
 import com.timgroup.tucker.info.Status;
 
+import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.Objects;
 
@@ -54,7 +55,7 @@ public class DurationThreshold {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         DurationThreshold that = (DurationThreshold) o;

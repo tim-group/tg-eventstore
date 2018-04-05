@@ -3,6 +3,7 @@ package com.timgroup.eventstore.stitching;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
@@ -42,7 +43,7 @@ final class StitchedPosition implements Position {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         StitchedPosition that = (StitchedPosition) o;

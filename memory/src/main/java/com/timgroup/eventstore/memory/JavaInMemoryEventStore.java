@@ -15,6 +15,7 @@ import com.timgroup.eventstore.api.WrongExpectedVersionException;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -200,7 +201,7 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
         }
 
         @Override
-        public boolean equals(Object o) {
+        public boolean equals(@Nullable Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
 

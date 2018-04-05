@@ -8,6 +8,7 @@ import com.timgroup.eventstore.api.StreamId;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Objects;
 import java.util.Spliterator;
 import java.util.function.Consumer;
@@ -151,7 +152,7 @@ public final class RekeyingEventReader implements EventReader {
         }
 
         @Override
-        public boolean equals(Object o) {
+        public boolean equals(@Nullable Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             RekeyedStreamPosition that = (RekeyedStreamPosition) o;

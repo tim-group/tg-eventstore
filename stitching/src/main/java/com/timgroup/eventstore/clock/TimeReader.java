@@ -9,6 +9,7 @@ import com.timgroup.eventstore.merging.NamedReaderWithCodec;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -94,7 +95,7 @@ public class TimeReader implements EventReader, PositionCodec {
         }
 
         @Override
-        public boolean equals(Object o) {
+        public boolean equals(@Nullable Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
 
