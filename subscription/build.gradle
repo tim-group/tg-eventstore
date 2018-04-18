@@ -31,7 +31,7 @@ dependencies {
     testCompile "com.timgroup:clocks-testing:1.0.1080" // autobump
     testCompile "com.timgroup:tim-structured-events-testing:0.4.1237" // autobump
     testCompile "org.mockito:mockito-core:1.9.5"
-    testCompile "com.youdevise:Matchers:0.0.1266" // autobump
+    testCompile "com.youdevise:Matchers:0.0.1267" // autobump
 }
 
 tasks.withType(JavaCompile).all {
