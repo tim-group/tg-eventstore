@@ -14,11 +14,20 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
+import java.util.stream.Collectors;
 
+import static com.timgroup.eventstore.api.StreamId.streamId;
 import static java.lang.String.format;
+import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toMap;
 
 @ParametersAreNonnullByDefault
 public class BasicMysqlEventStreamWriter implements EventStreamWriter {
@@ -36,36 +45,55 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
 
     @Override
     public void write(StreamId streamId, Collection<NewEvent> events) {
-        if (events.isEmpty()) {
-            return;
-        }
-        try (Connection connection = connectionProvider.getConnection()) {
-            connection.setAutoCommit(false);
-            long currentEventNumber = currentEventNumber(streamId, connection);
-
-            write(streamId, events, currentEventNumber, connection);
-
-            connection.commit();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+        execute(singletonList(new StreamWriteRequest(streamId, OptionalLong.empty(), events)));
     }
 
     @Override
     public void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
-        if (events.isEmpty()) {
+        execute(singletonList(new StreamWriteRequest(streamId, OptionalLong.of(expectedVersion), events)));
+    }
+
+    @Override
+    public void execute(Collection<StreamWriteRequest> writeRequests) {
+        if (writeRequests.stream().mapToInt(r -> r.events.size()).sum() == 0) {
             return;
         }
+
+        writeRequests.stream().collect(toMap(r -> r.streamId, r -> r, (r1, r2) -> {
+            throw new RuntimeException("Duplicate streamId in write request: " + r1.streamId);
+        }));
+
         try (Connection connection = connectionProvider.getConnection()) {
             connection.setAutoCommit(false);
 
-            long currentEventNumber = currentEventNumber(streamId, connection);
+            Map<StreamId, Long> currentEventNumbers = currentEventNumbers(writeRequests, connection);
 
-            if (currentEventNumber != expectedVersion) {
-                throw new WrongExpectedVersionException(currentEventNumber, expectedVersion);
+            List<WritableEvent> events = new ArrayList<>();
+
+            for (StreamWriteRequest req : writeRequests) {
+                long currentEventNumber = currentEventNumbers.getOrDefault(req.streamId, -1L);
+
+                req.expectedVersion.ifPresent(expectedVersion -> {
+                    if (currentEventNumber != expectedVersion) {
+                        throw new WrongExpectedVersionException(currentEventNumber, expectedVersion);
+                    }
+                });
+
+                long eventNumber = currentEventNumber;
+
+                for (NewEvent event : req.events) {
+                    events.add(new WritableEvent(
+                            req.streamId,
+                            ++eventNumber,
+                            event.type(),
+                            event.data(),
+                            event.metadata()
+                    ));
+                }
             }
 
-            write(streamId, events, currentEventNumber, connection);
+            write(events, connection);
+
             connection.commit();
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -79,7 +107,7 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
                 '}';
     }
 
-    private void write(StreamId streamId, Collection<NewEvent> events, long currentEventNumber, Connection connection) throws SQLException {
+    private void write(Collection<WritableEvent> events, Connection connection) throws SQLException {
         try (
                 Timer.Context c = timer.map(t -> t.time()).orElse(new Timer().time());
                 PreparedStatement statement = connection.prepareStatement("insert into " + tableName + "(position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata) values(?, UTC_TIMESTAMP(), ?, ?, ?, ?, ?, ?)")
@@ -87,16 +115,14 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
 
             long currentPosition = currentPosition(connection);
 
-            long eventNumber = currentEventNumber;
-
-            for (NewEvent event : events) {
+            for (WritableEvent event : events) {
                 statement.setLong(1, ++currentPosition);
-                statement.setString(2, streamId.category());
-                statement.setString(3, streamId.id());
-                statement.setLong(4, ++eventNumber);
-                statement.setString(5, event.type());
-                statement.setBytes(6, event.data());
-                statement.setBytes(7, event.metadata());
+                statement.setString(2, event.streamId.category());
+                statement.setString(3, event.streamId.id());
+                statement.setLong(4, event.eventNumber);
+                statement.setString(5, event.eventType);
+                statement.setBytes(6, event.data);
+                statement.setBytes(7, event.metadata);
                 statement.addBatch();
             }
 
@@ -118,17 +144,39 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
         }
     }
 
-    private long currentEventNumber(StreamId streamId, Connection connection) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement(format("select event_number from %s where stream_category = ? and stream_id = ? order by event_number desc limit 1", tableName))) {
-            statement.setString(1, streamId.category());
-            statement.setString(2, streamId.id());
-            try (ResultSet resultSet = statement.executeQuery()) {
-                if (resultSet.next()) {
-                    return resultSet.getLong("event_number");
-                } else {
-                    return -1;
-                }
+    private Map<StreamId, Long> currentEventNumbers(Collection<StreamWriteRequest> writeRequests, Connection connection) throws SQLException {
+        String query = writeRequests.stream().map(s -> "(stream_category = ? and stream_id = ?)").collect(Collectors.joining(" or ", "select stream_category, stream_id, max(event_number) from " + tableName + " where", "group by stream_category, stream_id"));
+
+        try (PreparedStatement statement = connection.prepareStatement(query)) {
+            int index = 1;
+
+            for (StreamWriteRequest request : writeRequests) {
+                statement.setString(index++, request.streamId.category());
+                statement.setString(index++, request.streamId.id());
             }
+            try (ResultSet resultSet = statement.executeQuery()) {
+                Map<StreamId, Long> eventNumbers = new HashMap<>();
+                while (resultSet.next()) {
+                    eventNumbers.put(streamId(resultSet.getString(1), resultSet.getString(2)), resultSet.getLong(3));
+                }
+                return eventNumbers;
+            }
+        }
+    }
+
+    private static class WritableEvent {
+        private final StreamId streamId;
+        private final long eventNumber;
+        private final String eventType;
+        private final byte[] data;
+        private final byte[] metadata;
+
+        private WritableEvent(StreamId streamId, long eventNumber, String eventType, byte[] data, byte[] metadata) {
+            this.streamId = streamId;
+            this.eventNumber = eventNumber;
+            this.eventType = eventType;
+            this.data = data;
+            this.metadata = metadata;
         }
     }
 }
