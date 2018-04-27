@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.api;
 
+import com.timgroup.eventstore.api.EventStreamWriter.StreamWriteRequest;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
@@ -11,8 +12,10 @@ import org.junit.rules.ExpectedException;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.OptionalLong;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,6 +35,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 
 public abstract class JavaEventStoreTest {
     @Rule
@@ -48,6 +52,8 @@ public abstract class JavaEventStoreTest {
     private final NewEvent event_1 = newEvent("type-A", randomData(), randomData());
     private final NewEvent event_2 = newEvent("type-B", randomData(), randomData());
     private final NewEvent event_3 = newEvent("type-C", randomData(), randomData());
+    private final NewEvent event_4 = newEvent("type-D", randomData(), randomData());
+    private final NewEvent event_5 = newEvent("type-E", randomData(), randomData());
 
     public abstract EventSource eventSource();
 
@@ -511,6 +517,47 @@ public abstract class JavaEventStoreTest {
         EventRecord eventRecord = eventSource().readStream().readLastEventInStream(stream_2).eventRecord();
         assertThat(eventRecord, is(objectWith(EventRecord::streamId, stream_2).and(EventRecord::eventNumber, 0L)));
     }
+
+    @Test public void
+    can_execute_several_write_requests_in_one_operation() {
+        eventSource().writeStream().execute(Arrays.asList(
+                new StreamWriteRequest(stream_1, singletonList(event_1), OptionalLong.empty()),
+                new StreamWriteRequest(stream_2, asList(event_2, event_3), OptionalLong.empty())
+        ));
+
+        assertThat(eventSource().readAll().readAllForwards().map(ResolvedEvent::eventRecord).collect(toList()), contains(
+                objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 0L),
+                objectWith(EventRecord::streamId, stream_2).and(EventRecord::eventNumber, 0L),
+                objectWith(EventRecord::streamId, stream_2).and(EventRecord::eventNumber, 1L)
+        ));
+    }
+
+    @Test public void
+    when_a_write_request_fails_others_are_still_executed() {
+        eventSource().writeStream().write(stream_1, singletonList(event_1));
+        eventSource().writeStream().write(stream_1, singletonList(event_2));
+
+        WrongExpectedVersionException exception = null;
+
+        try {
+            eventSource().writeStream().execute(Arrays.asList(
+                    new StreamWriteRequest(stream_1, singletonList(event_4), OptionalLong.of(0)),
+                    new StreamWriteRequest(stream_2, asList(event_5, event_5), OptionalLong.of(-1))
+            ));
+        } catch (WrongExpectedVersionException e) {
+            exception = e;
+        }
+
+        //todo: assert exception
+        assertThat(exception, notNullValue());
+        assertThat(eventSource().readAll().readAllForwards().map(ResolvedEvent::eventRecord).collect(toList()), contains(
+                objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 0L),
+                objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 1L),
+                objectWith(EventRecord::streamId, stream_2).and(EventRecord::eventNumber, 0L),
+                objectWith(EventRecord::streamId, stream_2).and(EventRecord::eventNumber, 1L)
+        ));
+    }
+
 
     private static Matcher<Instant> shortlyAfter(Instant expected) {
         return new TypeSafeDiagnosingMatcher<Instant>() {

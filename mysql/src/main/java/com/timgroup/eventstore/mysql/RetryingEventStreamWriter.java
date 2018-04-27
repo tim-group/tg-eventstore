@@ -37,6 +37,11 @@ public class RetryingEventStreamWriter implements EventStreamWriter {
     }
 
     @Override
+    public void execute(Collection<StreamWriteRequest> writeRequests) {
+        retry(() -> underlying.execute(writeRequests));
+    }
+
+    @Override
     public String toString() {
         return "RetryingEventStreamWriter{" +
                 "underlying=" + underlying +
