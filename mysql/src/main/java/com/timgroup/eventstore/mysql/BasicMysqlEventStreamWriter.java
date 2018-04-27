@@ -21,12 +21,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
-import java.util.stream.Collectors;
 
 import static com.timgroup.eventstore.api.StreamId.streamId;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
 
 @ParametersAreNonnullByDefault
@@ -45,12 +45,12 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
 
     @Override
     public void write(StreamId streamId, Collection<NewEvent> events) {
-        execute(singletonList(new StreamWriteRequest(streamId, OptionalLong.empty(), events)));
+        execute(singletonList(new StreamWriteRequest(streamId, events, OptionalLong.empty())));
     }
 
     @Override
     public void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
-        execute(singletonList(new StreamWriteRequest(streamId, OptionalLong.of(expectedVersion), events)));
+        execute(singletonList(new StreamWriteRequest(streamId, events, OptionalLong.of(expectedVersion))));
     }
 
     @Override
@@ -68,16 +68,17 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
 
             Map<StreamId, Long> currentEventNumbers = currentEventNumbers(writeRequests, connection);
 
+            List<String> failures = new ArrayList<>();
+
             List<WritableEvent> events = new ArrayList<>();
 
             for (StreamWriteRequest req : writeRequests) {
                 long currentEventNumber = currentEventNumbers.getOrDefault(req.streamId, -1L);
 
-                req.expectedVersion.ifPresent(expectedVersion -> {
-                    if (currentEventNumber != expectedVersion) {
-                        throw new WrongExpectedVersionException(currentEventNumber, expectedVersion);
-                    }
-                });
+                if (req.expectedVersion.isPresent() && req.expectedVersion.getAsLong() != currentEventNumber) {
+                    failures.add(req.streamId + ": " + "current version: " + currentEventNumber + ", expected version: " + req.expectedVersion.getAsLong());
+                    continue;
+                }
 
                 long eventNumber = currentEventNumber;
 
@@ -95,6 +96,10 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
             write(events, connection);
 
             connection.commit();
+
+            if (!failures.isEmpty()) {
+                throw new WrongExpectedVersionException(failures.stream().collect(joining(",")));
+            }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -145,7 +150,7 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
     }
 
     private Map<StreamId, Long> currentEventNumbers(Collection<StreamWriteRequest> writeRequests, Connection connection) throws SQLException {
-        String query = writeRequests.stream().map(s -> "(stream_category = ? and stream_id = ?)").collect(Collectors.joining(" or ", "select stream_category, stream_id, max(event_number) from " + tableName + " where", "group by stream_category, stream_id"));
+        String query = writeRequests.stream().map(s -> "(stream_category = ? and stream_id = ?)").collect(joining(" or ", "select stream_category, stream_id, max(event_number) from " + tableName + " where", "group by stream_category, stream_id"));
 
         try (PreparedStatement statement = connection.prepareStatement(query)) {
             int index = 1;

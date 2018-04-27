@@ -1,7 +1,10 @@
 package com.timgroup.eventstore.api;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.OptionalLong;
+import java.util.stream.Collectors;
 
 public interface EventStreamWriter {
     void write(StreamId streamId, Collection<NewEvent> events);
@@ -9,13 +12,23 @@ public interface EventStreamWriter {
     void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion);
 
     default void execute(Collection<StreamWriteRequest> writeRequests) {
+        List<String> failures = new ArrayList<>();
+
         writeRequests.forEach(request -> {
-            if (request.expectedVersion.isPresent()) {
-                write(request.streamId, request.events, request.expectedVersion.getAsLong());
-            } else {
-                write(request.streamId, request.events);
+            try {
+                if (request.expectedVersion.isPresent()) {
+                    write(request.streamId, request.events, request.expectedVersion.getAsLong());
+                } else {
+                    write(request.streamId, request.events);
+                }
+            } catch (WrongExpectedVersionException e) {
+                failures.add(request.streamId + ": " + e.getMessage());
             }
         });
+
+        if (!failures.isEmpty()) {
+            throw new WrongExpectedVersionException(failures.stream().collect(Collectors.joining(",")));
+        }
     }
 
     class StreamWriteRequest {
@@ -23,7 +36,7 @@ public interface EventStreamWriter {
         public final OptionalLong expectedVersion;
         public final Collection<NewEvent> events;
 
-        public StreamWriteRequest(StreamId streamId, OptionalLong expectedVersion, Collection<NewEvent> events) {
+        public StreamWriteRequest(StreamId streamId, Collection<NewEvent> events, OptionalLong expectedVersion) {
             this.streamId = streamId;
             this.expectedVersion = expectedVersion;
             this.events = events;
