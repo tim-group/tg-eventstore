@@ -55,7 +55,7 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
 
     @Override
     public void execute(Collection<StreamWriteRequest> writeRequests) {
-        if (writeRequests.stream().mapToInt(r -> r.events.size()).sum() == 0) {
+        if (writeRequests.stream().allMatch(r -> r.events.isEmpty())) {
             return;
         }
 
