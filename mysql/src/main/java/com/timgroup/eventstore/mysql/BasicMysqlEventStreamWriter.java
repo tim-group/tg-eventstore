@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 
-import static com.timgroup.eventstore.api.StreamId.streamId;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
@@ -150,22 +149,21 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
     }
 
     private Map<StreamId, Long> currentEventNumbers(Collection<StreamWriteRequest> writeRequests, Connection connection) throws SQLException {
-        String query = writeRequests.stream().map(s -> "(stream_category = ? and stream_id = ?)").collect(joining(" or ", "select stream_category, stream_id, max(event_number) from " + tableName + " where", "group by stream_category, stream_id"));
+        try (PreparedStatement statement = connection.prepareStatement(format("select event_number from %s where stream_category = ? and stream_id = ? order by event_number desc limit 1", tableName))) {
+            Map<StreamId, Long> eventNumbers = new HashMap<>();
 
-        try (PreparedStatement statement = connection.prepareStatement(query)) {
-            int index = 1;
-
-            for (StreamWriteRequest request : writeRequests) {
-                statement.setString(index++, request.streamId.category());
-                statement.setString(index++, request.streamId.id());
-            }
-            try (ResultSet resultSet = statement.executeQuery()) {
-                Map<StreamId, Long> eventNumbers = new HashMap<>();
-                while (resultSet.next()) {
-                    eventNumbers.put(streamId(resultSet.getString(1), resultSet.getString(2)), resultSet.getLong(3));
+            for (StreamWriteRequest r : writeRequests) {
+                statement.setString(1, r.streamId.category());
+                statement.setString(2, r.streamId.id());
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        eventNumbers.put(r.streamId, resultSet.getLong(1));
+                    }
                 }
-                return eventNumbers;
+                statement.clearParameters();
             }
+
+            return eventNumbers;
         }
     }
 
