@@ -548,7 +548,6 @@ public abstract class JavaEventStoreTest {
             exception = e;
         }
 
-        //todo: assert exception
         assertThat(exception, notNullValue());
         assertThat(eventSource().readAll().readAllForwards().map(ResolvedEvent::eventRecord).collect(toList()), contains(
                 objectWith(EventRecord::streamId, stream_1).and(EventRecord::eventNumber, 0L),
@@ -558,6 +557,15 @@ public abstract class JavaEventStoreTest {
         ));
     }
 
+    @Test public void
+    cannot_issue_multiple_write_requests_to_the_same_stream() {
+        thrown.expectMessage("Duplicate streamId in write request");
+
+        eventSource().writeStream().execute(Arrays.asList(
+                new StreamWriteRequest(stream_1, singletonList(event_1), OptionalLong.empty()),
+                new StreamWriteRequest(stream_1, asList(event_2), OptionalLong.empty())
+        ));
+    }
 
     private static Matcher<Instant> shortlyAfter(Instant expected) {
         return new TypeSafeDiagnosingMatcher<Instant>() {

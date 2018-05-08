@@ -6,12 +6,18 @@ import java.util.List;
 import java.util.OptionalLong;
 import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.toMap;
+
 public interface EventStreamWriter {
     void write(StreamId streamId, Collection<NewEvent> events);
 
     void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion);
 
     default void execute(Collection<StreamWriteRequest> writeRequests) {
+        writeRequests.stream().collect(toMap(r -> r.streamId, r -> r, (r1, r2) -> {
+            throw new RuntimeException("Duplicate streamId in write request: " + r1.streamId);
+        }));
+
         List<String> failures = new ArrayList<>();
 
         writeRequests.forEach(request -> {
