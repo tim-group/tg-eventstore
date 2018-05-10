@@ -466,7 +466,8 @@ public abstract class JavaEventStoreTest {
         EventStreamWriter writer = eventSource().writeStream();
 
         range(0, 100).forEach(i -> {
-            exec.submit(() -> {
+            // Cast to Runnable required only by java9, not 8 or 10
+            exec.submit((Runnable) () -> {
                while (true) {
                     try {
                         writer.write(stream, singletonList(anEvent()));
