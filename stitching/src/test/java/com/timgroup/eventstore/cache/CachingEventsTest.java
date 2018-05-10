@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -38,13 +39,15 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 
 public class CachingEventsTest {
+    private static final Clock CLOCK = Clock.tick(Clock.systemUTC(), Duration.ofMillis(1));
+
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
     Path cacheDirectory;
 
     CacheEventReader cacheEventReader;
 
-    JavaInMemoryEventStore underlyingEventStore = new JavaInMemoryEventStore(Clock.systemUTC());
+    JavaInMemoryEventStore underlyingEventStore = new JavaInMemoryEventStore(CLOCK);
 
     private final StreamId stream_1 = streamId(randomCategory(), "1");
     private final NewEvent event_1 = anEvent();
@@ -130,7 +133,7 @@ public class CachingEventsTest {
         underlyingEventStore.write(stream_1, singletonList(event_1));
         saveAllToCache(getCacheFile("cache.gz"));
 
-        CacheEventReader newCacheEventReader = new CacheEventReader(new JavaInMemoryEventStore(Clock.systemUTC()), CODEC, cacheDirectory, "cache");
+        CacheEventReader newCacheEventReader = new CacheEventReader(new JavaInMemoryEventStore(CLOCK), CODEC, cacheDirectory, "cache");
         assertThat(readAllToList(newCacheEventReader), hasSize(1));
         assertThat(readAllToList(newCacheEventReader), equalTo(readAllToList(underlyingEventStore)));
     }
@@ -147,7 +150,7 @@ public class CachingEventsTest {
 
         assertThat(readAllFromEmpty(cacheEventReader), hasSize(1));
 
-        CacheEventReader newCacheEventReader = new CacheEventReader(new JavaInMemoryEventStore(Clock.systemUTC()), CODEC, cacheDirectory, "cache");
+        CacheEventReader newCacheEventReader = new CacheEventReader(new JavaInMemoryEventStore(CLOCK), CODEC, cacheDirectory, "cache");
         assertThat(readAllFromEmpty(newCacheEventReader), hasSize(1));
         assertThat(readAllFromEmpty(newCacheEventReader), equalTo(readAllToList(underlyingEventStore)));
     }
@@ -164,7 +167,7 @@ public class CachingEventsTest {
         underlyingEventStore.write(stream_1, singletonList(event_1));
         Position thirdPosition = saveAllToCache(getCacheFile("cache_3.gz"), secondPosition);
 
-        CacheEventReader newCacheEventReader = new CacheEventReader(new JavaInMemoryEventStore(Clock.systemUTC()), CODEC, cacheDirectory, "cache");
+        CacheEventReader newCacheEventReader = new CacheEventReader(new JavaInMemoryEventStore(CLOCK), CODEC, cacheDirectory, "cache");
         List<ResolvedEvent> resolvedEvents = readAllFromEmpty(newCacheEventReader);
         assertThat(resolvedEvents.stream().map(ResolvedEvent::position).collect(toList()), contains(firstPosition, secondPosition, thirdPosition));
     }

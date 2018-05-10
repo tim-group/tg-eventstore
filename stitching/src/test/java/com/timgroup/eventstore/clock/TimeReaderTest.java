@@ -1,18 +1,19 @@
 package com.timgroup.eventstore.clock;
 
-import java.time.Duration;
-import java.time.Instant;
-
 import com.timgroup.clocks.testing.ManualClock;
 import org.hamcrest.Matchers;
 import org.junit.Test;
+
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 
 public class TimeReaderTest {
-    private final ManualClock clock = ManualClock.createDefault();
+    private final ManualClock clock = ManualClock.initiallyAt(Clock.tick(Clock.systemUTC(), Duration.ofMillis(1)));
     private final Instant start = clock.instant();
     private final TimeReader reader = new TimeReader(clock.instant(), Duration.ofSeconds(10), clock);
 
