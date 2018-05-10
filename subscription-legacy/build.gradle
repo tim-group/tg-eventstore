@@ -11,8 +11,7 @@ if (buildNumber) version = '0.0.' + buildNumber
 
 repositories {
     maven {
-        name "nexus"
-        url "${repoUrl}/groups/public"
+        url = "$repoUrl/groups/public"
     }
 }
 
@@ -50,6 +49,16 @@ tasks.withType(JavaCompile).all {
     options.compilerArgs << "-parameters"
 }
 
+tasks.withType(ScalaCompile).all {
+    sourceCompatibility = "1.8"
+    targetCompatibility = "1.8"
+    options.encoding = "UTF-8"
+    options.incremental = true
+    options.deprecation = true
+    options.compilerArgs << "-parameters"
+    scalaCompileOptions.additionalParameters = ["-target:jvm-1.8"]
+}
+
 tasks.withType(Jar).all {
     manifest {
         attributes(
@@ -78,8 +87,7 @@ publishing {
     repositories {
         if (project.hasProperty("repoUrl")) {
             maven {
-                name "nexus"
-                url "${project.repoUrl}/repositories/yd-release-candidates"
+                url = "${project.repoUrl}/repositories/yd-release-candidates"
                 credentials {
                     username = project.repoUsername
                     password = project.repoPassword
