@@ -17,7 +17,7 @@ import static com.timgroup.tucker.info.Status.CRITICAL;
 import static com.timgroup.tucker.info.Status.OK;
 import static com.timgroup.tucker.info.Status.WARNING;
 
-public class EventSubscriptionStatus extends Component implements Health, SubscriptionListener {
+public final class EventSubscriptionStatus extends Component implements Health, SubscriptionListener {
     private final String name;
     private final Clock clock;
     private final EventSink eventSink;
@@ -39,14 +39,6 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
         this.startTime = Instant.now(clock);
         this.staleSince = Instant.now(clock);
         this.eventSink = eventSink;
-    }
-
-    /**
-     * Use constructor with description instead
-     */
-    @Deprecated
-    public EventSubscriptionStatus(String name, Clock clock, Duration maxInitialReplayDuration, EventSink eventSink) {
-        this(name, clock, DurationThreshold.warningThresholdWithCriticalRatio(maxInitialReplayDuration, 1.25), new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(30)), eventSink);
     }
 
     @Override
