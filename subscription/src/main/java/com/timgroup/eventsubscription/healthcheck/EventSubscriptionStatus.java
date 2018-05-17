@@ -95,12 +95,4 @@ public final class EventSubscriptionStatus extends Component implements Health, 
     public void terminated(Position position, Exception e) {
         terminatedReport = new Report(CRITICAL, "Event subscription terminated. Failed to process version " + position + ": " + e.getMessage() + " at " + e.getStackTrace()[0]);
     }
-
-    public void reset() {
-        startTime = Instant.now(clock);
-        staleSince = Instant.now(clock);
-        currentPosition = null;
-        initialReplayDuration = null;
-        terminatedReport = null;
-    }
 }
