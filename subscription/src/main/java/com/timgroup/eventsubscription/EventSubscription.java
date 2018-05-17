@@ -94,8 +94,8 @@ public class EventSubscription<T> {
                 EventSink eventSink
     ) {
         this.runFrequency = runFrequency;
-        ChaserHealth chaserHealth = new ChaserHealth(name, description, clock, runFrequency);
-        subscriptionStatus = new EventSubscriptionStatus(name, description, clock, initialReplay, staleness, eventSink);
+        ChaserHealth chaserHealth = new ChaserHealth(name, clock, runFrequency);
+        subscriptionStatus = new EventSubscriptionStatus(name, clock, initialReplay, staleness, eventSink);
 
         List<SubscriptionListener> subListeners = new ArrayList<>();
         subListeners.add(subscriptionStatus);
@@ -140,6 +140,7 @@ public class EventSubscription<T> {
         chaser = new EventStoreChaser(eventSource, startingPosition, event -> disruptor.publishEvent(translator.setting(event)), chaserListener);
 
         statusComponents = new ArrayList<>();
+        statusComponents.add(Component.supplyInfo("event-subscription-description", "Subscription source (" + name + ")", () -> description));
         statusComponents.add(subscriptionStatus);
         statusComponents.add(chaserHealth);
     }

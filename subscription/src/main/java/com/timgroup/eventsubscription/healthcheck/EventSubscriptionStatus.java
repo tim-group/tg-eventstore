@@ -8,7 +8,6 @@ import com.timgroup.tucker.info.Health;
 import com.timgroup.tucker.info.Report;
 import com.timgroup.tucker.info.Status;
 
-import javax.annotation.Nullable;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -31,8 +30,8 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
     private volatile Report terminatedReport;
     private volatile Instant staleSince;
 
-    public EventSubscriptionStatus(String name, @Nullable String description, Clock clock, DurationThreshold initialReplay, DurationThreshold staleness, EventSink eventSink) {
-        super("event-subscription-status-" + name, "Event subscription status (" + parenthetical(name, description) + ")");
+    public EventSubscriptionStatus(String name, Clock clock, DurationThreshold initialReplay, DurationThreshold staleness, EventSink eventSink) {
+        super("event-subscription-status-" + name, "Event subscription status (" + name + ")");
         this.name = name;
         this.clock = clock;
         this.staleness = staleness;
@@ -47,7 +46,7 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
      */
     @Deprecated
     public EventSubscriptionStatus(String name, Clock clock, Duration maxInitialReplayDuration, EventSink eventSink) {
-        this(name, null, clock, DurationThreshold.warningThresholdWithCriticalRatio(maxInitialReplayDuration, 1.25), new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(30)), eventSink);
+        this(name, clock, DurationThreshold.warningThresholdWithCriticalRatio(maxInitialReplayDuration, 1.25), new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(30)), eventSink);
     }
 
     @Override
@@ -112,13 +111,4 @@ public class EventSubscriptionStatus extends Component implements Health, Subscr
         initialReplayDuration = null;
         terminatedReport = null;
     }
-
-    static String parenthetical(String name, @Nullable String description) {
-        if (description != null) {
-            return name + ": " + description;
-        } else {
-            return name;
-        }
-    }
-
 }
