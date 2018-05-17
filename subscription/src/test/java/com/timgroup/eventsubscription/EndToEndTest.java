@@ -7,7 +7,6 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
-import com.timgroup.eventsubscription.healthcheck.DurationThreshold;
 import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
 import com.timgroup.structuredevents.LocalEventSink;
 import com.timgroup.structuredevents.StructuredEventMatcher;
@@ -47,7 +46,6 @@ import static com.timgroup.tucker.info.Health.State.ill;
 import static com.timgroup.tucker.info.Status.CRITICAL;
 import static com.timgroup.tucker.info.Status.OK;
 import static com.youdevise.testutils.matchers.ExceptionMatcher.anExceptionOfType;
-import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -202,7 +200,14 @@ public class EndToEndTest {
         store.write(streamId("alpha", "2"), singletonList(event3));
         @SuppressWarnings("unchecked")
         EventHandler<DeserialisedEvent> eventHandler = Mockito.mock(EventHandler.class);
-        subscription = new EventSubscription<>("test", store, "alpha", EndToEndTest::deserialize, eventHandler, clock, 1024, Duration.ofMillis(1L), store.emptyStorePosition(), DurationThreshold.warningThresholdWithCriticalRatio(Duration.ofSeconds(320), 1.25), new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(60)), emptyList());
+        subscription = SubscriptionBuilder.<DeserialisedEvent> eventSubscription("test")
+                .readingFrom(store, "alpha")
+                .deserializingUsing(EndToEndTest::deserialize)
+                .publishingTo(eventHandler)
+                .withClock(clock)
+                .runningInParallelWithBuffer(1024)
+                .withRunFrequency(Duration.ofMillis(1L))
+                .build();
         subscription.start();
 
         eventually(() -> {

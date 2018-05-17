@@ -13,7 +13,6 @@ import com.timgroup.eventsubscription.healthcheck.EventSubscriptionStatus;
 import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
 import com.timgroup.eventsubscription.healthcheck.SubscriptionListenerAdapter;
 import com.timgroup.structuredevents.EventSink;
-import com.timgroup.structuredevents.Slf4jEventSink;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Health;
 import org.slf4j.Logger;
@@ -44,39 +43,6 @@ public class EventSubscription<T> {
     private final Disruptor<EventContainer<T>> disruptor;
     private final EventStoreChaser chaser;
     private final Duration runFrequency;
-
-    public EventSubscription(
-            String name,
-            EventCategoryReader eventReader,
-            String category,
-            Deserializer<? extends T> deserializer,
-            EventHandler<? super T> eventHandler,
-            Clock clock,
-            int bufferSize,
-            Duration runFrequency,
-            Position startingPosition,
-            DurationThreshold initialReplay,
-            DurationThreshold staleness,
-            List<SubscriptionListener> listeners
-    ) {
-        this(name, descriptionFor(eventReader, category), pos -> eventReader.readCategoryForwards(category, pos), deserializer, eventHandler, clock, bufferSize, runFrequency, startingPosition, initialReplay, staleness, listeners, new Slf4jEventSink());
-    }
-
-    public EventSubscription(
-            String name,
-            EventReader eventReader,
-            Deserializer<? extends T> deserializer,
-            EventHandler<? super T> eventHandler,
-            Clock clock,
-            int bufferSize,
-            Duration runFrequency,
-            Position startingPosition,
-            DurationThreshold initialReplay,
-            DurationThreshold staleness,
-            List<SubscriptionListener> listeners
-    ) {
-        this(name, descriptionFor(eventReader), eventReader::readAllForwards, deserializer, eventHandler, clock, bufferSize, runFrequency, startingPosition, initialReplay, staleness, listeners, new Slf4jEventSink());
-    }
 
     EventSubscription(
                 String name,
