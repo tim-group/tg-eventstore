@@ -6,6 +6,7 @@ import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.EventStreamWriter;
+import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.tucker.info.Component;
 
@@ -14,14 +15,17 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.lang.String.format;
 
 public final class MergedEventSource<T extends Comparable<T>> implements EventSource {
 
     private final MergedEventReader<T> eventReader;
     private final PositionCodec mergedEventReaderPositionCodec;
+    private final NamedReaderWithCodec[] namedReaders;
 
     @SuppressWarnings("WeakerAccess")
     public MergedEventSource(Clock clock, MergingStrategy<T> mergingStrategy, NamedReaderWithCodec... namedReaders) {
@@ -30,7 +34,8 @@ public final class MergedEventSource<T extends Comparable<T>> implements EventSo
             "reader names must be unique"
         );
 
-        this.eventReader = new MergedEventReader<>(clock, mergingStrategy, namedReaders);
+        this.namedReaders = namedReaders;
+        this.eventReader = new MergedEventReader<>(clock, mergingStrategy, this.namedReaders);
         this.mergedEventReaderPositionCodec = MergedEventReaderPosition.codecFor(namedReaders);
     }
 
@@ -78,6 +83,43 @@ public final class MergedEventSource<T extends Comparable<T>> implements EventSo
     @Override
     public PositionCodec positionCodec() {
         return mergedEventReaderPositionCodec;
+    }
+
+    @Nonnull
+    public PositionCodec positionCodecComparing(String eventSourceName) {
+        int componentIndex = indexOf(eventSourceName);
+
+        return new PositionCodec() {
+            @Override
+            public Position deserializePosition(String string) {
+                return mergedEventReaderPositionCodec.deserializePosition(string);
+            }
+
+            @Override
+            public String serializePosition(Position position) {
+                return mergedEventReaderPositionCodec.serializePosition(position);
+            }
+
+            @Override
+            public int comparePositions(Position left, Position right) {
+                MergedEventReaderPosition mergedLeft = (MergedEventReaderPosition) left;
+                MergedEventReaderPosition mergedRight = (MergedEventReaderPosition) right;
+
+                return namedReaders[componentIndex].codec.comparePositions(mergedLeft.inputPositions[componentIndex], mergedRight.inputPositions[componentIndex]);
+            }
+        };
+    }
+
+    private int indexOf(String eventSourceName) {
+        for (int i = 0; i < namedReaders.length; i++) {
+            if (namedReaders[i].name.equals(eventSourceName)) {
+                return i;
+            }
+        }
+
+        throw new IllegalArgumentException(format("Event source with name '%s' does not exist. Configured sources are: %s",
+                eventSourceName,
+                Stream.of(namedReaders).map(n -> "'" + n.name + "'").collect(Collectors.joining(","))));
     }
 
     @Nonnull
