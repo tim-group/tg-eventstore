@@ -11,7 +11,9 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -38,6 +40,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
 
 public final class MergedEventSourceTest {
+    @Rule public final ExpectedException thrown = ExpectedException.none();
 
     private final ManualClock clock = new ManualClock(Instant.parse("2009-04-12T22:12:32Z"), ZoneId.of("UTC"));
 
@@ -404,6 +407,33 @@ public final class MergedEventSourceTest {
         assertThat(eventSource1.positionCodec().comparePositions(b1, emptyStorePosition), greaterThan(0));
         assertThat(a1.toString(), equalTo("a:1;b:0"));
         assertThat(b1.toString(), equalTo("a:1;b:1"));
+    }
+
+    @Test public void
+    on_reordering_partial_positions_are_comparable_whilst_merged_position_is_not() {
+        JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
+        JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
+        MergedEventSource<Instant> merged = MergedEventSource.effectiveTimestampMergedEventSource(
+                clock,
+                new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC),
+                new NamedReaderWithCodec("b", input2, JavaInMemoryEventStore.CODEC)
+        );
+
+        input1.write(streamId("all", "all"), ImmutableList.of(newEvent("", new byte[0], "{\"effective_timestamp\":\"2014-01-23T00:23:54Z\"}".getBytes(UTF_8))));
+        input2.write(streamId("all", "all"), ImmutableList.of(newEvent("", new byte[0], "{\"effective_timestamp\":\"2014-01-23T00:23:55Z\"}".getBytes(UTF_8))));
+        input1.write(streamId("all", "all"), ImmutableList.of(newEvent("", new byte[0], "{\"effective_timestamp\":\"2014-01-23T00:23:57Z\"}".getBytes(UTF_8))));
+
+        Position originalValidPosition = merged.readAll().readAllForwards().collect(Collectors.toList()).get(2).position();
+
+        input2.write(streamId("all", "all"), ImmutableList.of(newEvent("", new byte[0], "{\"effective_timestamp\":\"2014-01-23T00:23:56Z\"}".getBytes(UTF_8))));
+
+        Position postDelayPosition = merged.readAll().readAllForwards().collect(Collectors.toList()).get(2).position();
+
+        assertThat(merged.positionCodecComparing("a").comparePositions(originalValidPosition, postDelayPosition), is(1));
+        assertThat(merged.positionCodecComparing("b").comparePositions(originalValidPosition, postDelayPosition), is(-1));
+
+        thrown.expectMessage("Not comparable: a:2;b:1 <=> a:1;b:2");
+        merged.positionCodec().comparePositions(originalValidPosition, postDelayPosition);
     }
 
     private static void inputEventArrived(EventStreamWriter input, String eventType) {
