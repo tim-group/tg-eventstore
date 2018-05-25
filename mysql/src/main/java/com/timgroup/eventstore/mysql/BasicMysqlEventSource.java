@@ -9,7 +9,6 @@ import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.tucker.info.Component;
-import com.timgroup.tucker.info.component.DatabaseConnectionComponent;
 import com.typesafe.config.Config;
 import org.slf4j.LoggerFactory;
 
@@ -84,7 +83,7 @@ public class BasicMysqlEventSource implements EventSource {
     public Collection<Component> monitoring() {
         String id = "EventStore-" + this.name;
         String label = "EventStore (name=" + this.name + ", tableName=" + this.tableName +")";
-        return singletonList(new DatabaseConnectionComponent(id, label, connectionProvider::getConnection));
+        return singletonList(new EventStoreConnectionComponent(id, label, this));
     }
 
     @Override
