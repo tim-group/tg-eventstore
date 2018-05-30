@@ -3,10 +3,12 @@ package com.timgroup.eventstore.memory;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.JavaEventStoreTest;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.ResolvedEvent;
 import org.junit.Test;
 
 import static java.util.stream.Collectors.toList;
@@ -37,6 +39,13 @@ public class JavaInMemoryEventStoreTest extends JavaEventStoreTest {
                 position(10L),
                 position(100L)
         )));
+    }
+
+    @Test
+    public void reading_backwards_from_an_empty_position_returns_empty_stream() {
+        Stream<ResolvedEvent> resolvedEventStream = eventStore.readAllBackwards(eventStore.emptyStorePosition());
+
+        assertThat(resolvedEventStream.count(), equalTo(0L));
     }
 
     private Position position(long n) {
