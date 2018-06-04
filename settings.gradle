@@ -1,8 +1,7 @@
 pluginManagement {
     repositories {
         maven {
-            name "nexus"
-            url "${repoUrl}/groups/public"
+            url = "$repoUrl/groups/public"
         }
     }
 }
@@ -24,3 +23,5 @@ include "stitching-legacy"
 include "ges-http"
 include "subscription"
 include "subscription-legacy"
+
+enableFeaturePreview('STABLE_PUBLISHING')
