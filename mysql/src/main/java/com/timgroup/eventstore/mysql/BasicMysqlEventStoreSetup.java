@@ -57,11 +57,11 @@ public class BasicMysqlEventStoreSetup {
                         "stream_id varchar(255) not null, " +
                         "event_number bigint not null, " +
                         "event_type varchar(255) not null," +
-                        "data blob not null, " +
+                        "data mediumblob not null, " +
                         "metadata blob not null," +
                         "unique stream_category(stream_category, stream_id, event_number)," +
                         "key stream_category_2(stream_category, position)" +
-                        ")");
+                        ") row_format=DYNAMIC");
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
