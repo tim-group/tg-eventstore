@@ -79,7 +79,7 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     }
 
     @Override
-    public void write(StreamId streamId, Collection<NewEvent> events) {
+    public synchronized void write(StreamId streamId, Collection<NewEvent> events) {
         write(streamId, events, currentVersionOf(streamId));
     }
 
@@ -91,26 +91,24 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     }
 
     @Override
-    public void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
-        synchronized (this) {
-            long currentVersion = currentVersionOf(streamId);
+    public synchronized void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
+        long currentVersion = currentVersionOf(streamId);
 
-            if (currentVersion != expectedVersion) {
-                throw new WrongExpectedVersionException(currentVersion, expectedVersion);
-            }
-
-            AtomicLong globalPosition = new AtomicLong(this.events.size());
-            AtomicLong eventNumber = new AtomicLong(currentVersion);
-
-            events.stream().map(newEvent -> new ResolvedEvent(new InMemoryEventStorePosition(globalPosition.incrementAndGet()), EventRecord.eventRecord(
-                    clock.instant(),
-                    streamId,
-                    eventNumber.incrementAndGet(),
-                    newEvent.type(),
-                    newEvent.data(),
-                    newEvent.metadata()
-            ))).forEachOrdered(this.events::add);
+        if (currentVersion != expectedVersion) {
+            throw new WrongExpectedVersionException(currentVersion, expectedVersion);
         }
+
+        AtomicLong globalPosition = new AtomicLong(this.events.size());
+        AtomicLong eventNumber = new AtomicLong(currentVersion);
+
+        events.stream().map(newEvent -> new ResolvedEvent(new InMemoryEventStorePosition(globalPosition.incrementAndGet()), EventRecord.eventRecord(
+                clock.instant(),
+                streamId,
+                eventNumber.incrementAndGet(),
+                newEvent.type(),
+                newEvent.data(),
+                newEvent.metadata()
+        ))).forEachOrdered(this.events::add);
     }
 
     @Override

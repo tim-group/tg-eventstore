@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.mysql;
 
+import com.codahale.metrics.Counter;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
@@ -10,10 +11,12 @@ import com.timgroup.eventstore.api.WrongExpectedVersionException;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.sql.BatchUpdateException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -34,12 +37,14 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
     private final String tableName;
     private final Optional<Timer> timer;
     private final Optional<Histogram> histogram;
+    private final Optional<Counter> retryCounter;
 
     public BasicMysqlEventStreamWriter(ConnectionProvider connectionProvider, String databaseName, String tableName, @Nullable MetricRegistry metricRegistry) {
         this.connectionProvider = requireNonNull(connectionProvider);
         this.tableName = requireNonNull(tableName);
         this.timer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.write.time", databaseName, tableName)));
         this.histogram = Optional.ofNullable(metricRegistry).map(r -> r.histogram(String.format("database.%s.%s.write.count", databaseName, tableName)));
+        this.retryCounter = Optional.ofNullable(metricRegistry).map(r -> r.counter(String.format("database.%s.%s.retry.count", databaseName, tableName)));
     }
 
     @Override
@@ -98,6 +103,13 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
 
             if (!failures.isEmpty()) {
                 throw new WrongExpectedVersionException(failures.stream().collect(joining(",")));
+            }
+        } catch (BatchUpdateException e) {
+            if (e.getCause() instanceof SQLIntegrityConstraintViolationException) {
+                retryCounter.ifPresent(Counter::inc);
+                execute(writeRequests); // retry indefinitely
+            } else {
+                throw new RuntimeException(e);
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
