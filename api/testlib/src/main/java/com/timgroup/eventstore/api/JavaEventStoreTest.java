@@ -467,14 +467,7 @@ public abstract class JavaEventStoreTest {
 
         range(0, 100).forEach(i -> {
             // Cast to Runnable required only by java9, not 8 or 10
-            exec.submit((Runnable) () -> {
-               while (true) {
-                    try {
-                        writer.write(stream, singletonList(anEvent()));
-                        return;
-                    } catch (Exception e) {}
-               }
-           });
+            exec.submit((Runnable) () -> writer.write(stream, singletonList(anEvent())));
         });
 
         exec.shutdown();
