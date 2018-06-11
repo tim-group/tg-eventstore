@@ -13,6 +13,7 @@ import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.sql.BatchUpdateException;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -126,7 +127,10 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
     private void write(Collection<WritableEvent> events, Connection connection) throws SQLException {
         try (
                 Timer.Context c = timer.map(t -> t.time()).orElse(new Timer().time());
-                PreparedStatement statement = connection.prepareStatement("insert into " + tableName + "(position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata) values(?, UTC_TIMESTAMP(), ?, ?, ?, ?, ?, ?)")
+                PreparedStatement statement = connection.prepareStatement(
+                        "insert into " + tableName + "(position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata) " +
+                        "values(?, " + currentTime(connection.getMetaData()) +", ?, ?, ?, ?, ?, ?)"
+                )
         ) {
 
             long currentPosition = currentPosition(connection);
@@ -149,6 +153,12 @@ public class BasicMysqlEventStreamWriter implements EventStreamWriter {
             }
             histogram.ifPresent(h -> h.update(events.size()));
         }
+    }
+
+    private static String currentTime(DatabaseMetaData meta) throws SQLException {
+        return BasicMysqlEventStoreSetup.mysqlSupportsFractionalSecondsForDatetime(meta)
+                ? "UTC_TIMESTAMP(6)"
+                : "UTC_TIMESTAMP()";
     }
 
     private long currentPosition(Connection connection) throws SQLException {

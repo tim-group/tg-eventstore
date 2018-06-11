@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.OptionalLong;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -30,11 +31,13 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static java.util.stream.LongStream.range;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
 public abstract class JavaEventStoreTest {
@@ -85,6 +88,22 @@ public abstract class JavaEventStoreTest {
                         .and(EventRecord::metadata, event_2.metadata())
                         .andMatching(EventRecord::timestamp, shortlyAfter(timeBeforeTest))
         ));
+    }
+
+    @Test
+    public void
+    returns_sub_second_precision_for_read_events() {
+        eventSource().writeStream().write(stream_1, asList(event_1, event_2, event_3));
+
+        Set<Integer> eventTimestampFractionsOfSeconds = eventSource().readStream().readStreamForwards(stream_1)
+                .map(ResolvedEvent::eventRecord)
+                .map(e -> e.timestamp().getNano())
+                .collect(toSet());
+
+        // - in theory, this might accidentally fail if all events have 0 nanos in their timestamps
+        // - in practice, this is highly unlikely though, since even for the in-memory store subsequently written events have slightly different nanos in their timestamps
+        // - is there must be a better way to test / ensure that we return timestamps with sub-second precision?
+        assertThat(eventTimestampFractionsOfSeconds, not(Matchers.contains(0)));
     }
 
     @Test

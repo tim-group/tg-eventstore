@@ -38,8 +38,8 @@ public class BasicMysqlEventStoreSetup {
 
     private void create(boolean ifNotExists) {
         try (Connection connection = connectionProvider.getConnection()) {
+            DatabaseMetaData meta = connection.getMetaData();
             if (ifNotExists) {
-                DatabaseMetaData meta = connection.getMetaData();
                 String searchStringEscape = meta.getSearchStringEscape();
                 String escapedTableName = tableName.replace("_", searchStringEscape + "_").replace("%", searchStringEscape + "%");
                 try(ResultSet res = meta.getTables(null, null, escapedTableName, new String[]{"TABLE", "VIEW"})) {
@@ -52,7 +52,7 @@ public class BasicMysqlEventStoreSetup {
             try (Statement statement = connection.createStatement()) {
                 statement.execute("create table " + (ifNotExists ? "if not exists" : "") + " " + tableName + "(" +
                         "position bigint primary key, " +
-                        "timestamp datetime not null, " +
+                        timestampColumnDefinition(meta) +
                         "stream_category varchar(255) not null, " +
                         "stream_id varchar(255) not null, " +
                         "event_number bigint not null, " +
@@ -66,6 +66,20 @@ public class BasicMysqlEventStoreSetup {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    // You can only specify the fractional second precision of a DATETIME column starting with MySql 5.5
+    // (compare https://dev.mysql.com/doc/refman/5.5/en/datetime.html and
+    // https://docs.oracle.com/cd/E19078-01/mysql/mysql-refman-5.1/data-types.html#datetime).
+    protected static boolean mysqlSupportsFractionalSecondsForDatetime(DatabaseMetaData meta) throws SQLException {
+        return (meta.getDatabaseMajorVersion() == 5 && meta.getDatabaseMinorVersion() >= 5)
+                || meta.getDatabaseMajorVersion() > 5;
+    }
+
+    private static String timestampColumnDefinition(DatabaseMetaData meta) throws SQLException {
+        return mysqlSupportsFractionalSecondsForDatetime(meta)
+                ? "timestamp datetime(6) not null, "
+                : "timestamp datetime not null, ";
     }
 
 }
