@@ -93,7 +93,9 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     returns_sub_second_precision_for_read_events() {
-        eventSource().writeStream().write(stream_1, asList(event_1, event_2, event_3));
+        for (int i = 0; i < 1000; i++) {
+            eventSource().writeStream().write(stream_1, asList(event_1));
+        }
 
         Set<Integer> eventTimestampFractionsOfSeconds = eventSource().readStream().readStreamForwards(stream_1)
                 .map(ResolvedEvent::eventRecord)
