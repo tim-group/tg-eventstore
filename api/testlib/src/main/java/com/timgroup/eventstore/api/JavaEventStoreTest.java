@@ -93,7 +93,7 @@ public abstract class JavaEventStoreTest {
     @Test
     public void
     returns_sub_second_precision_for_read_events() {
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 50; i++) {
             eventSource().writeStream().write(stream_1, asList(event_1));
         }
 
