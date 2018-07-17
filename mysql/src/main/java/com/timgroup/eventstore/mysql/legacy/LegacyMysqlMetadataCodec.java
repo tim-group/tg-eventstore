@@ -14,7 +14,6 @@ final class LegacyMysqlMetadataCodec {
     private LegacyMysqlMetadataCodec() { /* prevent instantiation */ }
 
     private static final Pattern EFFECTIVE_TIMESTAMP_PATTERN = Pattern.compile("\"effective_timestamp\"\\s*:\\s*\"([^\"]+)\"");
-    private static final String EFFECTIVE_TIMESTAMP_FORMAT = "{\"effective_timestamp\":\"%s\"}";
 
     static Timestamp effectiveTimestampFrom(NewEvent event) {
         if (event.metadata().length > 0) {
@@ -28,6 +27,6 @@ final class LegacyMysqlMetadataCodec {
     }
 
     static byte[] metadataFrom(Timestamp effectiveTimestamp) {
-        return String.format(EFFECTIVE_TIMESTAMP_FORMAT, effectiveTimestamp.toInstant()).getBytes(UTF_8);
+        return ("{\"effective_timestamp\":\"" + effectiveTimestamp.toInstant() + "\"}").getBytes(UTF_8);
     }
 }
