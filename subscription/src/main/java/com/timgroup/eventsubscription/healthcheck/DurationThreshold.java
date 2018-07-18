@@ -9,7 +9,7 @@ import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
-public class DurationThreshold {
+public final class DurationThreshold {
     private final Duration warning;
     private final Duration critical;
 
