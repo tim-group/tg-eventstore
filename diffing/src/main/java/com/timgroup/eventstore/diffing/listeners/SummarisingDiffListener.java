@@ -5,6 +5,7 @@ import com.google.common.base.Strings;
 import com.timgroup.eventstore.diffing.DiffEvent;
 
 import java.io.PrintWriter;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,47 +14,88 @@ import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
 
 public final class SummarisingDiffListener implements DiffListener {
+    private static final int DEFAULT_INTERMEDIATE_REPORT_EVENT_FREQUENCY = 500000;
+
     private final PrintWriter summaryWriter;
+    private final int intermediateReportEventFrequency;
 
     private final InterestingEventsPair matching = new InterestingEventsPair();
     private final InterestingEventsPair similar = new InterestingEventsPair();
     private final InterestingEventsPair unmatched = new InterestingEventsPair();
 
-    SummarisingDiffListener(PrintWriter summaryWriter) {
+    private int eventsProcessed = 0;
+    private int lastIntermediateReportEventCount = 0;
+
+    public SummarisingDiffListener(PrintWriter summaryWriter) {
+        this(summaryWriter, DEFAULT_INTERMEDIATE_REPORT_EVENT_FREQUENCY);
+    }
+
+    public SummarisingDiffListener(PrintWriter summaryWriter, int intermediateReportEventFrequency) {
         this.summaryWriter = summaryWriter;
+        this.intermediateReportEventFrequency = intermediateReportEventFrequency;
+        header(Instant.now() + " starting to diff", ' ');
+        summaryWriter.flush();
     }
 
     @Override public void onMatchingEvents(DiffEvent eventInStreamA, DiffEvent eventInStreamB) {
         matching.updateWith(eventInStreamA, eventInStreamB);
+        maybePrintIntermediateReport(2);
     }
 
     @Override public void onSimilarEvents(DiffEvent eventInStreamA, DiffEvent eventInStreamB) {
         similar.updateWith(eventInStreamA, eventInStreamB);
+        maybePrintIntermediateReport(2);
     }
 
     @Override public void onUnmatchedEventInStreamA(DiffEvent eventInStreamA) {
         unmatched.eventsFromA.updateWith(eventInStreamA);
+        maybePrintIntermediateReport(1);
     }
 
     @Override public void onUnmatchedEventInStreamB(DiffEvent eventInStreamB) {
         unmatched.eventsFromB.updateWith(eventInStreamB);
+        maybePrintIntermediateReport(1);
     }
 
-    // TODO on thresholdReached -> printReport
-    public void printReport() {
+    public void printFinalReport() {
+        header(Instant.now() + " final diffing results after " + eventsProcessed + " processed events", '=');
+        printReport();
+    }
+
+    void maybePrintIntermediateReport(int additionalEvents) {
+        eventsProcessed += additionalEvents;
+        if (hasNewTypeOfDiff() || isOverReportingThreshold()) {
+            lastIntermediateReportEventCount = eventsProcessed;
+            header(Instant.now() + " intermediate diffing results after " + eventsProcessed + " processed events", '=');
+            printReport();
+        }
+    }
+
+    private boolean hasNewTypeOfDiff() {
+        return similar.eventsFromA.totalCount == 1 || unmatched.eventsFromA.totalCount == 1 || unmatched.eventsFromB.totalCount == 1;
+    }
+    private boolean isOverReportingThreshold() {
+        return eventsProcessed - lastIntermediateReportEventCount >= intermediateReportEventFrequency;
+    }
+
+    void printReport() {
         section("matching pairs of events", matching.eventsFromA);
         section("similar events in stream A", similar.eventsFromA);
         section("similar events in stream B", similar.eventsFromB);
         section("unmatched events in stream A", unmatched.eventsFromA);
         section("unmatched events in stream B", unmatched.eventsFromB);
+        summaryWriter.flush();
+    }
+
+    private void header(String text, Character underline) {
+        summaryWriter.println();
+        summaryWriter.println(text);
+        summaryWriter.println(Strings.repeat(underline.toString(), text.length()));
     }
 
     private void section(String title, InterestingEvents events) {
         if (events.totalCount > 0) {
-            summaryWriter.println();
-            summaryWriter.println(events.totalCount + " " + title);
-            summaryWriter.println(Strings.repeat("-", (events.totalCount + " " + title).length()));
-            summaryWriter.println();
+            header(events.totalCount + " " + title, '-');
             summaryWriter.println("per type: " +
                     Joiner.on(", ").join(events.countByType.entrySet().stream().sorted(comparing(Map.Entry::getKey))
                             .map(entry -> entry.getValue() + " " + entry.getKey()).collect(toList())));

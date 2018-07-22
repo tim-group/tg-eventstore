@@ -1,6 +1,5 @@
 package com.timgroup.eventstore.diffing.listeners;
 
-import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.diffing.DiffEvent;
 
 public interface DiffListener {
@@ -9,6 +8,4 @@ public interface DiffListener {
 
     default void onUnmatchedEventInStreamA(DiffEvent eventInStreamA) {}
     default void onUnmatchedEventInStreamB(DiffEvent eventInStreamB) {}
-
-    // TODO default void onProgressReportThresholdReached(int processedEvents) {}
 }
