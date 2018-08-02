@@ -178,7 +178,7 @@ public final class StacksConfiguredDataSource {
             @Nullable MetricRegistry metricRegistry)
     {
         ComboPooledDataSource dataSource = new ComboPooledDataSource();
-        dataSource.setJdbcUrl(format("jdbc:mysql://%s:%d/%s?rewriteBatchedStatements=true&secondsBeforeRetryMaster=0&queriesBeforeRetryMaster=0&connectTimeout=5000&socketTimeout=" + socketTimeoutMs,
+        dataSource.setJdbcUrl(format("jdbc:mysql://%s:%d/%s?rewriteBatchedStatements=true&connectTimeout=5000&socketTimeout=" + socketTimeoutMs,
                 hostname,
                 port,
                 database));
@@ -190,7 +190,7 @@ public final class StacksConfiguredDataSource {
         dataSource.setAcquireIncrement(1);
         dataSource.setAcquireRetryAttempts(5);
         dataSource.setMaxPoolSize(maxPoolsize);
-        dataSource.setMaxConnectionAge(60);
+        dataSource.setMaxConnectionAge(30);
         dataSource.setPreferredTestQuery("SELECT 1");
 
         configureToSendMetrics(dataSource, database, metricRegistry);
