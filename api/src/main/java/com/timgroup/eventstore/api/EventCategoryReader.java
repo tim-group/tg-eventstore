@@ -2,6 +2,7 @@ package com.timgroup.eventstore.api;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -15,6 +16,12 @@ public interface EventCategoryReader {
     @Nonnull
     @CheckReturnValue
     Stream<ResolvedEvent> readCategoryForwards(String category, Position positionExclusive);
+
+    @Nonnull
+    @CheckReturnValue
+    default Stream<ResolvedEvent> readCategoriesForwards(List<String> categories, Position positionExclusive) {
+        throw new UnsupportedOperationException("reading multiple categories forwards not supported yet");
+    }
 
     @Nonnull
     @CheckReturnValue

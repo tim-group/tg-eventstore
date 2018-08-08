@@ -20,7 +20,9 @@ import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
@@ -116,6 +118,13 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
     @CheckReturnValue
     public Stream<ResolvedEvent> readCategoryForwards(String category, Position position) {
         return readAllForwards(position).filter(evt -> evt.eventRecord().streamId().category().equals(category));
+    }
+
+    @Nonnull
+    @Override
+    public Stream<ResolvedEvent> readCategoriesForwards(List<String> categories, Position positionExclusive) {
+        Set<String> cats = new HashSet<>(categories);
+        return readAllForwards(positionExclusive).filter(e -> cats.contains(e.eventRecord().streamId().category()));
     }
 
     @Override

@@ -101,7 +101,7 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
         );
     }
 
-    private EventSpliterator(
+    EventSpliterator(
             ConnectionProvider connectionProvider,
             T startingLocation,
             Function<T, String> queryStringGenerator,

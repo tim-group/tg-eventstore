@@ -430,6 +430,26 @@ public abstract class JavaEventStoreTest {
         assertThat(eventSource().readCategory().readCategoryForwards(category_1, position).collect(toList()), empty());
     }
 
+    @Test public void
+    can_read_multiple_categories_in_one_request() {
+        eventSource().writeStream().write(streamId(category_1, "Id1"), singletonList(anEvent()));
+        eventSource().writeStream().write(streamId(category_1, "Id2"), singletonList(anEvent()));
+        eventSource().writeStream().write(streamId(category_2, "Id3"), singletonList(anEvent()));
+        eventSource().writeStream().write(streamId(category_1, "Id4"), singletonList(anEvent()));
+        eventSource().writeStream().write(streamId(category_3, "Id5"), singletonList(anEvent()));
+        eventSource().writeStream().write(streamId(category_2, "Id6"), singletonList(anEvent()));
+
+        List<EventRecord> events = eventSource().readCategory().readCategoriesForwards(Arrays.asList(category_1, category_2), eventSource().readAll().emptyStorePosition()).map(ResolvedEvent::eventRecord).collect(toList());
+
+        assertThat(events, contains(
+                objectWith(EventRecord::streamId, streamId(category_1, "Id1")),
+                objectWith(EventRecord::streamId, streamId(category_1, "Id2")),
+                objectWith(EventRecord::streamId, streamId(category_2, "Id3")),
+                objectWith(EventRecord::streamId, streamId(category_1, "Id4")),
+                objectWith(EventRecord::streamId, streamId(category_2, "Id6"))
+        ));
+    }
+
     @Test
     public void
     can_read_events_backwards_by_category() {
