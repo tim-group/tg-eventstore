@@ -5,8 +5,17 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
 
-import java.sql.*;
-import java.util.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Optional;
+import java.util.Spliterator;
 import java.util.function.Consumer;
 
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
@@ -58,8 +67,8 @@ final class LegacyMysqlEventSpliterator implements Spliterator<ResolvedEvent> {
                                         resultSet.getBytes("body"),
                                         LegacyMysqlMetadataCodec.metadataFrom(effectiveTimestamp)
                                 )));
-                        currentPage = list.iterator();
                     }
+                    currentPage = list.iterator();
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
                 }
