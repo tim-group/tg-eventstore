@@ -102,9 +102,8 @@ public final class EventShovel {
             writeEvents(resolvedEventStream.map(evt -> {
                 EventRecord record = evt.eventRecord();
                 lastProcessedEvent.updateValue(INFO, record.streamId() + " eventNumber=" + record.eventNumber());
-
                 return new NewEventWithStreamId(
-                        record.streamId(),
+                        redefineStreamId(record.streamId()),
                         record.eventNumber(),
                         newEvent(
                                 record.eventType(),
@@ -145,14 +144,16 @@ public final class EventShovel {
             while (batches.hasNext()) {
                 List<NewEventWithStreamId> batch = batches.next();
                 NewEventWithStreamId first = batch.get(0);
-                StreamId streamId;
-                if (outputCategory != null && !outputCategory.equals(first.streamId.category())) {
-                    streamId = StreamId.streamId(outputCategory, first.streamId.id());
-                } else {
-                    streamId = first.streamId;
-                }
-                outputWriter.write(streamId, transform(batch, e -> e.event), first.eventNumber - 1);
+                outputWriter.write(first.streamId, transform(batch, e -> e.event), first.eventNumber - 1);
             }
+        }
+    }
+
+    private StreamId redefineStreamId(StreamId streamId) {
+        if (outputCategory != null && !outputCategory.equals(streamId.category())) {
+            return StreamId.streamId(outputCategory, streamId.id());
+        } else {
+            return streamId;
         }
     }
 
