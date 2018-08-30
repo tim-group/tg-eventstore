@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.shovelling;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventstore.api.EventRecord;
@@ -344,6 +345,29 @@ public final class EventShovelTest {
         }
     }
 
+    @Test public void
+    it_can_shovel_to_a_cateogry_whilst_other_clients_are_writing_to_the_output() throws Exception {
+
+        EventShovel shovelForCategory = new EventShovel(inputSource.readAll(), inputSource.positionCodec(), outputSource, "coolness");
+
+        inputEventArrived(streamId("coolness", "tom"), newEvent("CoolenessAdded", new byte[0], new byte[0]));
+        outputSource.writeStream().write(StreamId.streamId("hotness", "foo"), ImmutableList.of(newEvent("HotnessAdded", "{\"data\":1}".getBytes(), "{\"md\":1}".getBytes())));
+
+        shovelForCategory.shovelAllNewlyAvailableEvents();
+
+        List<EventRecord> shovelledEvents = outputSource.readAll().readAllForwards().skip(1).map(ResolvedEvent::eventRecord).collect(Collectors.toList());
+
+        assertThat(shovelledEvents, contains(
+                anEventRecord(
+                        clock.instant(),
+                        StreamId.streamId("coolness", "tom"),
+                        0L,
+                        "CoolenessAdded",
+                        new byte[0],
+                        "{\"shovel_position\":\"1\"}".getBytes(UTF_8)
+                )
+        ));
+    }
 
     private void inputEventArrived(StreamId streamId, NewEvent... events) {
         inputReader.write(streamId, Lists.newArrayList(events));

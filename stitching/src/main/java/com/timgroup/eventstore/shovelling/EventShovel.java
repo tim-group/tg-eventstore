@@ -12,11 +12,13 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
+import com.timgroup.eventstore.readerutils.SingleEventCategoryEventReader;
 import com.timgroup.eventstore.writerutils.IdempotentEventStreamWriter;
 import com.timgroup.eventstore.writerutils.IdempotentEventStreamWriter.IncompatibleNewEventException;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.component.SimpleValueComponent;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
@@ -46,33 +48,47 @@ public final class EventShovel {
     private final SimpleValueComponent lastProcessedEvent = new SimpleValueComponent("last-shovelled-event", "Last Shovelled Event");
     private final EventReader outputReader;
     private final EventStreamWriter outputWriter;
+    private final String outputCategory;
 
-    public EventShovel(int maxBatchSize, EventReader reader, PositionCodec readerPositionCodec, EventSource output) {
+    public EventShovel(int maxBatchSize, EventReader reader, PositionCodec readerPositionCodec, EventSource output, @Nullable String outputCategory) {
         this.maxBatchSize = maxBatchSize;
         this.reader = requireNonNull(reader);
         this.readerPositionCodec = requireNonNull(readerPositionCodec);
-        this.outputReader = output.readAll();
+        this.outputCategory = outputCategory;
+        if (this.outputCategory != null) {
+            this.outputReader = SingleEventCategoryEventReader.curryCategoryReader(output, this.outputCategory);
+        } else {
+            this.outputReader = output.readAll();
+        }
         this.outputWriter = IdempotentEventStreamWriter.idempotent(output.writeStream(), output.readStream(), (a, b) -> {
-                BASIC_COMPATIBILITY_CHECK.throwIfIncompatible(a, b);
-                if (a.eventRecord().metadata() != b.metadata()) {
-                    try {
-                        ObjectNode aJson = (ObjectNode) json.readTree(a.eventRecord().metadata());
-                        ObjectNode bJson = (ObjectNode) json.readTree(b.metadata());
-                        aJson.remove(SHOVEL_POSITION_METADATA_FIELD);
-                        bJson.remove(SHOVEL_POSITION_METADATA_FIELD);
-                        if (!aJson.equals(bJson)) {
-                            METADATA_COMPATIBILITY_CHECK.throwIfIncompatible(a, b);
-                        }
-                    } catch (IOException e) {
-                        throw new IncompatibleNewEventException("unable to compare metadata", a, b);
+            BASIC_COMPATIBILITY_CHECK.throwIfIncompatible(a, b);
+            if (a.eventRecord().metadata() != b.metadata()) {
+                try {
+                    ObjectNode aJson = (ObjectNode) json.readTree(a.eventRecord().metadata());
+                    ObjectNode bJson = (ObjectNode) json.readTree(b.metadata());
+                    aJson.remove(SHOVEL_POSITION_METADATA_FIELD);
+                    bJson.remove(SHOVEL_POSITION_METADATA_FIELD);
+                    if (!aJson.equals(bJson)) {
+                        METADATA_COMPATIBILITY_CHECK.throwIfIncompatible(a, b);
                     }
+                } catch (IOException e) {
+                    throw new IncompatibleNewEventException("unable to compare metadata", a, b);
                 }
+            }
         });
         lastProcessedEvent.updateValue(INFO, "none");
     }
 
+    public EventShovel(int maxBatchSize, EventReader reader, PositionCodec readerPositionCodec, EventSource output) {
+        this(maxBatchSize, reader, readerPositionCodec, output, null);
+    }
+
     public EventShovel(EventReader reader, PositionCodec readerPositionCodec, EventSource output) {
-        this(10000, reader, readerPositionCodec, output);
+        this(reader, readerPositionCodec, output, null);
+    }
+
+    public EventShovel(EventReader reader, PositionCodec readerPositionCodec, EventSource output, @Nullable String outputCategory) {
+        this(10000, reader, readerPositionCodec, output, outputCategory);
     }
 
     public void shovelAllNewlyAvailableEvents() {
@@ -129,7 +145,13 @@ public final class EventShovel {
             while (batches.hasNext()) {
                 List<NewEventWithStreamId> batch = batches.next();
                 NewEventWithStreamId first = batch.get(0);
-                outputWriter.write(first.streamId, transform(batch, e -> e.event), first.eventNumber - 1);
+                StreamId streamId;
+                if (outputCategory != null && !outputCategory.equals(first.streamId.category())) {
+                    streamId = StreamId.streamId(outputCategory, first.streamId.id());
+                } else {
+                    streamId = first.streamId;
+                }
+                outputWriter.write(streamId, transform(batch, e -> e.event), first.eventNumber - 1);
             }
         }
     }
