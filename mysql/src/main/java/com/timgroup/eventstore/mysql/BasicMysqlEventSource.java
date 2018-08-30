@@ -22,7 +22,7 @@ import java.util.Properties;
 import static java.util.Collections.singletonList;
 
 public class BasicMysqlEventSource implements EventSource {
-    private static final int DefaultBatchSize = 100000;
+    private static final int DefaultBatchSize = 100_000;
 
     private final ConnectionProvider connectionProvider;
     private final String databaseName;
