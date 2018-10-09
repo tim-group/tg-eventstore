@@ -18,6 +18,7 @@ import static com.timgroup.eventstore.mysql.BasicMysqlEventStorePosition.EMPTY_S
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.StreamSupport.stream;
 
+@SuppressWarnings({"OptionalUsedAsFieldOrParameterType", "WeakerAccess"})
 public class BasicMysqlEventCategoryReader implements EventCategoryReader {
     private final ConnectionProvider connectionProvider;
     private final String tableName;
@@ -94,10 +95,8 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
     @Override
     public String toString() {
         return "BasicMysqlEventCategoryReader{" +
-                "connectionProvider=" + connectionProvider +
-                ", tableName='" + tableName + '\'' +
+                "tableName='" + tableName + '\'' +
                 ", batchSize=" + batchSize +
-                ", timer=" + timer +
                 '}';
     }
 
