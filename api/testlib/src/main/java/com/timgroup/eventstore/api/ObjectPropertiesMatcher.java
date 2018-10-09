@@ -34,7 +34,7 @@ public class ObjectPropertiesMatcher<T> extends TypeSafeDiagnosingMatcher<T> {
             mismatchDescription.appendText("\n\t");
             p.describeMismatch(item, mismatchDescription);
         });
-        return !properties.stream().filter(p -> !p.matches(item)).findAny().isPresent();
+        return properties.stream().allMatch(p -> p.matches(item));
     }
 
     @Override

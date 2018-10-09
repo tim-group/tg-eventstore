@@ -40,6 +40,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
+@SuppressWarnings({"ResultOfMethodCallIgnored", "OptionalGetWithoutIsPresent"})
 public abstract class JavaEventStoreTest {
     @Rule
     public ExpectedException thrown = ExpectedException.none();
@@ -60,7 +61,7 @@ public abstract class JavaEventStoreTest {
 
     public abstract EventSource eventSource();
 
-    public Instant timeBeforeTest;
+    private Instant timeBeforeTest;
 
     @Before
     public void captureTime() {
@@ -94,7 +95,7 @@ public abstract class JavaEventStoreTest {
     public void
     returns_sub_second_precision_for_read_events() {
         for (int i = 0; i < 50; i++) {
-            eventSource().writeStream().write(stream_1, asList(event_1));
+            eventSource().writeStream().write(stream_1, singletonList(event_1));
         }
 
         Set<Integer> eventTimestampFractionsOfSeconds = eventSource().readStream().readStreamForwards(stream_1)
@@ -508,7 +509,7 @@ public abstract class JavaEventStoreTest {
 
         range(0, 100).forEach(i -> {
             // Cast to Runnable required only by java9, not 8 or 10
-            exec.submit((Runnable) () -> writer.write(stream, singletonList(anEvent())));
+            exec.submit(() -> writer.write(stream, singletonList(anEvent())));
         });
 
         exec.shutdown();
@@ -516,7 +517,7 @@ public abstract class JavaEventStoreTest {
 
         List<Long> eventNumberWritten = eventSource().readStream().readStreamForwards(stream).map(e -> e.eventRecord().eventNumber()).collect(toList());
 
-        assertThat(eventNumberWritten, is(range(0, 100).mapToObj(i -> i).collect(toList())));
+        assertThat(eventNumberWritten, is(range(0, 100).boxed().collect(toList())));
     }
 
     @Test
@@ -598,7 +599,7 @@ public abstract class JavaEventStoreTest {
 
         eventSource().writeStream().execute(Arrays.asList(
                 new StreamWriteRequest(stream_1, singletonList(event_1), OptionalLong.empty()),
-                new StreamWriteRequest(stream_1, asList(event_2), OptionalLong.empty())
+                new StreamWriteRequest(stream_1, singletonList(event_2), OptionalLong.empty())
         ));
     }
 
