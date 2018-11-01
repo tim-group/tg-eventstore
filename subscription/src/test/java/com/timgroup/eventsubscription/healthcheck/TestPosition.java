@@ -17,7 +17,6 @@ class TestPosition implements Position {
         TestPosition that = (TestPosition) o;
 
         return value == that.value;
-
     }
 
     @Override
