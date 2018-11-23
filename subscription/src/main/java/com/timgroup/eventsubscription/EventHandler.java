@@ -8,7 +8,9 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 public interface EventHandler<T> {
-    default void apply(T deserialized) {}
+    default void apply(T deserialized) {
+        throw new UnsupportedOperationException();
+    }
 
     default void apply(Position position, DateTime timestamp, T deserialized, boolean endOfBatch) {
         apply(deserialized);
