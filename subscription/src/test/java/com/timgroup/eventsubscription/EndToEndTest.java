@@ -7,6 +7,7 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
+import com.timgroup.eventsubscription.healthcheck.InitialCatchupFuture;
 import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
 import com.timgroup.structuredevents.LocalEventSink;
 import com.timgroup.structuredevents.StructuredEventMatcher;
@@ -49,6 +50,7 @@ import static com.youdevise.testutils.matchers.ExceptionMatcher.anExceptionOfTyp
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.core.StringContains.containsString;
 import static org.mockito.Matchers.argThat;
@@ -63,6 +65,7 @@ public class EndToEndTest {
 
     private final LocalEventSink eventSink = new LocalEventSink();
     private final SubscriptionListener listener = Mockito.mock(SubscriptionListener.class);
+    private final InitialCatchupFuture initialCatchupFuture = new InitialCatchupFuture();
 
     private EventSubscription<DeserialisedEvent> subscription;
 
@@ -102,6 +105,8 @@ public class EndToEndTest {
         inOrder.verify(listener, Mockito.atLeastOnce()).staleAtVersion(Mockito.eq(Optional.empty()));
         inOrder.verify(listener, Mockito.atLeastOnce()).caughtUpAt(argThat(inMemoryPosition(3)));
         Mockito.verify(listener, Mockito.never()).terminated(Mockito.any(), Mockito.any());
+
+        assertThat(initialCatchupFuture.isDone(), equalTo(true));
     }
 
     @Test
@@ -136,6 +141,8 @@ public class EndToEndTest {
             assertThat(eventsProcessed.get(), is(1));
             Mockito.verify(listener).terminated(argThat(inMemoryPosition(1)), argThat(anExceptionOfType(RuntimeException.class).withTheMessage("failure")));
         });
+
+        assertThat(initialCatchupFuture.isCompletedExceptionally(), equalTo(true));
     }
 
     @Test
@@ -271,6 +278,7 @@ public class EndToEndTest {
                 .publishingTo(eventHandler)
                 .withEventSink(eventSink)
                 .withListener(listener)
+                .withListener(initialCatchupFuture)
                 .build();
     }
 
