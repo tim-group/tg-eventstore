@@ -178,7 +178,7 @@ public final class StacksConfiguredDataSource {
             @Nullable MetricRegistry metricRegistry)
     {
         ComboPooledDataSource dataSource = new ComboPooledDataSource();
-        dataSource.setJdbcUrl(format("jdbc:mysql://%s:%d/%s?rewriteBatchedStatements=true&secondsBeforeRetryMaster=0&queriesBeforeRetryMaster=0&connectTimeout=5000&socketTimeout=" + socketTimeoutMs,
+        dataSource.setJdbcUrl(format("jdbc:mysql://%s:%d/%s?rewriteBatchedStatements=true&secondsBeforeRetryMaster=1&queriesBeforeRetryMaster=1&connectTimeout=5000&socketTimeout=" + socketTimeoutMs,
                 hostname,
                 port,
                 database));
