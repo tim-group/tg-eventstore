@@ -17,7 +17,7 @@ if (project.hasProperty('scalaTarget')) {
     }
     logger.info "Scala: using (specified) library " + ext.scalaVersion + " and API version " + ext.scalaApiVersion
 } else {
-    ext.scalaVersion = '2.12.4'
+    ext.scalaVersion = '2.12.8'
     ext.scalaApiVersion = '2.12'
     logger.info "Scala: using (default) library " + ext.scalaVersion + " and API version " + ext.scalaApiVersion
 }
