@@ -21,7 +21,7 @@ dependencies {
     implementation "com.lmax:disruptor:3.3.2"
     implementation "com.timgroup:tim-structured-events:0.4.1256" // autobump
     implementation "com.google.guava:guava:19.0"
-    implementation "com.fasterxml.jackson.core:jackson-databind:2.7.2"
+    implementation "com.fasterxml.jackson.core:jackson-databind:2.9.8"
 
     testCompile project(":api:testlib")
     testCompile project(":memory")
