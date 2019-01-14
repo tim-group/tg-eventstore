@@ -36,7 +36,7 @@ dependencies {
     testCompile "org.scalatest:scalatest_$scalaApiVersion:3.0.1"
     testCompileOnly "org.joda:joda-convert:1.3.1"
     testRuntime "org.pegdown:pegdown:1.4.2"
-    testCompile "mysql:mysql-connector-java:5.1.20"
+    testCompile "mysql:mysql-connector-java:8.0.13"
 }
 
 check.dependsOn("scalatest")
