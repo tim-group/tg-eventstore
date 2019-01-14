@@ -18,7 +18,7 @@ dependencies {
     compile project(":mysql")
     compile "io.dropwizard.metrics:metrics-core:3.2.3"
     compile "io.dropwizard.metrics:metrics-jvm:3.2.3"
-    compile "io.dropwizard.metrics:metrics-graphite:3.2.3"
+    compile "io.dropwizard.metrics:metrics-graphite:4.0.5"
     api project(":api")
     compileOnly "com.google.code.findbugs:jsr305:1.3.9"
     implementation "com.google.guava:guava:19.0"
