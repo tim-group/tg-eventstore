@@ -29,7 +29,7 @@ dependencies {
     testCompile project(":api-legacy:testlib")
     testCompile project(":memory-legacy")
     testCompile "junit:junit:4.12"
-    testCompile "org.hamcrest:hamcrest-core:1.3"
+    testCompile "org.hamcrest:hamcrest-core:2.1"
     testCompile "org.hamcrest:hamcrest-library:1.3"
     testCompile "com.timgroup:clocks-testing:1.0.1087" // autobump
     testCompile "org.scalatest:scalatest_$scalaApiVersion:3.0.1"
