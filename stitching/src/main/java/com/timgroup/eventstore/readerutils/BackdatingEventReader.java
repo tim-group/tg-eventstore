@@ -1,6 +1,5 @@
 package com.timgroup.eventstore.readerutils;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.timgroup.eventstore.api.EventReader;
@@ -8,7 +7,6 @@ import com.timgroup.eventstore.api.EventRecord;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.Optional;
 import java.util.function.UnaryOperator;
 
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
@@ -56,7 +54,7 @@ public final class BackdatingEventReader extends TransformingEventReader {
 
         private Instant effectiveTimestampOf(EventRecord eventRecord) {
             try {
-                return Instant.parse(readNonNullTree(eventRecord.metadata()).get(EFFECTIVE_TIMESTAMP).asText());
+                return Instant.parse(json.readTree(eventRecord.metadata()).get(EFFECTIVE_TIMESTAMP).asText());
             } catch (IOException | NullPointerException e) {
                 throw new IllegalStateException("no effective_timestamp in metadata", e);
             }
@@ -64,17 +62,12 @@ public final class BackdatingEventReader extends TransformingEventReader {
 
         private byte[] backdateEffectiveTimestamp(byte[] upstreamMetadata) {
             try {
-                ObjectNode jsonNode = (ObjectNode) readNonNullTree(upstreamMetadata);
+                ObjectNode jsonNode = (ObjectNode) json.readTree(upstreamMetadata);
                 jsonNode.put(EFFECTIVE_TIMESTAMP, destination.toString());
                 return json.writeValueAsBytes(jsonNode);
             } catch (IOException e) {
                 throw new IllegalStateException("the code should never end up here", e);
             }
         }
-
-        private JsonNode readNonNullTree(byte[] data) throws IOException {
-            return Optional.ofNullable(json.readTree(data)).orElseThrow(() -> new IOException("blank json data"));
-        }
-
     }
 }

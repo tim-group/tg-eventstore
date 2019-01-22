@@ -17,7 +17,6 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.UUID;
 
@@ -68,8 +67,8 @@ public class HttpGesEventStreamWriter implements EventStreamWriter {
                             return new HttpEvent(
                                     UUID.randomUUID().toString(),
                                     e.type(),
-                                    readNonNullTree(e.data()),
-                                    readNonNullTree(e.metadata())
+                                    mapper.readTree(e.data()),
+                                    mapper.readTree(e.metadata())
                             );
                         } catch (IOException e1) {
                             throw new RuntimeException(e1);
@@ -94,9 +93,6 @@ public class HttpGesEventStreamWriter implements EventStreamWriter {
         }
     }
 
-    private JsonNode readNonNullTree(byte[] data) throws IOException {
-        return Optional.ofNullable(mapper.readTree(data)).orElseThrow(() -> new IOException("blank json data"));
-    }
 
     private static class HttpEvent {
         public final String eventId;

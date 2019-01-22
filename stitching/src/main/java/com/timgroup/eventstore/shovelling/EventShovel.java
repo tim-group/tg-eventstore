@@ -1,6 +1,5 @@
 package com.timgroup.eventstore.shovelling;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.PeekingIterator;
@@ -65,8 +64,8 @@ public final class EventShovel {
             BASIC_COMPATIBILITY_CHECK.throwIfIncompatible(a, b);
             if (a.eventRecord().metadata() != b.metadata()) {
                 try {
-                    ObjectNode aJson = (ObjectNode) readNonNullTree(a.eventRecord().metadata());
-                    ObjectNode bJson = (ObjectNode) readNonNullTree(b.metadata());
+                    ObjectNode aJson = (ObjectNode) json.readTree(a.eventRecord().metadata());
+                    ObjectNode bJson = (ObjectNode) json.readTree(b.metadata());
                     aJson.remove(SHOVEL_POSITION_METADATA_FIELD);
                     bJson.remove(SHOVEL_POSITION_METADATA_FIELD);
                     if (!aJson.equals(bJson)) {
@@ -127,16 +126,12 @@ public final class EventShovel {
 
     private byte[] createMetadataWithShovelPosition(Position shovelPosition, byte[] upstreamMetadata) {
         try {
-            ObjectNode jsonNode = (ObjectNode) readNonNullTree(upstreamMetadata);
+            ObjectNode jsonNode = (ObjectNode) json.readTree(upstreamMetadata);
             jsonNode.put(SHOVEL_POSITION_METADATA_FIELD, readerPositionCodec.serializePosition(shovelPosition));
             return json.writeValueAsBytes(jsonNode);
         } catch (IOException e) {
             return ("{\"" + SHOVEL_POSITION_METADATA_FIELD + "\":\"" + readerPositionCodec.serializePosition(shovelPosition) + "\"}").getBytes(UTF_8);
         }
-    }
-
-    private JsonNode readNonNullTree(byte[] data) throws IOException {
-        return Optional.ofNullable(json.readTree(data)).orElseThrow(() -> new IOException("blank json data"));
     }
 
     private void writeEvents(Stream<NewEventWithStreamId> eventsToWrite) {

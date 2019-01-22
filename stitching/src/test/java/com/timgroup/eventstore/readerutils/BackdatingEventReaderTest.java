@@ -72,13 +72,6 @@ public final class BackdatingEventReaderTest {
         reader.readAllForwards().forEach(e -> {});
     }
 
-    @Test(expected = IllegalStateException.class)
-    public void it_throws_exception_if_blank_metadata() throws Exception {
-        underlying.write(aStream, singletonList(newEvent("AnEvent", data, "".getBytes())));
-
-        reader.readAllForwards().forEach(e -> {});
-    }
-
     @Test
     public void it_reads_by_position() throws Exception {
         underlying.write(aStream, asList(
