@@ -9,7 +9,6 @@ if (buildNumber) version = '0.0.' + buildNumber
 
 repositories {
     maven {
-        name "nexus"
         url "${repoUrl}/groups/public"
     }
 }
@@ -21,15 +20,17 @@ dependencies {
     compileOnly "com.google.code.findbugs:jsr305:1.3.9"
     implementation "com.timgroup:tim-logger:1.5.1094" // autobump
     implementation "io.dropwizard.metrics:metrics-core:3.2.3"
+    implementation "org.slf4j:slf4j-api:1.7.25"
 
-    testCompile project(":api:testlib")
-    testCompile project(":memory")
-    testCompile "junit:junit:4.12"
-    testCompile "org.hamcrest:hamcrest-core:1.3"
-    testCompile "org.hamcrest:hamcrest-library:1.3"
-    testCompile "com.timgroup:clocks-testing:1.0.1087" // autobump
-    testCompile "mysql:mysql-connector-java:5.1.39"
+    testImplementation project(":api:testlib")
+    testImplementation project(":memory")
+    testImplementation "junit:junit:4.12"
+    testImplementation "org.hamcrest:hamcrest-core:1.3"
+    testImplementation "org.hamcrest:hamcrest-library:1.3"
+    testImplementation "com.timgroup:clocks-testing:1.0.1087" // autobump
+    testImplementation "mysql:mysql-connector-java:5.1.39"
     testCompileOnly "com.google.code.findbugs:jsr305:1.3.9"
+    testRuntimeOnly "org.slf4j:slf4j-simple:1.7.25"
 }
 
 tasks.withType(JavaCompile).all {
@@ -71,7 +72,6 @@ publishing {
     repositories {
         if (project.hasProperty("repoUrl")) {
             maven {
-                name "nexus"
                 url "${project.repoUrl}/repositories/yd-release-candidates"
                 credentials {
                     username = project.repoUsername

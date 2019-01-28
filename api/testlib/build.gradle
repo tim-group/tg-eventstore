@@ -9,7 +9,6 @@ if (buildNumber) version = '0.0.' + buildNumber
 
 repositories {
     maven {
-        name "nexus"
         url "${repoUrl}/groups/public"
     }
 }
@@ -59,7 +58,6 @@ publishing {
     repositories {
         if (project.hasProperty("repoUrl")) {
             maven {
-                name "nexus"
                 url "${project.repoUrl}/repositories/yd-release-candidates"
                 credentials {
                     username = project.repoUsername
