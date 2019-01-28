@@ -9,7 +9,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.fail;
 
@@ -35,8 +34,8 @@ public class ServerSubscriptionListenerTest {
         });
 
         listener.caughtUpAt(new TestPosition(2));
-        latch.await(200, TimeUnit.MILLISECONDS);
-        assertThat(latch.getCount(), is(0L));
+        if (!latch.await(200, TimeUnit.MILLISECONDS))
+            throw new AssertionError("listener await didn't complete");
     }
 
     @Test public void
