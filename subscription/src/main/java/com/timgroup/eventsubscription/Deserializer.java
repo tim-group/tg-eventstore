@@ -12,7 +12,7 @@ import static java.util.Objects.requireNonNull;
 public interface Deserializer<T> {
     @Nonnull T deserialize(EventRecord event);
 
-    default void deserialize(EventRecord event, Consumer<T> consumer) {
+    default void deserialize(EventRecord event, Consumer<? super T> consumer) {
         consumer.accept(deserialize(event));
     }
 
@@ -23,7 +23,7 @@ public interface Deserializer<T> {
     static <T> Deserializer<T> filtering(Predicate<? super EventRecord> predicate, Deserializer<? extends T> downstream) {
         return new Deserializer<T>() {
             @Override
-            public void deserialize(EventRecord event, Consumer<T> consumer) {
+            public void deserialize(EventRecord event, Consumer<? super T> consumer) {
                 if (predicate.test(event)) {
                     consumer.accept(downstream.deserialize(event));
                 }
