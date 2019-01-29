@@ -19,13 +19,13 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
-final class MergedEventReader<T extends Comparable<T>> implements EventReader {
+final class MergedEventReader implements EventReader {
 
     private final Clock clock;
-    private final MergingStrategy<T> mergingStrategy;
+    private final MergingStrategy<?> mergingStrategy;
     private final List<NamedReaderWithCodec> readers;
 
-    public MergedEventReader(Clock clock, MergingStrategy<T> mergingStrategy, NamedReaderWithCodec... readers) {
+    public MergedEventReader(Clock clock, MergingStrategy<?> mergingStrategy, NamedReaderWithCodec... readers) {
         this.clock = requireNonNull(clock);
         this.mergingStrategy = requireNonNull(mergingStrategy);
         this.readers = ImmutableList.copyOf(readers);

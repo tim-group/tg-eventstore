@@ -144,7 +144,7 @@ public final class MergedEventSourceTest {
     supports_reading_all_forwards_from_multiple_input_streams_with_serialisation_of_position() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
-        MergedEventSource<Integer> eventSource = MergedEventSource.streamOrderMergedEventSource(
+        MergedEventSource eventSource = MergedEventSource.streamOrderMergedEventSource(
                 clock,
                 new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC),
                 new NamedReaderWithCodec("b", input2, JavaInMemoryEventStore.CODEC)
@@ -318,7 +318,7 @@ public final class MergedEventSourceTest {
     has_readable_toString_for_its_position() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
-        MergedEventSource<Integer> eventSource = MergedEventSource.streamOrderMergedEventSource(
+        MergedEventSource eventSource = MergedEventSource.streamOrderMergedEventSource(
                 clock,
                 new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC),
                 new NamedReaderWithCodec("b", input2, JavaInMemoryEventStore.CODEC)
@@ -332,7 +332,7 @@ public final class MergedEventSourceTest {
     blows_up_when_decoding_a_position_with_missing_feeds() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
-        MergedEventSource<Integer> eventSource1 = MergedEventSource.streamOrderMergedEventSource(
+        MergedEventSource eventSource1 = MergedEventSource.streamOrderMergedEventSource(
                 clock,
                 new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC),
                 new NamedReaderWithCodec("b", input2, JavaInMemoryEventStore.CODEC)
@@ -342,7 +342,7 @@ public final class MergedEventSourceTest {
         String serialisedPosition = eventSource1.positionCodec().serializePosition(position);
 
         JavaInMemoryEventStore input3 = new JavaInMemoryEventStore(clock);
-        MergedEventSource<Integer> eventSource2 = MergedEventSource.streamOrderMergedEventSource(
+        MergedEventSource eventSource2 = MergedEventSource.streamOrderMergedEventSource(
                 clock,
                 new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC),
                 new NamedReaderWithCodec("b", input2, JavaInMemoryEventStore.CODEC),
@@ -361,7 +361,7 @@ public final class MergedEventSourceTest {
     blows_up_when_decoding_a_position_with_extra_feeds() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
-        MergedEventSource<Integer> eventSource1 = MergedEventSource.streamOrderMergedEventSource(
+        MergedEventSource eventSource1 = MergedEventSource.streamOrderMergedEventSource(
                 clock,
                 new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC),
                 new NamedReaderWithCodec("b", input2, JavaInMemoryEventStore.CODEC)
@@ -370,7 +370,7 @@ public final class MergedEventSourceTest {
         Position position = eventSource1.readAll().emptyStorePosition();
         String serialisedPosition = eventSource1.positionCodec().serializePosition(position);
 
-        MergedEventSource<Integer> eventSource2 = MergedEventSource.streamOrderMergedEventSource(
+        MergedEventSource eventSource2 = MergedEventSource.streamOrderMergedEventSource(
                 clock,
                 new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC)
         );
@@ -387,7 +387,7 @@ public final class MergedEventSourceTest {
     position_ordering() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
-        MergedEventSource<Integer> eventSource1 = MergedEventSource.streamOrderMergedEventSource(
+        MergedEventSource eventSource1 = MergedEventSource.streamOrderMergedEventSource(
                 clock,
                 new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC),
                 new NamedReaderWithCodec("b", input2, JavaInMemoryEventStore.CODEC)
@@ -413,7 +413,7 @@ public final class MergedEventSourceTest {
     on_reordering_partial_positions_are_comparable_whilst_merged_position_is_not() {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
         JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
-        MergedEventSource<Instant> merged = MergedEventSource.effectiveTimestampMergedEventSource(
+        MergedEventSource merged = MergedEventSource.effectiveTimestampMergedEventSource(
                 clock,
                 new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC),
                 new NamedReaderWithCodec("b", input2, JavaInMemoryEventStore.CODEC)
