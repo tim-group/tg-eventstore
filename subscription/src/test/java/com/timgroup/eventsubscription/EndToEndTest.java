@@ -79,7 +79,7 @@ public class EndToEndTest {
     public void reports_ill_during_initial_replay() throws Exception {
         BlockingEventHandler eventProcessing = new BlockingEventHandler();
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
-        subscription = subscription(EndToEndTest::deserialize, eventProcessing);
+        subscription = subscription(Deserializer.applying(EndToEndTest::deserialize), eventProcessing);
         subscription.start();
 
         eventually(() -> {
@@ -112,7 +112,7 @@ public class EndToEndTest {
     @Test
     public void reports_warning_if_event_store_was_not_polled_recently() throws Exception {
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
-        subscription = subscription(EndToEndTest::deserialize, failingHandler(() -> new RuntimeException("failure")));
+        subscription = subscription(Deserializer.applying(EndToEndTest::deserialize), failingHandler(() -> new RuntimeException("failure")));
         subscription.start();
 
         eventually(() -> {
@@ -125,7 +125,7 @@ public class EndToEndTest {
     public void does_not_continue_processing_events_if_event_processing_failed_on_a_previous_event() throws Exception {
         store.write(stream, Arrays.asList(newEvent(), newEvent()));
         AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = subscription(EndToEndTest::deserialize, EventHandler.ofConsumer(e -> {
+        subscription = subscription(Deserializer.applying(EndToEndTest::deserialize), EventHandler.ofConsumer(e -> {
             eventsProcessed.incrementAndGet();
             if (e.event.eventNumber() == 0) {
                 throw new RuntimeException("failure");
@@ -149,14 +149,14 @@ public class EndToEndTest {
     public void does_not_continue_processing_events_if_deserialisation_failed_on_a_previous_event() throws Exception {
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
         AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = subscription(e -> {
+        subscription = subscription(Deserializer.applying(e -> {
             if (e.eventNumber() == 0) {
                 throw new RuntimeException("Failed to deserialize first event");
             }
             else {
                 return deserialize(e);
             }
-        }, EventHandler.ofConsumer(e1 -> {
+        }), EventHandler.ofConsumer(e1 -> {
             eventsProcessed.incrementAndGet();
             throw new UnsupportedOperationException();
         }));
@@ -177,7 +177,7 @@ public class EndToEndTest {
         store.write(stream, Arrays.asList(event1, event2));
         @SuppressWarnings("unchecked")
         EventHandler<DeserialisedEvent> eventHandler = Mockito.mock(EventHandler.class);
-        subscription = subscription(EndToEndTest::deserialize, eventHandler);
+        subscription = subscription(Deserializer.applying(EndToEndTest::deserialize), eventHandler);
         subscription.start();
 
         eventually(() -> {
@@ -209,7 +209,7 @@ public class EndToEndTest {
         EventHandler<DeserialisedEvent> eventHandler = Mockito.mock(EventHandler.class);
         subscription = SubscriptionBuilder.<DeserialisedEvent> eventSubscription("test")
                 .readingFrom(store, "alpha")
-                .deserializingUsing(EndToEndTest::deserialize)
+                .deserializingUsing(Deserializer.applying(EndToEndTest::deserialize))
                 .publishingTo(eventHandler)
                 .withClock(clock)
                 .runningInParallelWithBuffer(1024)
@@ -239,7 +239,7 @@ public class EndToEndTest {
     @Test
     public void starts_up_healthy_when_there_are_no_events() throws Exception {
         AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = subscription(EndToEndTest::deserialize, EventHandler.ofConsumer(e -> {
+        subscription = subscription(Deserializer.applying(EndToEndTest::deserialize), EventHandler.ofConsumer(e -> {
             eventsProcessed.incrementAndGet();
         }));
         subscription.start();
@@ -255,7 +255,7 @@ public class EndToEndTest {
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
         Position lastPosition = store.readAllForwards().map(ResolvedEvent::position).collect(last()).orElseThrow(() -> new AssertionError("No events"));
         AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = subscription(EndToEndTest::deserialize, EventHandler.ofConsumer(e -> eventsProcessed.incrementAndGet()), lastPosition);
+        subscription = subscription(Deserializer.applying(EndToEndTest::deserialize), EventHandler.ofConsumer(e -> eventsProcessed.incrementAndGet()), lastPosition);
         subscription.start();
 
         eventually(() -> {
