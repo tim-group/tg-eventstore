@@ -10,7 +10,7 @@ import scala.collection.JavaConverters._
 class InMemoryEventStore(now: JodaClock = JodaClock.getDefault) extends EventStore {
   var events: IndexedSeq[EventInStream] = Vector()
 
-  def saveWithTime(now: JodaClock = JodaClock.getDefault, newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit =  {
+  override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {
     val currentVersion = events.size
 
     if (expectedVersion.exists(_ != currentVersion)) {
@@ -18,10 +18,6 @@ class InMemoryEventStore(now: JodaClock = JodaClock.getDefault) extends EventSto
     }
 
     events = events ++ newEvents.zipWithIndex.map { case (evt, index) => EventInStream(now.nowDateTime(), evt, currentVersion + index + 1) }
-  }
-
-  override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit =  {
-    saveWithTime(now, newEvents, expectedVersion)
   }
 
   override def fromAll(version: Long): EventStream = new EventStream {
