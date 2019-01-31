@@ -33,7 +33,7 @@ class SQLEventPersisterTest extends FunSpec with MustMatchers with BeforeAndAfte
         override def fetchCurrentVersion(connection: Connection): Long = {
           val version = super.fetchCurrentVersion(connection)
 
-          new SQLEventStore(connectionProvider, "Event", JodaClock.getDefault).save(Seq(EventData("Event", Body(Array[Byte]()))))
+          new SQLEventStore(connectionProvider, "Event", JodaClock.getDefault.withUTC()).save(Seq(EventData("Event", Body(Array[Byte]()))))
 
           version
         }

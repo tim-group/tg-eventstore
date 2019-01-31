@@ -7,7 +7,7 @@ import com.timgroup.eventstore.api._
 
 import scala.collection.JavaConverters._
 
-class InMemoryEventStore(now: JodaClock = JodaClock.getDefault) extends EventStore {
+class InMemoryEventStore(now: JodaClock = JodaClock.getDefault.withUTC()) extends EventStore {
   var events: IndexedSeq[EventInStream] = Vector()
 
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {

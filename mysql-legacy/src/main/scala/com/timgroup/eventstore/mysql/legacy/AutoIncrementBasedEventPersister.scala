@@ -12,7 +12,7 @@ import com.timgroup.eventstore.mysql._
 object AutoIncrementBasedEventStore {
   def apply(connectionProvider: ConnectionProvider,
             tableName: String = "Event",
-            now: JodaClock = JodaClock.getDefault,
+            now: JodaClock = JodaClock.getDefault.withUTC(),
             batchSize: Option[Int] = None) = {
     new SQLEventStore(
       connectionProvider,

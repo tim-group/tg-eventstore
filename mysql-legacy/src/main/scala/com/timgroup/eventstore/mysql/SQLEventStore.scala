@@ -33,7 +33,7 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
                     fetcher: SQLEventFetcher,
                     persister: EventPersister,
                     tableName: String,
-                    now: JodaClock = JodaClock.getDefault,
+                    now: JodaClock = JodaClock.getDefault.withUTC(),
                     batchSize: Option[Int] = None) extends EventStore {
 
   def this(connectionProvider: ConnectionProvider,
@@ -50,7 +50,7 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
   def this(connectionProvider: ConnectionProvider,
            tableName: String,
            clock: JodaClock) {
-    this(connectionProvider, tableName, JodaClock.getDefault, None)
+    this(connectionProvider, tableName, JodaClock.getDefault.withUTC(), None)
   }
 
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {
