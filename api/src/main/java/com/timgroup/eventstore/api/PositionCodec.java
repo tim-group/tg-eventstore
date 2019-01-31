@@ -14,9 +14,9 @@ public interface PositionCodec {
 
     static <T extends Position> PositionCodec fromComparator(
             Class<T> clazz,
-            Function<String, ? extends T> deserialize,
+            Function<? super String, ? extends T> deserialize,
             Function<? super T, String> serialize,
-            Comparator<T> comparator) {
+            Comparator<? super T> comparator) {
         return new PositionCodec() {
             @Override
             public Position deserializePosition(String string) {
@@ -37,7 +37,7 @@ public interface PositionCodec {
 
     static <T extends Position & Comparable<T>> PositionCodec ofComparable(
             Class<T> clazz,
-            Function<String, ? extends T> deserialize,
+            Function<? super String, ? extends T> deserialize,
             Function<? super T, String> serialize) {
         return new PositionCodec() {
             @Override
