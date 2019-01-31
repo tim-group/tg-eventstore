@@ -2,9 +2,10 @@ package com.timgroup.eventstore.mysql
 
 import java.sql.{Connection, DriverManager}
 
+import com.timgroup.clocks.joda.testing.ManualJodaClock
 import com.timgroup.eventstore.api.EventData
-import org.joda.time.DateTime
 import org.joda.time.DateTimeZone.UTC
+import org.joda.time.{DateTime, DateTimeZone, Instant}
 import org.scalatest.{BeforeAndAfterEach, FunSpec, MustMatchers}
 
 class VersionByEffectiveTimestampTest extends FunSpec with MustMatchers with BeforeAndAfterEach {
@@ -20,13 +21,13 @@ class VersionByEffectiveTimestampTest extends FunSpec with MustMatchers with Bef
   val afterCuttoff = cuttoff.plusDays(5)
 
   it("fetches the version before the first event after the specified effective timestamp cuttoff") {
-    val clock = new FixedClock
+    val clock = new ManualJodaClock(Instant.EPOCH, DateTimeZone.UTC)
     val eventStore = new SQLEventStore(connectionProvider, "Event", now = clock, None)
 
-    clock.currentTimeIs(beforeCuttoff)
+    clock.advanceTo(beforeCuttoff.toInstant)
     eventStore.save(Seq(EventData("Blah", "{}".getBytes("utf-8"))))
     eventStore.save(Seq(EventData("Blah", "{}".getBytes("utf-8"))))
-    clock.currentTimeIs(afterCuttoff)
+    clock.advanceTo(afterCuttoff.toInstant)
     eventStore.save(Seq(EventData("Blah", "{}".getBytes("utf-8"))))
 
     new VersionByEffectiveTimestamp(connectionProvider).versionFor(cuttoff) must be(2)
@@ -37,10 +38,10 @@ class VersionByEffectiveTimestampTest extends FunSpec with MustMatchers with Bef
   }
 
   it("if there are no new events after the cuttoff returns the last eventversion") {
-    val clock = new FixedClock
+    val clock = new ManualJodaClock(Instant.EPOCH, DateTimeZone.UTC)
     val eventStore = new SQLEventStore(connectionProvider, "Event", now = clock, None)
 
-    clock.currentTimeIs(beforeCuttoff)
+    clock.advanceTo(beforeCuttoff.toInstant)
     eventStore.save(Seq(EventData("Blah", "{}".getBytes("utf-8"))))
     eventStore.save(Seq(EventData("Blah", "{}".getBytes("utf-8"))))
     eventStore.save(Seq(EventData("Blah", "{}".getBytes("utf-8"))))
@@ -53,14 +54,4 @@ class VersionByEffectiveTimestampTest extends FunSpec with MustMatchers with Bef
     conn.prepareStatement("delete from Event").execute()
     conn.close()
   }
-}
-
-class FixedClock() extends (() => DateTime) {
-  private var time: DateTime = null
-
-  def currentTimeIs(dateTime: DateTime): Unit = {
-    time = dateTime
-  }
-
-  override def apply(): DateTime = time
 }

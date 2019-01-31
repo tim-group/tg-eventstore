@@ -1,8 +1,11 @@
 package com.timgroup.eventstore.mysql.legacy
 
 import java.sql.{Connection, DriverManager}
+
+import com.timgroup.clocks.joda.testing.ManualJodaClock
 import com.timgroup.eventstore.api.EventStoreTest
 import com.timgroup.eventstore.mysql.ConnectionProvider
+import org.joda.time.DateTimeZone
 import org.scalatest.{BeforeAndAfterEach, FunSpec, MustMatchers}
 
 class AutoIncrementBasedEventStoreTest extends FunSpec with EventStoreTest with MustMatchers with BeforeAndAfterEach {
@@ -22,7 +25,7 @@ class AutoIncrementBasedEventStoreTest extends FunSpec with EventStoreTest with 
 
   val eventStore = AutoIncrementBasedEventStore(
     connectionProvider,
-    now = () => effectiveTimestamp,
+    now = new ManualJodaClock(effectiveTimestamp.toInstant, DateTimeZone.UTC),
     tableName = "AutoIncrementEvent"
   )
 

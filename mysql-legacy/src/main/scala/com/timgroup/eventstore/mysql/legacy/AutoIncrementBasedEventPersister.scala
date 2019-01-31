@@ -1,10 +1,9 @@
 package com.timgroup.eventstore.mysql.legacy
 
-import java.io.ByteArrayInputStream
 import java.sql.{Connection, Timestamp}
 
+import com.timgroup.clocks.joda.JodaClock
 import com.timgroup.eventstore.mysql._
-import org.joda.time.{DateTime, DateTimeZone}
 
 /**
   * @deprecated uaw LegacyMysqlEventSource instead
@@ -13,7 +12,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 object AutoIncrementBasedEventStore {
   def apply(connectionProvider: ConnectionProvider,
             tableName: String = "Event",
-            now: () => DateTime = () => DateTime.now(DateTimeZone.UTC),
+            now: JodaClock = JodaClock.getDefault,
             batchSize: Option[Int] = None) = {
     new SQLEventStore(
       connectionProvider,

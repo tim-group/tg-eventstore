@@ -1,7 +1,10 @@
 package com.timgroup.eventstore.mysql
 
 import java.sql.{Connection, DriverManager}
-import com.timgroup.eventstore.api.{OptimisticConcurrencyFailure, EventStoreTest}
+
+import com.timgroup.clocks.joda.testing.ManualJodaClock
+import com.timgroup.eventstore.api.EventStoreTest
+import org.joda.time.DateTimeZone
 import org.scalatest.{BeforeAndAfterEach, FunSpec, MustMatchers}
 
 class SQLEventStoreTest extends FunSpec with EventStoreTest with MustMatchers with BeforeAndAfterEach {
@@ -18,7 +21,7 @@ class SQLEventStoreTest extends FunSpec with EventStoreTest with MustMatchers wi
     conn.close()
   }
 
-  val eventStore = new SQLEventStore(connectionProvider, "Event", () => effectiveTimestamp, None)
+  val eventStore = new SQLEventStore(connectionProvider, "Event", new ManualJodaClock(effectiveTimestamp.toInstant, DateTimeZone.UTC), None)
 
   it should behave like anEventStore(eventStore)
 

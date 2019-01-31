@@ -33,12 +33,12 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
                     fetcher: SQLEventFetcher,
                     persister: EventPersister,
                     tableName: String,
-                    now: () => DateTime = () => DateTime.now(DateTimeZone.UTC),
+                    now: JodaClock = JodaClock.getDefault,
                     batchSize: Option[Int] = None) extends EventStore {
 
   def this(connectionProvider: ConnectionProvider,
            tableName: String,
-           now: () => DateTime,
+           now: JodaClock,
            batchSize: Option[Int]) {
     this(connectionProvider,
          new SQLEventFetcher(tableName),
@@ -50,12 +50,12 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
   def this(connectionProvider: ConnectionProvider,
            tableName: String,
            clock: JodaClock) {
-    this(connectionProvider, tableName, () => clock.nowDateTime(), None)
+    this(connectionProvider, tableName, JodaClock.getDefault, None)
   }
 
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {
     ResourceManagement.transactionallyUsing(connectionProvider) { connection =>
-      val effectiveTimestamp = now()
+      val effectiveTimestamp = now.nowDateTime()
       persister.saveEventsToDB(connection, newEvents.map(EventAtATime(effectiveTimestamp, _)), expectedVersion)
     }
   }
