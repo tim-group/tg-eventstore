@@ -2,21 +2,22 @@ package com.timgroup.eventstore.memory
 
 import java.util.stream.Stream
 
+import com.timgroup.clocks.joda.JodaClock
 import com.timgroup.eventstore.api._
 
 import scala.collection.JavaConverters._
 
-class InMemoryEventStore(now: Clock = SystemClock) extends EventStore {
+class InMemoryEventStore(now: JodaClock = JodaClock.getDefault) extends EventStore {
   var events: IndexedSeq[EventInStream] = Vector()
 
-  def saveWithTime(now: Clock = SystemClock, newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit =  {
+  def saveWithTime(now: JodaClock = JodaClock.getDefault, newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit =  {
     val currentVersion = events.size
 
     if (expectedVersion.exists(_ != currentVersion)) {
       throw new OptimisticConcurrencyFailure(None)
     }
 
-    events = events ++ newEvents.zipWithIndex.map { case (evt, index) => EventInStream(now.now(), evt, currentVersion + index + 1) }
+    events = events ++ newEvents.zipWithIndex.map { case (evt, index) => EventInStream(now.nowDateTime(), evt, currentVersion + index + 1) }
   }
 
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit =  {

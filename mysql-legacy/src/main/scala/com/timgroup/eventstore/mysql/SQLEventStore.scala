@@ -5,6 +5,7 @@ import java.util.Spliterator
 import java.util.function.Consumer
 import java.util.stream.{Stream, StreamSupport}
 
+import com.timgroup.clocks.joda.JodaClock
 import com.timgroup.eventstore.api._
 import org.joda.time.{DateTime, DateTimeZone}
 
@@ -48,8 +49,8 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
   }
   def this(connectionProvider: ConnectionProvider,
            tableName: String,
-           clock: Clock) {
-    this(connectionProvider, tableName, () => clock.now(), None)
+           clock: JodaClock) {
+    this(connectionProvider, tableName, () => clock.nowDateTime(), None)
   }
 
   override def save(newEvents: Seq[EventData], expectedVersion: Option[Long]): Unit = {

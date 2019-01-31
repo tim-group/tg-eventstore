@@ -2,9 +2,10 @@ package com.timgroup.eventstore.stitching
 
 import java.util.function.Consumer
 
+import com.timgroup.clocks.joda.testing.ManualJodaClock
 import com.timgroup.eventstore.api._
 import com.timgroup.eventstore.memory.InMemoryEventStore
-import org.joda.time.DateTime
+import org.joda.time.DateTimeZone
 import org.scalatest.{BeforeAndAfterEach, FunSpec, MustMatchers}
 
 class BackfillStitchingEventStoreTest extends FunSpec with MustMatchers with EventStoreTest with BeforeAndAfterEach {
@@ -89,11 +90,7 @@ class BackfillStitchingEventStoreTest extends FunSpec with MustMatchers with Eve
     events.next.eventData mustBe event("L2")
   }
 
-  val live = new InMemoryEventStore(
-    now = new Clock {
-      override def now(): DateTime = effectiveTimestamp
-    }
-  )
+  val live = new InMemoryEventStore( now = new ManualJodaClock(effectiveTimestamp.toInstant, DateTimeZone.UTC)  )
 
   val eventStore = {
     val backfill = new InMemoryEventStore()
