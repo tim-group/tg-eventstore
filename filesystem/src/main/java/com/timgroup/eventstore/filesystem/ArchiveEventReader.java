@@ -29,14 +29,15 @@ public class ArchiveEventReader implements EventReader {
     @Nonnull
     private final Path archivePath;
 
-    public ArchiveEventReader(Path archivePath) {
+    ArchiveEventReader(Path archivePath) {
         this.archivePath = requireNonNull(archivePath);
     }
 
     @Nonnull
     @Override
-    public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-        ArchiveEventIterator iterator = new ArchiveEventIterator();
+    public Stream<ResolvedEvent> readAllForwards(@Nonnull Position positionExclusive) {
+        String seekToPosition = ((ArchivePosition) positionExclusive).getFilename();
+        ArchiveEventIterator iterator = new ArchiveEventIterator(seekToPosition.isEmpty() ? null : seekToPosition + "~");
         Spliterator<ResolvedEvent> spliterator = Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED | Spliterator.DISTINCT | Spliterator.NONNULL);
         return StreamSupport.stream(spliterator, false).onClose(iterator::close);
     }
@@ -65,19 +66,39 @@ public class ArchiveEventReader implements EventReader {
         private final CpioArchiveInputStream cpioInput;
         @Nonnull
         private final CpioEntryBuffer buffer;
+        @Nullable
+        private String positionExclusive;
 
-        {
+        ArchiveEventIterator(@Nullable String positionExclusive) {
+            super();
+            this.positionExclusive = positionExclusive;
+
             try {
                 cpioInput = new CpioArchiveInputStream(openFile());
             } catch (IOException e) {
                 throw new WrappedIOException(e);
             }
+
             buffer = new CpioEntryBuffer(cpioInput);
         }
 
         @Override
         public void computeNext() {
             try {
+                if (positionExclusive != null) {
+                    // seek start position
+                    CpioArchiveEntry cpioEntry;
+                    while ((cpioEntry = buffer.getNextEntry()) != null) {
+                        if (cpioEntry.getName().compareTo(positionExclusive) > 0) {
+                            break;
+                        }
+                        buffer.shift();
+                        //noinspection ResultOfMethodCallIgnored
+                        cpioInput.skip(cpioEntry.getSize());
+                    }
+                    positionExclusive = null;
+                }
+
                 CpioArchiveEntry cpioEntry = buffer.shiftOrNull();
                 if (cpioEntry == null) {
                     done();

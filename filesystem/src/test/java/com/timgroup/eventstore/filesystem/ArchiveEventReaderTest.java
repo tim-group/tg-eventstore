@@ -3,7 +3,6 @@ package com.timgroup.eventstore.filesystem;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import org.apache.commons.compress.archivers.cpio.CpioArchiveEntry;
 import org.apache.commons.compress.archivers.cpio.CpioArchiveOutputStream;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -47,7 +46,7 @@ public class ArchiveEventReaderTest {
         ));
     }
 
-    @Test @Ignore
+    @Test
     public void reads_store_from_archive_starting_from_given_position() throws Exception {
         Path tempFile = temporaryFolder.newFile("events.cpio").toPath();
         try (CpioArchiveOutputStream cpioOutput = new CpioArchiveOutputStream(Files.newOutputStream(tempFile))) {
