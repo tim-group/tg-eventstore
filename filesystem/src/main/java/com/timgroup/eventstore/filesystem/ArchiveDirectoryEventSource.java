@@ -23,7 +23,7 @@ import static java.util.Collections.emptySet;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
-public class ArchiveDirectoryEventSource implements EventSource, EventReader {
+public final class ArchiveDirectoryEventSource implements EventSource, EventReader {
     @Nonnull
     private final Path archiveDirectory;
 
