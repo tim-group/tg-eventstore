@@ -6,21 +6,21 @@ import com.timgroup.eventstore.api.PositionCodec;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
-final class FilesystemPosition implements Position, Comparable<FilesystemPosition> {
-    static final PositionCodec CODEC = PositionCodec.ofComparable(FilesystemPosition.class,
-            FilesystemPosition::parse,
-            FilesystemPosition::format);
+final class FlatFilesystemPosition implements Position, Comparable<FlatFilesystemPosition> {
+    static final PositionCodec CODEC = PositionCodec.ofComparable(FlatFilesystemPosition.class,
+            FlatFilesystemPosition::parse,
+            FlatFilesystemPosition::format);
 
-    static final FilesystemPosition EMPTY = new FilesystemPosition("");
+    static final FlatFilesystemPosition EMPTY = new FlatFilesystemPosition("");
 
     private final String filename;
 
-    public FilesystemPosition(String filename) {
+    public FlatFilesystemPosition(String filename) {
         this.filename = filename;
     }
 
-    public static FilesystemPosition parse(String input) {
-        return new FilesystemPosition(input);
+    public static FlatFilesystemPosition parse(String input) {
+        return new FlatFilesystemPosition(input);
     }
 
     public String format() {
@@ -35,7 +35,7 @@ final class FilesystemPosition implements Position, Comparable<FilesystemPositio
     public boolean equals(@Nullable Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        FilesystemPosition that = (FilesystemPosition) o;
+        FlatFilesystemPosition that = (FlatFilesystemPosition) o;
         return Objects.equals(filename, that.filename);
     }
 
@@ -45,7 +45,7 @@ final class FilesystemPosition implements Position, Comparable<FilesystemPositio
     }
 
     @Override
-    public int compareTo(FilesystemPosition o) {
+    public int compareTo(FlatFilesystemPosition o) {
         return filename.compareTo(o.filename);
     }
 

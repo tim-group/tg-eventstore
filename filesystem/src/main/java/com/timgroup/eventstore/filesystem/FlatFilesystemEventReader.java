@@ -31,7 +31,7 @@ final class FlatFilesystemEventReader implements EventReader {
     @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-        String afterFilename = ((FilesystemPosition) positionExclusive).getFilename();
+        String afterFilename = ((FlatFilesystemPosition) positionExclusive).getFilename();
         try {
             return Files.list(directory)
                     .filter(p -> p.getFileName().toString().endsWith(dataSuffix))
@@ -61,7 +61,7 @@ final class FlatFilesystemEventReader implements EventReader {
     @CheckReturnValue
     @Override
     public Stream<ResolvedEvent> readAllBackwards(Position positionExclusive) {
-        String beforeFilename = ((FilesystemPosition) positionExclusive).getFilename();
+        String beforeFilename = ((FlatFilesystemPosition) positionExclusive).getFilename();
         try {
             return Files.list(directory)
                     .filter(p -> p.getFileName().toString().endsWith(dataSuffix))
@@ -105,7 +105,7 @@ final class FlatFilesystemEventReader implements EventReader {
         }
 
         return FilenameCodec.parse(dataPath, (timestamp, streamId, eventNumber, eventType) -> eventRecord(timestamp, streamId, eventNumber, eventType, data, metadata))
-                    .toResolvedEvent(new FilesystemPosition(dataPath.getFileName().toString()));
+                    .toResolvedEvent(new FlatFilesystemPosition(dataPath.getFileName().toString()));
     }
 
     private Path metadataPath(Path dataPath) {
@@ -119,7 +119,7 @@ final class FlatFilesystemEventReader implements EventReader {
     @Nonnull
     @Override
     public Position emptyStorePosition() {
-        return FilesystemPosition.EMPTY;
+        return FlatFilesystemPosition.EMPTY;
     }
 
     @Override
