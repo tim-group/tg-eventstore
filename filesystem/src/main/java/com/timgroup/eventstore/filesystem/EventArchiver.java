@@ -5,6 +5,8 @@ import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.EventStreamReader;
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import org.apache.commons.compress.archivers.ArchiveEntry;
@@ -20,7 +22,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public final class EventArchiver {
     @Nonnull
@@ -29,34 +34,41 @@ public final class EventArchiver {
     private final EventCategoryReader categoryReader;
     @Nonnull
     private final EventStreamReader streamReader;
+    @Nonnull
+    private final PositionCodec positionCodec;
 
     public EventArchiver(EventSource eventSource) {
         this.storeReader = eventSource.readAll();
         this.categoryReader = eventSource.readCategory();
         this.streamReader = eventSource.readStream();
+        this.positionCodec = eventSource.positionCodec();
     }
 
     public void archiveStore(Path outputFile) throws IOException {
+        Position position;
         try (OutputStream stream = buffered(Files.newOutputStream(outputFile))) {
-            archiveStore(stream);
+            position = archiveStore(stream).orElseGet(storeReader::emptyStorePosition);
         }
+        writeString(outputFile.resolveSibling(outputFile.getFileName().toString() + ".position.txt"), positionCodec.serializePosition(position));
     }
 
-    public void archiveStore(OutputStream output) throws IOException {
+    public Optional<Position> archiveStore(OutputStream output) throws IOException {
         try (Stream<ResolvedEvent> input = storeReader.readAllForwards()) {
-            archiveEvents(input, output);
+            return archiveEvents(input, output);
         }
     }
 
     public void archiveCategory(Path outputFile, String category) throws IOException {
+        Position position;
         try (OutputStream stream = buffered(Files.newOutputStream(outputFile))) {
-            archiveCategory(stream, category);
+            position = archiveCategory(stream, category).orElseGet(() -> categoryReader.emptyCategoryPosition(category));
         }
+        writeString(outputFile.resolveSibling(outputFile.getFileName().toString() + ".position.txt"), positionCodec.serializePosition(position));
     }
 
-    public void archiveCategory(OutputStream output, String category) throws IOException {
+    public Optional<Position> archiveCategory(OutputStream output, String category) throws IOException {
         try (Stream<ResolvedEvent> input = categoryReader.readCategoryForwards(category)) {
-            archiveEvents(input, output);
+            return archiveEvents(input, output);
         }
     }
 
@@ -72,9 +84,14 @@ public final class EventArchiver {
         }
     }
 
-    private void archiveEvents(Stream<ResolvedEvent> input, OutputStream output) throws IOException {
+    private void writeString(Path outputFile, String content) throws IOException {
+        Files.write(outputFile, content.getBytes(UTF_8));
+    }
+
+    private Optional<Position> archiveEvents(Stream<ResolvedEvent> input, OutputStream output) throws IOException {
         try (CpioArchiveOutputStream cpioOutput = new CpioArchiveOutputStreamWithoutNames(output)) {
             final long[] fileIndex = {0};
+            final Position[] position = {null};
             input.forEachOrdered(re -> {
                 try {
                     EventRecord eventRecord = re.eventRecord();
@@ -90,10 +107,12 @@ public final class EventArchiver {
                         writeEntry(cpioOutput, basename + ".metadata", eventRecord.metadata(), eventRecord.timestamp());
                     }
                     ++fileIndex[0];
+                    position[0] = re.position();
                 } catch (IOException e) {
                     throw new WrappedIOException(e);
                 }
             });
+            return Optional.ofNullable(position[0]);
         } catch (WrappedIOException e) {
             throw e.getIoException();
         }
