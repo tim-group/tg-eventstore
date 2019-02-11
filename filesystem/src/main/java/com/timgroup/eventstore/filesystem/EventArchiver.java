@@ -45,28 +45,24 @@ public final class EventArchiver {
     }
 
     public void archiveStore(Path outputFile) throws IOException {
-        Position position;
         try (OutputStream stream = buffered(Files.newOutputStream(outputFile))) {
-            position = archiveStore(stream).orElseGet(storeReader::emptyStorePosition);
+            archiveStore(stream);
         }
-        writeString(outputFile.resolveSibling(outputFile.getFileName().toString() + ".position.txt"), positionCodec.serializePosition(position));
     }
 
-    public Optional<Position> archiveStore(OutputStream output) throws IOException {
+    public Optional<ArchiveBoundary> archiveStore(OutputStream output) throws IOException {
         try (Stream<ResolvedEvent> input = storeReader.readAllForwards()) {
             return archiveEvents(input, output);
         }
     }
 
     public void archiveCategory(Path outputFile, String category) throws IOException {
-        Position position;
         try (OutputStream stream = buffered(Files.newOutputStream(outputFile))) {
-            position = archiveCategory(stream, category).orElseGet(() -> categoryReader.emptyCategoryPosition(category));
+            archiveCategory(stream, category);
         }
-        writeString(outputFile.resolveSibling(outputFile.getFileName().toString() + ".position.txt"), positionCodec.serializePosition(position));
     }
 
-    public Optional<Position> archiveCategory(OutputStream output, String category) throws IOException {
+    public Optional<ArchiveBoundary> archiveCategory(OutputStream output, String category) throws IOException {
         try (Stream<ResolvedEvent> input = categoryReader.readCategoryForwards(category)) {
             return archiveEvents(input, output);
         }
@@ -88,10 +84,11 @@ public final class EventArchiver {
         Files.write(outputFile, content.getBytes(UTF_8));
     }
 
-    private Optional<Position> archiveEvents(Stream<ResolvedEvent> input, OutputStream output) throws IOException {
+    private Optional<ArchiveBoundary> archiveEvents(Stream<ResolvedEvent> input, OutputStream output) throws IOException {
         try (CpioArchiveOutputStream cpioOutput = new CpioArchiveOutputStreamWithoutNames(output)) {
             final long[] fileIndex = {0};
             final Position[] position = {null};
+            final String[] lastBasename = {null};
             input.forEachOrdered(re -> {
                 try {
                     EventRecord eventRecord = re.eventRecord();
@@ -108,11 +105,12 @@ public final class EventArchiver {
                     }
                     ++fileIndex[0];
                     position[0] = re.position();
+                    lastBasename[0] = basename;
                 } catch (IOException e) {
                     throw new WrappedIOException(e);
                 }
             });
-            return Optional.ofNullable(position[0]);
+            return Optional.ofNullable(position[0]).map(inputPosition -> new ArchiveBoundary(inputPosition, new ArchivePosition(lastBasename[0]), fileIndex[0]));
         } catch (WrappedIOException e) {
             throw e.getIoException();
         }

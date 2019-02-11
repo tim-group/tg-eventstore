@@ -69,8 +69,6 @@ public class EventArchiverTest {
             new CpioMember("00000001.testCategory.testId.1.EventType.metadata", Instant.EPOCH),
             new CpioMember("00000002.testCategory.otherTestId.0.EventType.data", Instant.EPOCH)
         ));
-
-        assertThat(Files.readAllLines(tempFile.resolveSibling("events.cpio.position.txt")), contains("3"));
     }
 
     @Test
@@ -85,8 +83,6 @@ public class EventArchiverTest {
             new CpioMember("00000002.testCategory.otherTestId.0.EventType.data", Instant.EPOCH),
             new CpioMember("00000003.otherTestCategory.testId.0.EventType.data", Instant.EPOCH)
         ));
-
-        assertThat(Files.readAllLines(tempFile.resolveSibling("events.cpio.position.txt")), contains("4"));
     }
 
     private static final class CpioMember {
