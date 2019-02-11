@@ -158,7 +158,7 @@ public class ArchiveEventReader implements EventReader {
         @Nullable
         private CpioArchiveEntry bufferedEntry;
 
-        public CpioEntryBuffer(CpioArchiveInputStream stream) {
+        CpioEntryBuffer(CpioArchiveInputStream stream) {
             this.stream = stream;
         }
 

@@ -19,7 +19,7 @@ import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 
-public class ArchiveEventReaderTest {
+public class ArchiveEventSourceTest {
     @Rule
     public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
@@ -32,17 +32,17 @@ public class ArchiveEventReaderTest {
             writeEntry(cpioOutput, "00000001.testCategory.testId.1.EventType.metadata", "12345");
             writeEntry(cpioOutput, "00000002.testCategory.testId.2.EventType.data", "nnnnn");
         }
-        ArchiveEventReader eventReader = new ArchiveEventReader(tempFile);
+        ArchiveEventSource eventSource = new ArchiveEventSource(tempFile);
 
-        List<ResolvedEvent> events = eventReader.readAllForwards().collect(toList());
+        List<ResolvedEvent> events = eventSource.readAll().readAllForwards().collect(toList());
 
         assertThat(events, contains(
                 eventRecord(Instant.EPOCH, streamId("testCategory", "testId"), 0, "EventType", "xyzzy".getBytes(), "".getBytes())
-                        .toResolvedEvent(ArchivePosition.CODEC.deserializePosition("00000000.testCategory.testId.0.EventType")),
+                        .toResolvedEvent(eventSource.positionCodec().deserializePosition("00000000.testCategory.testId.0.EventType")),
                 eventRecord(Instant.EPOCH, streamId("testCategory", "testId"), 1, "EventType", "abcde".getBytes(), "12345".getBytes())
-                        .toResolvedEvent(ArchivePosition.CODEC.deserializePosition("00000001.testCategory.testId.1.EventType")),
+                        .toResolvedEvent(eventSource.positionCodec().deserializePosition("00000001.testCategory.testId.1.EventType")),
                 eventRecord(Instant.EPOCH, streamId("testCategory", "testId"), 2, "EventType", "nnnnn".getBytes(), "".getBytes())
-                        .toResolvedEvent(ArchivePosition.CODEC.deserializePosition("00000002.testCategory.testId.2.EventType"))
+                        .toResolvedEvent(eventSource.positionCodec().deserializePosition("00000002.testCategory.testId.2.EventType"))
         ));
     }
 
@@ -55,13 +55,13 @@ public class ArchiveEventReaderTest {
             writeEntry(cpioOutput, "00000001.testCategory.testId.1.EventType.metadata", "12345");
             writeEntry(cpioOutput, "00000002.testCategory.testId.2.EventType.data", "nnnnn");
         }
-        ArchiveEventReader eventReader = new ArchiveEventReader(tempFile);
+        ArchiveEventSource eventSource = new ArchiveEventSource(tempFile);
 
-        List<ResolvedEvent> events = eventReader.readAllForwards(ArchivePosition.CODEC.deserializePosition("00000001.testCategory.testId.1.EventType")).collect(toList());
+        List<ResolvedEvent> events = eventSource.readAll().readAllForwards(eventSource.positionCodec().deserializePosition("00000001.testCategory.testId.1.EventType")).collect(toList());
 
         assertThat(events, contains(
                 eventRecord(Instant.EPOCH, streamId("testCategory", "testId"), 2, "EventType", "nnnnn".getBytes(), "".getBytes())
-                        .toResolvedEvent(ArchivePosition.CODEC.deserializePosition("00000002.testCategory.testId.2.EventType"))
+                        .toResolvedEvent(eventSource.positionCodec().deserializePosition("00000002.testCategory.testId.2.EventType"))
         ));
     }
 
