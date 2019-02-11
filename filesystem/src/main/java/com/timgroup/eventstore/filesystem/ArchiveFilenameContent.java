@@ -1,12 +1,15 @@
 package com.timgroup.eventstore.filesystem;
 
+import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.StreamId;
 
 import javax.annotation.Nonnull;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static com.timgroup.eventstore.api.StreamId.streamId;
 
 public final class ArchiveFilenameContent {
@@ -80,6 +83,11 @@ public final class ArchiveFilenameContent {
     @Nonnull
     public StreamId getStreamId() {
         return streamId(category, id);
+    }
+
+    @Nonnull
+    public EventRecord toEventRecord(@Nonnull Instant timestamp, @Nonnull byte[] data, @Nonnull byte[] metadata) {
+        return eventRecord(timestamp, getStreamId(), eventNumber, eventType, data, metadata);
     }
 
     @Override

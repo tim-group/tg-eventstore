@@ -145,18 +145,4 @@ public final class EventArchiver {
             namesMap.remove(entry.getName());
         }
     }
-
-    private static final class WrappedIOException extends RuntimeException {
-        @Nonnull private final IOException ioException;
-
-        WrappedIOException(@Nonnull IOException e) {
-            super(e);
-            this.ioException = e;
-        }
-
-        @Nonnull
-        public IOException getIoException() {
-            return ioException;
-        }
-    }
 }
