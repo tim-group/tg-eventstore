@@ -1,11 +1,11 @@
 package com.timgroup.eventstore.filesystem;
 
+import com.timgroup.eventstore.api.StreamId;
+
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import com.timgroup.eventstore.api.StreamId;
 
 import static com.timgroup.eventstore.api.StreamId.streamId;
 
@@ -36,7 +36,7 @@ final class FilenameCodec {
         return String.format("%08x.%s.%s.%s.%d.%s", globalNumber, timestamp, escape(streamId.category()), escape(streamId.id()), eventNumber, escape(eventType));
     }
 
-    private static String escape(CharSequence input) {
+    static String escape(CharSequence input) {
         StringBuilder builder = new StringBuilder(input.length());
         for (int i = 0; i < input.length(); i++) {
             char ch = input.charAt(i);
@@ -51,7 +51,7 @@ final class FilenameCodec {
         return builder.toString();
     }
 
-    private static String unescape(CharSequence input) {
+    static String unescape(CharSequence input) {
         StringBuilder builder = new StringBuilder(input.length());
         for (int i = 0; i < input.length(); i++) {
             char ch = input.charAt(i);
