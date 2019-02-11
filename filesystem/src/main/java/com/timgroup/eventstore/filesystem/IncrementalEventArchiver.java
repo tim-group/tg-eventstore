@@ -39,13 +39,12 @@ public class IncrementalEventArchiver {
     }
 
     public void archiveEvents() throws IOException {
-        Optional<Position> lastPositionOptional = findLastSourcePosition();
-        if (!lastPositionOptional.isPresent() && !createInitial) throw new IllegalStateException("No existing archives and createInitial not specified");
-        Position lastPosition = lastPositionOptional.orElseGet(storeReader::emptyStorePosition);
+        Optional<ArchiveBoundary> lastArchiveBoundary = findLastArchiveBoundary();
+        if (!lastArchiveBoundary.isPresent() && !createInitial) throw new IllegalStateException("No existing archives and createInitial not specified");
         Optional<ArchiveBoundary> archivedTo;
         Path tempFile = Files.createTempFile(archiveDirectory, "__archive", ".cpio.tmp");
         try (OutputStream tempFileOutput = Files.newOutputStream(tempFile)) {
-            archivedTo = eventArchiver.archiveStore(tempFileOutput);
+            archivedTo = eventArchiver.archiveStore(tempFileOutput, lastArchiveBoundary.orElse(null));
         }
         if (!archivedTo.isPresent()) {
             Files.delete(tempFile);
@@ -56,11 +55,14 @@ public class IncrementalEventArchiver {
         }
     }
 
-    private Optional<Position> findLastSourcePosition() throws IOException {
+    private Optional<ArchiveBoundary> findLastArchiveBoundary() throws IOException {
         List<Path> positionFiles = listFiles(s -> s.endsWith(".position.txt"));
         if (positionFiles.isEmpty())
             return Optional.empty();
-        return Optional.of(positionCodec.deserializePosition(Files.readAllLines(positionFiles.get(positionFiles.size() - 1)).get(0)));
+        Path file = positionFiles.get(positionFiles.size() - 1);
+        Position inputPosition = positionCodec.deserializePosition(Files.readAllLines(file).get(0));
+        Position archivePosition = ArchivePosition.CODEC.deserializePosition(file.getFileName().toString().replaceFirst("\\.position\\.txt$", ""));
+        return Optional.of(new ArchiveBoundary(inputPosition, archivePosition, 0L));
     }
 
     private List<Path> listFiles(Predicate<? super String> filenameMatches) throws IOException {

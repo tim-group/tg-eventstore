@@ -21,6 +21,10 @@ final class ArchivePosition implements Comparable<ArchivePosition>, Position {
         this.filename = filename;
     }
 
+    public ArchiveFilenameContent decode() {
+        return ArchiveFilenameContent.parseBasename(filename, "data");
+    }
+
     @Nonnull
     public String getFilename() {
         return filename;

@@ -14,6 +14,7 @@ import org.apache.commons.compress.archivers.cpio.CpioArchiveEntry;
 import org.apache.commons.compress.archivers.cpio.CpioArchiveOutputStream;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -24,8 +25,6 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 public final class EventArchiver {
     @Nonnull
@@ -46,13 +45,14 @@ public final class EventArchiver {
 
     public void archiveStore(Path outputFile) throws IOException {
         try (OutputStream stream = buffered(Files.newOutputStream(outputFile))) {
-            archiveStore(stream);
+            archiveStore(stream, null);
         }
     }
 
-    public Optional<ArchiveBoundary> archiveStore(OutputStream output) throws IOException {
-        try (Stream<ResolvedEvent> input = storeReader.readAllForwards()) {
-            return archiveEvents(input, output);
+    public Optional<ArchiveBoundary> archiveStore(OutputStream output, @Nullable ArchiveBoundary archiveBoundary) throws IOException {
+        Position startPosition = archiveBoundary == null ? storeReader.emptyStorePosition() : archiveBoundary.getInputPosition();
+        try (Stream<ResolvedEvent> input = storeReader.readAllForwards(startPosition)) {
+            return archiveEvents(input, output, archiveBoundary);
         }
     }
 
@@ -64,7 +64,7 @@ public final class EventArchiver {
 
     public Optional<ArchiveBoundary> archiveCategory(OutputStream output, String category) throws IOException {
         try (Stream<ResolvedEvent> input = categoryReader.readCategoryForwards(category)) {
-            return archiveEvents(input, output);
+            return archiveEvents(input, output, null);
         }
     }
 
@@ -76,17 +76,13 @@ public final class EventArchiver {
 
     public void archiveStream(OutputStream output, StreamId streamId) throws IOException {
         try (Stream<ResolvedEvent> input = streamReader.readStreamForwards(streamId)) {
-            archiveEvents(input, output);
+            archiveEvents(input, output, null);
         }
     }
 
-    private void writeString(Path outputFile, String content) throws IOException {
-        Files.write(outputFile, content.getBytes(UTF_8));
-    }
-
-    private Optional<ArchiveBoundary> archiveEvents(Stream<ResolvedEvent> input, OutputStream output) throws IOException {
+    private Optional<ArchiveBoundary> archiveEvents(Stream<ResolvedEvent> input, OutputStream output, @Nullable ArchiveBoundary startExclusive) throws IOException {
         try (CpioArchiveOutputStream cpioOutput = new CpioArchiveOutputStreamWithoutNames(output)) {
-            final long[] fileIndex = {0};
+            final long[] fileIndex = { startExclusive == null ? 0 : ((ArchivePosition) startExclusive.getArchivePosition()).decode().getPosition() + 1};
             final Position[] position = {null};
             final String[] lastBasename = {null};
             input.forEachOrdered(re -> {

@@ -13,7 +13,8 @@ import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static com.timgroup.eventstore.api.StreamId.streamId;
 
 public final class ArchiveFilenameContent {
-    private static final Pattern FILENAME_REGEX = Pattern.compile("([0-9A-Fa-f]{8})\\.([^.]+)\\.([^.]+)\\.([0-9]+)\\.([^.]+)\\.((?:meta)?data)");
+    private static final Pattern BASENAME_REGEX = Pattern.compile("([0-9A-Fa-f]{8})\\.([^.]+)\\.([^.]+)\\.([0-9]+)\\.([^.]+)");
+    private static final Pattern FILENAME_REGEX = Pattern.compile(BASENAME_REGEX.pattern() + "\\.((?:meta)?data)");
 
     public static ArchiveFilenameContent parseFilename(CharSequence filename) {
         Matcher matcher = FILENAME_REGEX.matcher(filename);
@@ -26,6 +27,20 @@ public final class ArchiveFilenameContent {
                 FilenameCodec.unescape(matcher.group(5)).intern(),
                 matcher.group(6).intern(),
                 filename.subSequence(0, matcher.start(6) - 1).toString().intern()
+        );
+    }
+
+    public static ArchiveFilenameContent parseBasename(CharSequence basename, String extension) {
+        Matcher matcher = BASENAME_REGEX.matcher(basename);
+        if (!matcher.matches()) throw new IllegalArgumentException("Invalid member basename: " + basename);
+        return new ArchiveFilenameContent(
+                Long.parseLong(matcher.group(1), 16),
+                FilenameCodec.unescape(matcher.group(2)).intern(),
+                FilenameCodec.unescape(matcher.group(3)),
+                Long.parseLong(matcher.group(4)),
+                FilenameCodec.unescape(matcher.group(5)).intern(),
+                extension,
+                basename.toString()
         );
     }
 
