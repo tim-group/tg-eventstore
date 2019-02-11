@@ -1,6 +1,5 @@
 package com.timgroup.eventstore.filesystem;
 
-import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
@@ -19,19 +18,16 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
-public class IncrementalEventArchiver {
+public final class IncrementalEventArchiver {
     @Nonnull
     private final Path archiveDirectory;
     private final boolean createInitial;
-    @Nonnull
-    private final EventReader storeReader;
     @Nonnull
     private final PositionCodec positionCodec;
     @Nonnull
     private final EventArchiver eventArchiver;
 
     public IncrementalEventArchiver(@Nonnull EventSource eventSource, @Nonnull Path archiveDirectory, boolean createInitial) {
-        this.storeReader = eventSource.readAll();
         this.positionCodec = eventSource.positionCodec();
         this.archiveDirectory = requireNonNull(archiveDirectory);
         this.createInitial = createInitial;
