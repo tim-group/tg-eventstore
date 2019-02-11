@@ -12,10 +12,14 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.Spliterator.DISTINCT;
+import static java.util.Spliterator.NONNULL;
+import static java.util.Spliterator.ORDERED;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
@@ -45,7 +49,10 @@ final class MergedEventReader implements EventReader {
                 .map(eventStream -> takeWhileBefore(snapTimestamp, eventStream.iterator()))
                 .collect(toList());
 
-        return StreamSupport.stream(new MergingSpliterator<>(mergingStrategy, mergedPosition, snappedData), false)
+        return StreamSupport.stream(
+                        Spliterators.spliteratorUnknownSize(new MergingIterator<>(mergingStrategy, mergedPosition, snappedData), ORDERED | NONNULL | DISTINCT),
+                        false
+                )
                 .onClose(() -> data.forEach(Stream::close));
     }
 
@@ -67,8 +74,8 @@ final class MergedEventReader implements EventReader {
     @Nonnull
     @Override
     public Position emptyStorePosition() {
-        String[] names = readers.stream().map(r -> r.name).collect(toList()).toArray(new String[0]);
-        Position[] positions = readers.stream().map(r -> r.startingPosition).collect(toList()).toArray(new Position[0]);
+        String[] names = readers.stream().map(r -> r.name).toArray(String[]::new);
+        Position[] positions = readers.stream().map(r -> r.startingPosition).toArray(Position[]::new);
         return new MergedEventReaderPosition(names, positions);
     }
 

@@ -1,45 +1,41 @@
 package com.timgroup.eventstore.merging;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Spliterator;
-import java.util.function.Consumer;
-
+import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.PeekingIterator;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
+import java.util.Iterator;
+import java.util.List;
+
 import static com.google.common.collect.Iterators.peekingIterator;
-import static java.lang.Long.MAX_VALUE;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
-final class MergingSpliterator<T extends Comparable<T>> implements Spliterator<ResolvedEvent> {
+final class MergingIterator<T extends Comparable<T>> extends AbstractIterator<ResolvedEvent> {
 
     private final MergingStrategy<T> mergingStrategy;
     private final List<IdentifiedPeekingResolvedEventIterator> underlying;
 
     private MergedEventReaderPosition currentPosition;
 
-    MergingSpliterator(MergingStrategy<T> mergingStrategy, MergedEventReaderPosition currentPosition, List<Iterator<ResolvedEvent>> data) {
+    MergingIterator(MergingStrategy<T> mergingStrategy, MergedEventReaderPosition currentPosition, List<Iterator<ResolvedEvent>> data) {
         this.mergingStrategy = mergingStrategy;
         this.currentPosition = currentPosition;
         this.underlying = IdentifiedPeekingResolvedEventIterator.from(data);
     }
 
     @Override
-    public boolean tryAdvance(Consumer<? super ResolvedEvent> consumer) {
+    protected ResolvedEvent computeNext() {
         IdentifiedPeekingResolvedEventIterator iterator = getIteratorWhoseHeadIsNext();
 
         if (iterator == null) {
-            return false;
+            return endOfData();
         }
 
         ResolvedEvent nextInputEvent = iterator.next();
         currentPosition = currentPosition.withNextPosition(iterator.index, nextInputEvent.position());
 
-        consumer.accept(nextInputEvent.eventRecord().toResolvedEvent(currentPosition));
-
-        return true;
+        return nextInputEvent.eventRecord().toResolvedEvent(currentPosition);
     }
 
     private IdentifiedPeekingResolvedEventIterator getIteratorWhoseHeadIsNext() {
@@ -63,22 +59,6 @@ final class MergingSpliterator<T extends Comparable<T>> implements Spliterator<R
 
         return iteratorWhoseHeadIsNext;
     }
-
-    @Override
-    public Spliterator<ResolvedEvent> trySplit() {
-        return null;
-    }
-
-    @Override
-    public long estimateSize() {
-        return MAX_VALUE;
-    }
-
-    @Override
-    public int characteristics() {
-        return ORDERED | NONNULL | DISTINCT;
-    }
-
 
     private static final class IdentifiedPeekingResolvedEventIterator {
         private final int index;
