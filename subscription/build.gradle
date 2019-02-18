@@ -42,6 +42,7 @@ tasks.withType(JavaCompile).all {
     options.incremental = true
     options.deprecation = true
     options.compilerArgs << "-parameters"
+    options.compilerArgs << "-Xlint:unchecked"
 }
 
 tasks.withType(Jar).all {

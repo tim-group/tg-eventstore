@@ -44,6 +44,7 @@ public class EventSubscription<T> {
     private final EventStoreChaser chaser;
     private final Duration runFrequency;
 
+    @SuppressWarnings("unchecked")
     EventSubscription(
                 String name,
                 String description,
