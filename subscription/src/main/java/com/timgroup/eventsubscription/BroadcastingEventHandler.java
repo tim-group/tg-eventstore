@@ -9,7 +9,7 @@ import java.util.List;
 final class BroadcastingEventHandler<T> implements EventHandler<T> {
     private final List<EventHandler<? super T>> handlers;
 
-    BroadcastingEventHandler(List<EventHandler<? super T>> handlers) {
+    BroadcastingEventHandler(List<? extends EventHandler<? super T>> handlers) {
         this.handlers = new ArrayList<>(handlers);
     }
 

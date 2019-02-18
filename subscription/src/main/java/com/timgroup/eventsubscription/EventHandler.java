@@ -4,6 +4,7 @@ import com.timgroup.eventstore.api.Position;
 import org.joda.time.DateTime;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -17,8 +18,12 @@ public interface EventHandler<T> {
     }
 
     @SafeVarargs
-    static <E> EventHandler<E> concat(EventHandler<E>... handlers) {
+    static <E> EventHandler<E> concat(EventHandler<? super E>... handlers) {
         return new BroadcastingEventHandler<>(Arrays.asList(handlers));
+    }
+
+    static <E> EventHandler<E> concatAll(List<? extends EventHandler<? super E>> handlers) {
+        return new BroadcastingEventHandler<>(handlers);
     }
 
     static <E> EventHandler<E> ofConsumer(Consumer<? super E> consumer) {
