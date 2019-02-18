@@ -19,7 +19,7 @@ public interface EventHandler<T> {
 
     @SafeVarargs
     static <E> EventHandler<E> concat(EventHandler<? super E>... handlers) {
-        return new BroadcastingEventHandler<>(Arrays.asList(handlers));
+        return new BroadcastingEventHandler<E>(Arrays.asList(handlers));
     }
 
     static <E> EventHandler<E> concatAll(List<? extends EventHandler<? super E>> handlers) {
