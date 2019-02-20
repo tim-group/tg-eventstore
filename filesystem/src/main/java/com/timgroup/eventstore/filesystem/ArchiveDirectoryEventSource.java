@@ -70,7 +70,7 @@ public final class ArchiveDirectoryEventSource implements EventSource, EventRead
                 Path positionFilePath = fileIterator.next();
                 String positionFileName = positionFilePath.getFileName().toString();
                 String archiveName = positionFileName.replaceAll("\\.position\\.txt$", ".cpio");
-                Path archivePath = positionFilePath.resolveSibling(archiveName);
+                Path archivePath = findArchive(archiveName);
 
                 archiveStream = new ArchiveEventReader(archivePath)
                         .readAllForwards(((ArchiveDirectoryPosition) positionExclusive).getPosition())
@@ -162,5 +162,13 @@ public final class ArchiveDirectoryEventSource implements EventSource, EventRead
         } catch (IOException e) {
             throw new WrappedIOException(e);
         }
+    }
+
+    private Path findArchive(String baseName) {
+        Path xz = archiveDirectory.resolve(baseName + ".xz");
+        if (Files.exists(xz)) {
+            return xz;
+        }
+        return archiveDirectory.resolve(baseName);
     }
 }
