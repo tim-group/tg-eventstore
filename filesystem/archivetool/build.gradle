@@ -20,6 +20,16 @@ dependencies {
     runtimeOnly "org.slf4j:slf4j-simple:1.7.25"
 }
 
+tasks.withType(JavaCompile).all {
+    sourceCompatibility = "1.8"
+    targetCompatibility = "1.8"
+    options.encoding = "UTF-8"
+    options.incremental = true
+    options.deprecation = true
+    options.compilerArgs << "-parameters"
+    options.compilerArgs << "-Xlint:unchecked"
+}
+
 task archiveTestSource(type: JavaExec) {
     outputs.dir("archive")
     classpath = sourceSets.main.runtimeClasspath
