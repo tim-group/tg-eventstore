@@ -73,9 +73,6 @@ public class ArchiveAndLivePosition implements Position {
 
     @Override
     public String toString() {
-        return "ArchiveAndLivePosition{" +
-                "archiveDirectoryPosition=" + archiveDirectoryPosition +
-                ", livePosition=" + livePosition +
-                '}';
+        return livePosition != null ? livePosition.toString() : archiveDirectoryPosition.toString();
     }
 }

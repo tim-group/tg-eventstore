@@ -50,8 +50,6 @@ final class ArchivePosition implements Comparable<ArchivePosition>, Position {
 
     @Override
     public String toString() {
-        return "ArchivePosition{" +
-                "filename='" + filename + '\'' +
-                '}';
+        return filename;
     }
 }
