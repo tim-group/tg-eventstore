@@ -15,9 +15,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Spliterator;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptySet;
@@ -41,16 +45,57 @@ public final class ArchiveDirectoryEventSource implements EventSource, EventRead
     @Nonnull
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-        return archiveFilesStartingFrom((ArchiveDirectoryPosition) positionExclusive)
-                .stream()
-                .flatMap(positionFilePath -> {
-                    String positionFileName = positionFilePath.getFileName().toString();
-                    String archiveName = positionFileName.replaceAll("\\.position\\.txt$", ".cpio");
-                    Path archivePath = positionFilePath.resolveSibling(archiveName);
-                    return new ArchiveEventReader(archivePath)
-                            .readAllForwards(((ArchiveDirectoryPosition) positionExclusive).getPosition())
-                            .map(re -> re.eventRecord().toResolvedEvent(new ArchiveDirectoryPosition(archiveName, (ArchivePosition) re.position())));
-                });
+        List<Path> archiveFiles = positionFilesStartingFrom((ArchiveDirectoryPosition) positionExclusive);
+        if (archiveFiles.isEmpty())
+            return Stream.empty();
+
+        Spliterator<ResolvedEvent> directorySpliterator = new Spliterator<ResolvedEvent>() {
+            private final Iterator<Path> fileIterator = archiveFiles.iterator();
+            private Spliterator<ResolvedEvent> archiveSpliterator;
+            private Stream<ResolvedEvent> archiveStream;
+
+            @Override
+            public boolean tryAdvance(Consumer<? super ResolvedEvent> action) {
+                if (archiveStream != null) {
+                    if (archiveSpliterator.tryAdvance(action))
+                        return true;
+                    archiveStream.close();
+                    archiveSpliterator = null;
+                    archiveStream = null;
+                }
+
+                if (!fileIterator.hasNext())
+                    return false;
+
+                Path positionFilePath = fileIterator.next();
+                String positionFileName = positionFilePath.getFileName().toString();
+                String archiveName = positionFileName.replaceAll("\\.position\\.txt$", ".cpio");
+                Path archivePath = positionFilePath.resolveSibling(archiveName);
+
+                archiveStream = new ArchiveEventReader(archivePath)
+                        .readAllForwards(((ArchiveDirectoryPosition) positionExclusive).getPosition())
+                        .map(re -> re.eventRecord().toResolvedEvent(new ArchiveDirectoryPosition(archiveName, (ArchivePosition) re.position())));
+                archiveSpliterator = archiveStream.spliterator();
+                return tryAdvance(action);
+            }
+
+            @Override
+            public Spliterator<ResolvedEvent> trySplit() {
+                return null;
+            }
+
+            @Override
+            public long estimateSize() {
+                return Long.MAX_VALUE;
+            }
+
+            @Override
+            public int characteristics() {
+                return Spliterator.DISTINCT | Spliterator.NONNULL | Spliterator.CONCURRENT;
+            }
+        };
+
+        return StreamSupport.stream(directorySpliterator, false);
     }
 
     @Nonnull
@@ -99,7 +144,7 @@ public final class ArchiveDirectoryEventSource implements EventSource, EventRead
         }
     }
 
-    private List<Path> archiveFilesStartingFrom(ArchiveDirectoryPosition startExclusive) {
+    private List<Path> positionFilesStartingFrom(ArchiveDirectoryPosition startExclusive) {
         Predicate<? super Path> fileFilter;
         if (startExclusive.equals(ArchiveDirectoryPosition.EMPTY)) {
             fileFilter = p -> true;
