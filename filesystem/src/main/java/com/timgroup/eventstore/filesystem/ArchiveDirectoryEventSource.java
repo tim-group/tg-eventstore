@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptySet;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
@@ -86,6 +87,16 @@ public final class ArchiveDirectoryEventSource implements EventSource, EventRead
     @Override
     public Collection<Component> monitoring() {
         return emptySet();
+    }
+
+    public String readSourcePosition(ArchiveDirectoryPosition position) {
+        String positionFileName = position.getArchive().replaceAll("\\.cpio$", ".position.txt");
+        try {
+            byte[] bytes = Files.readAllBytes(archiveDirectory.resolve(positionFileName));
+            return new String(bytes, UTF_8);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to read source position for " + position, e);
+        }
     }
 
     private List<Path> archiveFilesStartingFrom(ArchiveDirectoryPosition startExclusive) {

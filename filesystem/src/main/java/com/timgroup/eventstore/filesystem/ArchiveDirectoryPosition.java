@@ -13,15 +13,22 @@ final class ArchiveDirectoryPosition implements Comparable<ArchiveDirectoryPosit
     static final ArchiveDirectoryPosition EMPTY = new ArchiveDirectoryPosition("", ArchivePosition.EMPTY);
     static final Comparator<ArchiveDirectoryPosition> COMPARATOR = comparing(ArchiveDirectoryPosition::getArchive).thenComparing(ArchiveDirectoryPosition::getPosition);
     static final PositionCodec CODEC = PositionCodec.ofComparable(ArchiveDirectoryPosition.class,
-            str -> {
-                if (str.isEmpty()) return EMPTY;
-                int splitAt = str.indexOf(':');
-                String archive = str.substring(0, splitAt);
-                Position position = ArchivePosition.CODEC.deserializePosition(str.substring(splitAt + 1));
-                return new ArchiveDirectoryPosition(archive, (ArchivePosition) position);
-            },
-            pos -> pos.getArchive().isEmpty() ? "" : pos.getArchive() + ":" + ArchivePosition.CODEC.serializePosition(pos.getPosition())
+            ArchiveDirectoryPosition::deserialise,
+            ArchiveDirectoryPosition::serialise
     );
+
+    static ArchiveDirectoryPosition deserialise(String str) {
+        if (str.isEmpty()) return EMPTY;
+        int splitAt = str.indexOf(':');
+        String archive = str.substring(0, splitAt);
+        Position position = ArchivePosition.CODEC.deserializePosition(str.substring(splitAt + 1));
+        return new ArchiveDirectoryPosition(archive, (ArchivePosition) position);
+    }
+
+    static String serialise(ArchiveDirectoryPosition pos) {
+        return pos.getArchive().isEmpty() ? "" : pos.getArchive() + ":" + ArchivePosition.CODEC.serializePosition(pos.getPosition());
+    }
+
     @Nonnull
     private final String archive;
     @Nonnull
