@@ -9,6 +9,7 @@ import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.tucker.info.Component;
 
 import javax.annotation.Nonnull;
+import java.time.Clock;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -19,6 +20,14 @@ public class InMemoryEventSource implements EventSource {
 
     public InMemoryEventSource(JavaInMemoryEventStore eventStore) {
         this.eventStore = requireNonNull(eventStore);
+    }
+
+    public InMemoryEventSource(Clock clock) {
+        this(new JavaInMemoryEventStore(clock));
+    }
+
+    public InMemoryEventSource() {
+        this(Clock.systemDefaultZone());
     }
 
     @Override
