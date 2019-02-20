@@ -67,7 +67,7 @@ final class FilenameCodec {
     }
 
     private static boolean permitted(char ch) {
-        return ch != '%' && ch != '.' && ch > 32 && ch < 127;
+        return ch != '%' && ch != '.' && ch != '/' && ch != ':' && ch > 32 && ch < 127;
     }
 
     private FilenameCodec() {
