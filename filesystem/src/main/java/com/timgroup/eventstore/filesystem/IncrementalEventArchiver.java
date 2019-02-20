@@ -54,7 +54,7 @@ public final class IncrementalEventArchiver {
             Files.write(tempFile.resolveSibling(basename + ".position.txt"), serialisedPosition.getBytes(UTF_8));
             Path archivePath = tempFile.resolveSibling(basename + ".cpio");
             Files.move(tempFile, archivePath);
-            LOG.info("Wrote {} events to {} up to {}", lastArchiveBoundary.isPresent() ? "initial" : "additional", archivePath, serialisedPosition);
+            LOG.info("Wrote {} events to {} up to {}", lastArchiveBoundary.isPresent() ? "additional" : "initial", archivePath, serialisedPosition);
         }
     }
 
