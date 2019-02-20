@@ -3,6 +3,7 @@ package com.timgroup.eventstore.filesystem;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
+import org.slf4j.Logger;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -17,8 +18,10 @@ import java.util.stream.Stream;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
+import static org.slf4j.LoggerFactory.getLogger;
 
 public final class IncrementalEventArchiver {
+    private static final Logger LOG = getLogger(IncrementalEventArchiver.class);
     @Nonnull
     private final Path archiveDirectory;
     private final boolean createInitial;
@@ -43,11 +46,15 @@ public final class IncrementalEventArchiver {
             archivedTo = eventArchiver.archiveStore(tempFileOutput, lastArchiveBoundary.orElse(null));
         }
         if (!archivedTo.isPresent()) {
+            LOG.debug("No new events to write- removing temp file");
             Files.delete(tempFile);
         } else {
             String basename = ArchivePosition.CODEC.serializePosition(archivedTo.get().getArchivePosition());
-            Files.write(tempFile.resolveSibling(basename + ".position.txt"), positionCodec.serializePosition(archivedTo.get().getInputPosition()).getBytes(UTF_8));
-            Files.move(tempFile, tempFile.resolveSibling(basename + ".cpio"));
+            String serialisedPosition = positionCodec.serializePosition(archivedTo.get().getInputPosition());
+            Files.write(tempFile.resolveSibling(basename + ".position.txt"), serialisedPosition.getBytes(UTF_8));
+            Path archivePath = tempFile.resolveSibling(basename + ".cpio");
+            Files.move(tempFile, archivePath);
+            LOG.info("Wrote {} events to {} up to {}", lastArchiveBoundary.isPresent() ? "initial" : "additional", archivePath, serialisedPosition);
         }
     }
 

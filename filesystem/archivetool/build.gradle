@@ -1,0 +1,28 @@
+plugins {
+    id "java"
+    id "application"
+    id "com.timgroup.jarmangit"
+}
+
+mainClassName = "com.timgroup.eventstore.filesystem.archivetool.ArchiveTool"
+
+repositories {
+    maven {
+        url "${repoUrl}/groups/public"
+    }
+}
+
+dependencies {
+    compile project(":filesystem")
+    compile project(":mysql")
+    compileOnly "com.google.code.findbugs:jsr305:1.3.9"
+    runtimeOnly "mysql:mysql-connector-java:5.1.39"
+    runtimeOnly "org.slf4j:slf4j-simple:1.7.25"
+}
+
+task archiveTestSource(type: JavaExec) {
+    outputs.dir("archive")
+    classpath = sourceSets.main.runtimeClasspath
+    main = mainClassName
+    args = ["-init", "-d" ,"archive", "config.properties", "testing", "basic_eventstore"]
+}
