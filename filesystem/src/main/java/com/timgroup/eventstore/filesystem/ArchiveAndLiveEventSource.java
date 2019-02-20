@@ -115,7 +115,7 @@ public final class ArchiveAndLiveEventSource implements EventSource, EventReader
 
             @Override
             public int characteristics() {
-                return archiveSpliterator.characteristics();
+                return Spliterator.ORDERED | Spliterator.DISTINCT | Spliterator.NONNULL;
             }
         };
 
