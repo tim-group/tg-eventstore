@@ -31,7 +31,7 @@ dependencies {
     testImplementation "com.timgroup:clocks-testing:1.0.1090" // autobump
     testImplementation "com.timgroup:tim-structured-events-testing:0.4.1260" // autobump
     testImplementation "org.mockito:mockito-core:1.9.5"
-    testImplementation "com.youdevise:Matchers:0.0.1286" // autobump
+    testImplementation "com.youdevise:Matchers:0.0.1287" // autobump
     testRuntimeOnly "org.slf4j:slf4j-simple:1.7.25"
 }
 
