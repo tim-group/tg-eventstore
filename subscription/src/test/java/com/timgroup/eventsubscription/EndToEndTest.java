@@ -18,8 +18,6 @@ import junit.framework.AssertionFailedError;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Test;
 import org.mockito.InOrder;
@@ -30,6 +28,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
@@ -39,6 +38,7 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static com.timgroup.eventstore.api.StreamId.streamId;
@@ -184,15 +184,15 @@ public class EndToEndTest {
             assertThat(subscription.health().get(), is(healthy));
         });
 
+        List<ResolvedEvent> eventsInStore = store.readAllForwards().collect(Collectors.toList());
+
         verify(eventHandler).apply(
-                Matchers.argThat(inMemoryPosition(1)),
-                Matchers.eq(new DateTime(clock.millis(), DateTimeZone.getDefault())),
+                Matchers.eq(eventsInStore.get(0)),
                 Matchers.eq(new DeserialisedEvent(eventRecord(clock.instant(), stream, 0, event1.type(), event1.data(), event1.metadata()))),
                 Matchers.anyBoolean());
 
         verify(eventHandler).apply(
-                Matchers.argThat(inMemoryPosition(2)),
-                Matchers.eq(new DateTime(clock.millis(), DateTimeZone.getDefault())),
+                Matchers.eq(eventsInStore.get(1)),
                 Matchers.eq(new DeserialisedEvent(eventRecord(clock.instant(), stream, 1, event2.type(), event2.data(), event2.metadata()))),
                 Matchers.eq(true));
     }
@@ -221,15 +221,15 @@ public class EndToEndTest {
             assertThat(subscription.health().get(), is(healthy));
         });
 
+        List<ResolvedEvent> categoryEvents = store.readCategoryForwards("alpha").collect(Collectors.toList());
+
         verify(eventHandler).apply(
-                Matchers.argThat(inMemoryPosition(1)),
-                Matchers.eq(new DateTime(clock.millis(), DateTimeZone.getDefault())),
+                Matchers.eq(categoryEvents.get(0)),
                 Matchers.eq(new DeserialisedEvent(eventRecord(clock.instant(), streamId("alpha", "1"), 0, event1.type(), event1.data(), event1.metadata()))),
                 Matchers.anyBoolean());
 
         verify(eventHandler).apply(
-                Matchers.argThat(inMemoryPosition(3)),
-                Matchers.eq(new DateTime(clock.millis(), DateTimeZone.getDefault())),
+                Matchers.eq(categoryEvents.get(1)),
                 Matchers.eq(new DeserialisedEvent(eventRecord(clock.instant(), streamId("alpha", "2"), 0, event3.type(), event3.data(), event3.metadata()))),
                 Matchers.eq(true));
 

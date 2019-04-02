@@ -1,9 +1,5 @@
 package com.timgroup.eventsubscription;
 
-import org.joda.time.DateTime;
-
-import java.time.Instant;
-
 import static java.util.Objects.requireNonNull;
 
 public class DisruptorEventHandlerAdapter<T> implements com.lmax.disruptor.EventHandler<EventContainer<T>> {
@@ -18,9 +14,8 @@ public class DisruptorEventHandlerAdapter<T> implements com.lmax.disruptor.Event
     @Override
     public void onEvent(EventContainer<T> eventContainer, long sequence, boolean endOfBatch) throws Exception {
         try {
-            Instant timestamp = eventContainer.event.eventRecord().timestamp();
             if (eventContainer.deserializedEvent != null) {
-                eventHandler.apply(eventContainer.event.position(), new DateTime(timestamp.toEpochMilli()), eventContainer.deserializedEvent, endOfBatch);
+                eventHandler.apply(eventContainer.event, eventContainer.deserializedEvent, endOfBatch);
             }
             processorListener.eventProcessed(eventContainer.event.position());
 

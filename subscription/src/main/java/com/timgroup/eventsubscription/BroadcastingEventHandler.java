@@ -1,6 +1,7 @@
 package com.timgroup.eventsubscription;
 
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.ResolvedEvent;
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;
@@ -11,6 +12,13 @@ final class BroadcastingEventHandler<T> implements EventHandler<T> {
 
     BroadcastingEventHandler(List<? extends EventHandler<? super T>> handlers) {
         this.handlers = new ArrayList<>(handlers);
+    }
+
+    @Override
+    public void apply(ResolvedEvent resolvedEvent, T deserializedEvent, boolean endOfBatch) {
+        for (EventHandler<? super T> handler : handlers) {
+            handler.apply(resolvedEvent, deserializedEvent, endOfBatch);
+        }
     }
 
     @Override
