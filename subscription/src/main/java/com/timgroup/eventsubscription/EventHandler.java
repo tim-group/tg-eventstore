@@ -22,7 +22,6 @@ public interface EventHandler {
         apply(resolvedEvent.position(), new DateTime(resolvedEvent.eventRecord().timestamp().toEpochMilli()), deserializedEvent, endOfBatch);
     }
 
-    @SafeVarargs
     static EventHandler concat(EventHandler... handlers) {
         return new BroadcastingEventHandler(Arrays.asList(handlers));
     }
