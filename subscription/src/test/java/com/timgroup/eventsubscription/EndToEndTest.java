@@ -67,7 +67,7 @@ public class EndToEndTest {
     private final SubscriptionListener listener = Mockito.mock(SubscriptionListener.class);
     private final InitialCatchupFuture initialCatchupFuture = new InitialCatchupFuture();
 
-    private EventSubscription<Event> subscription;
+    private EventSubscription subscription;
 
     @After
     public void stopSubscription() {
@@ -176,7 +176,7 @@ public class EndToEndTest {
         NewEvent event2 = newEvent();
         store.write(stream, Arrays.asList(event1, event2));
         @SuppressWarnings("unchecked")
-        EventHandler<Event> eventHandler = Mockito.mock(EventHandler.class);
+        EventHandler eventHandler = Mockito.mock(EventHandler.class);
         subscription = subscription(Deserializer.applying(EndToEndTest::deserialize), eventHandler);
         subscription.start();
 
@@ -206,7 +206,7 @@ public class EndToEndTest {
         store.write(streamId("beta", "1"), singletonList(event2));
         store.write(streamId("alpha", "2"), singletonList(event3));
         @SuppressWarnings("unchecked")
-        EventHandler<Event> eventHandler = Mockito.mock(EventHandler.class);
+        EventHandler eventHandler = Mockito.mock(EventHandler.class);
         subscription = SubscriptionBuilder.<Event> eventSubscription("test")
                 .readingFrom(store, "alpha")
                 .deserializingUsing(Deserializer.applying(EndToEndTest::deserialize))
@@ -264,11 +264,11 @@ public class EndToEndTest {
         });
     }
 
-    private EventSubscription<Event> subscription(Deserializer<DeserialisedEvent> deserializer, EventHandler<Event> eventHandler) {
+    private EventSubscription subscription(Deserializer<DeserialisedEvent> deserializer, EventHandler eventHandler) {
         return subscription(deserializer, eventHandler, store.emptyStorePosition());
     }
 
-    private EventSubscription<Event> subscription(Deserializer<DeserialisedEvent> deserializer, EventHandler<Event> eventHandler, Position startingPosition) {
+    private EventSubscription subscription(Deserializer<DeserialisedEvent> deserializer, EventHandler eventHandler, Position startingPosition) {
         return SubscriptionBuilder.<Event>eventSubscription("test")
                 .withClock(clock)
                 .withRunFrequency(Duration.ofMillis(1))
@@ -350,11 +350,11 @@ public class EndToEndTest {
         return new DeserialisedEvent(eventRecord);
     }
 
-    private static EventHandler<Event> failingHandler(Supplier<RuntimeException> supplier) {
+    private static EventHandler failingHandler(Supplier<RuntimeException> supplier) {
         return EventHandler.ofConsumer(e -> { throw supplier.get(); });
     }
 
-    private static final class BlockingEventHandler implements EventHandler<Event> {
+    private static final class BlockingEventHandler implements EventHandler {
         private final Semaphore lock = new Semaphore(0);
 
         @Override

@@ -34,13 +34,13 @@ import static com.lmax.disruptor.dsl.ProducerType.SINGLE;
 import static java.util.Collections.unmodifiableCollection;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-public class EventSubscription<T> {
+public class EventSubscription {
     private static final Logger LOG = LoggerFactory.getLogger(EventSubscription.class);
     private final EventSubscriptionStatus subscriptionStatus;
     private final List<Component> statusComponents;
     private final ScheduledExecutorService chaserExecutor;
     private final ExecutorService eventHandlerExecutor;
-    private final Disruptor<EventContainer<T>> disruptor;
+    private final Disruptor<EventContainer> disruptor;
     private final EventStoreChaser chaser;
     private final Duration runFrequency;
 
@@ -49,8 +49,8 @@ public class EventSubscription<T> {
                 String name,
                 String description,
                 Function<Position, Stream<ResolvedEvent>> eventSource,
-                Deserializer<? extends T> deserializer,
-                EventHandler<? super T> eventHandler,
+                Deserializer<? extends Event> deserializer,
+                EventHandler eventHandler,
                 Clock clock,
                 int bufferSize,
                 Duration runFrequency,
@@ -71,11 +71,11 @@ public class EventSubscription<T> {
 
         chaserExecutor = Executors.newScheduledThreadPool(1, new NamedThreadFactory("EventChaser-" + name));
         eventHandlerExecutor = Executors.newCachedThreadPool(new NamedThreadFactory("EventSubscription-" + name));
-        disruptor = new Disruptor<>(new EventContainer.Factory<>(), bufferSize, eventHandlerExecutor, SINGLE, new BlockingWaitStrategy());
+        disruptor = new Disruptor<>(new EventContainer.Factory(), bufferSize, eventHandlerExecutor, SINGLE, new BlockingWaitStrategy());
 
-        disruptor.handleExceptionsWith(new ExceptionHandler<EventContainer<T>>() {
+        disruptor.handleExceptionsWith(new ExceptionHandler<EventContainer>() {
             @Override
-            public void handleEventException(Throwable ex, long sequence, EventContainer<T> event) {
+            public void handleEventException(Throwable ex, long sequence, EventContainer event) {
                 LOG.error(String.format("Exception processing %d: %s", sequence, event), ex);
                 if (ex instanceof RuntimeException) {
                     throw (RuntimeException) ex;
@@ -98,12 +98,12 @@ public class EventSubscription<T> {
         });
 
         disruptor.handleEventsWithWorkerPool(
-                new DisruptorDeserializationAdapter<>(deserializer, processorListener),
-                new DisruptorDeserializationAdapter<>(deserializer, processorListener)
-        ).then(new DisruptorEventHandlerAdapter<>(eventHandler, processorListener));
+                new DisruptorDeserializationAdapter(deserializer, processorListener),
+                new DisruptorDeserializationAdapter(deserializer, processorListener)
+        ).then(new DisruptorEventHandlerAdapter(eventHandler, processorListener));
 
         ChaserListener chaserListener = new BroadcastingChaserListener(chaserHealth, processorListener);
-        EventContainer.Translator<T> translator = new EventContainer.Translator<>();
+        EventContainer.Translator translator = new EventContainer.Translator();
         chaser = new EventStoreChaser(eventSource, startingPosition, event -> disruptor.publishEvent(translator.setting(event)), chaserListener);
 
         statusComponents = new ArrayList<>();

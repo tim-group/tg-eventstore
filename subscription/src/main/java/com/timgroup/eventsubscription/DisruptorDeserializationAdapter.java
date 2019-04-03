@@ -4,17 +4,17 @@ import com.lmax.disruptor.WorkHandler;
 
 import static java.util.Objects.requireNonNull;
 
-public class DisruptorDeserializationAdapter<T> implements WorkHandler<EventContainer<T>> {
-    private final Deserializer<? extends T> deserializer;
+public class DisruptorDeserializationAdapter implements WorkHandler<EventContainer> {
+    private final Deserializer<? extends Event> deserializer;
     private final EventProcessorListener processorListener;
 
-    public DisruptorDeserializationAdapter(Deserializer<? extends T> deserializer, EventProcessorListener processorListener) {
+    public DisruptorDeserializationAdapter(Deserializer<? extends Event> deserializer, EventProcessorListener processorListener) {
         this.deserializer = requireNonNull(deserializer);
         this.processorListener = requireNonNull(processorListener);
     }
 
     @Override
-    public void onEvent(EventContainer<T> eventContainer) {
+    public void onEvent(EventContainer eventContainer) {
         try {
             eventContainer.deserializedEvent = null;
             deserializer.deserialize(eventContainer.event.eventRecord(), evt -> {

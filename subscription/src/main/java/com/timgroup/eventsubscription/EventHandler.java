@@ -9,34 +9,34 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-public interface EventHandler<T> {
-    default void apply(T deserialized) {
+public interface EventHandler {
+    default void apply(Event deserialized) {
         throw new UnsupportedOperationException();
     }
 
-    default void apply(Position position, DateTime timestamp, T deserialized, boolean endOfBatch) {
+    default void apply(Position position, DateTime timestamp, Event deserialized, boolean endOfBatch) {
         apply(deserialized);
     }
 
-    default void apply(ResolvedEvent resolvedEvent, T deserializedEvent, boolean endOfBatch) {
+    default void apply(ResolvedEvent resolvedEvent, Event deserializedEvent, boolean endOfBatch) {
         apply(resolvedEvent.position(), new DateTime(resolvedEvent.eventRecord().timestamp().toEpochMilli()), deserializedEvent, endOfBatch);
     }
 
     @SafeVarargs
-    static <E> EventHandler<E> concat(EventHandler<? super E>... handlers) {
-        return new BroadcastingEventHandler<E>(Arrays.asList(handlers));
+    static EventHandler concat(EventHandler... handlers) {
+        return new BroadcastingEventHandler(Arrays.asList(handlers));
     }
 
-    static <E> EventHandler<E> concatAll(List<? extends EventHandler<? super E>> handlers) {
-        return new BroadcastingEventHandler<>(handlers);
+    static EventHandler concatAll(List<EventHandler> handlers) {
+        return new BroadcastingEventHandler(handlers);
     }
 
-    static <E> EventHandler<E> ofConsumer(Consumer<? super E> consumer) {
+    static EventHandler ofConsumer(Consumer<? super Event> consumer) {
         Objects.requireNonNull(consumer);
 
-        return new EventHandler<E>() {
+        return new EventHandler() {
             @Override
-            public void apply(E deserialized) {
+            public void apply(Event deserialized) {
                 consumer.accept(deserialized);
             }
 
@@ -47,7 +47,7 @@ public interface EventHandler<T> {
         };
     }
 
-    static <E> EventHandler<E> discard() {
+    static EventHandler discard() {
         return ofConsumer(e -> {});
     }
 }

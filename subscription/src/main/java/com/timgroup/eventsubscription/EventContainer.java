@@ -4,27 +4,27 @@ import com.lmax.disruptor.EventFactory;
 import com.lmax.disruptor.EventTranslator;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
-public class EventContainer<T> {
+public class EventContainer {
     ResolvedEvent event = null;
-    T deserializedEvent = null;
+    Event deserializedEvent = null;
 
-    public static class Factory<T> implements EventFactory<EventContainer<T>> {
+    public static class Factory implements EventFactory<EventContainer> {
         @Override
-        public EventContainer<T> newInstance() {
-            return new EventContainer<>();
+        public EventContainer newInstance() {
+            return new EventContainer();
         }
     }
 
-    public static class Translator<T> implements EventTranslator<EventContainer<T>> {
+    public static class Translator implements EventTranslator<EventContainer> {
         private ResolvedEvent currentEvent;
 
-        public Translator<T> setting(ResolvedEvent event) {
+        public Translator setting(ResolvedEvent event) {
             currentEvent = event;
             return this;
         }
 
         @Override
-        public void translateTo(EventContainer<T> eventContainer, long sequence) {
+        public void translateTo(EventContainer eventContainer, long sequence) {
             eventContainer.event = currentEvent;
         }
     }
