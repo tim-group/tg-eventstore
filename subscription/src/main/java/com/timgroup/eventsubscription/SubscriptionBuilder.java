@@ -102,7 +102,7 @@ public class SubscriptionBuilder {
         return this;
     }
 
-    public SubscriptionBuilder publishingTo(Collection<EventHandler> handlers) {
+    public SubscriptionBuilder publishingTo(Collection<? extends EventHandler> handlers) {
         handlers.forEach(this::publishingTo);
         return this;
     }
@@ -124,7 +124,7 @@ public class SubscriptionBuilder {
         return this;
     }
 
-    public SubscriptionBuilder withListeners(Collection<SubscriptionListener> listeners) {
+    public SubscriptionBuilder withListeners(Collection<? extends SubscriptionListener> listeners) {
         listeners.forEach(this::withListener);
         return this;
     }
