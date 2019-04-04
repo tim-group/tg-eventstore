@@ -13,17 +13,17 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 public class HasPropertyValueMatcher<O, T> extends TypeSafeDiagnosingMatcher<O> {
-    private final PropertyToMatch<O, T> propertyToMatch;
+    private final PropertyToMatch<? super O, ? extends T> propertyToMatch;
     private final String propertyName;
-    private final Matcher<T> expectedValue;
+    private final Matcher<? super T> expectedValue;
 
-    private HasPropertyValueMatcher(PropertyToMatch<O, T> propertyToMatch, String propertyName, Matcher<T> expectedValue) {
+    private HasPropertyValueMatcher(PropertyToMatch<? super O, ? extends T> propertyToMatch, String propertyName, Matcher<? super T> expectedValue) {
         this.propertyToMatch = propertyToMatch;
         this.propertyName = propertyName;
         this.expectedValue = expectedValue;
     }
 
-    public static <O, T> Matcher<O> hasPropertyValue(PropertyToMatch<O, T> propertyToMatch, Matcher<T> expectedValue) {
+    public static <O, T> Matcher<O> hasPropertyValue(PropertyToMatch<? super O, ? extends T> propertyToMatch, Matcher<? super T> expectedValue) {
         return new HasPropertyValueMatcher<>(propertyToMatch, nameOf(propertyToMatch), expectedValue);
     }
 
