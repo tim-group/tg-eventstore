@@ -147,7 +147,7 @@ public class SubscriptionBuilder {
 
         EventHandler eventHandler;
         if (handlers.isEmpty()) {
-            eventHandler = EventHandler.discard();
+            eventHandler = EventHandler.DISCARD;
         }
         else if (handlers.size() == 1) {
             eventHandler = handlers.iterator().next();

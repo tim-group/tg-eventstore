@@ -12,7 +12,6 @@ public interface EventHandler {
         throw new UnsupportedOperationException();
     }
 
-
     default void apply(Position position, Event deserialized) {
         apply(deserialized);
     }
@@ -46,7 +45,5 @@ public interface EventHandler {
         };
     }
 
-    static EventHandler discard() {
-        return ofConsumer(e -> {});
-    }
+    static EventHandler DISCARD = ofConsumer(e -> {});
 }
