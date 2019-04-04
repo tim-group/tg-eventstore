@@ -45,5 +45,5 @@ public interface EventHandler {
         };
     }
 
-    static EventHandler DISCARD = ofConsumer(e -> {});
+    EventHandler DISCARD = ofConsumer(e -> {});
 }
