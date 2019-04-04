@@ -103,8 +103,7 @@ public class EventSubscription {
         ).then(new DisruptorEventHandlerAdapter(eventHandler, processorListener));
 
         ChaserListener chaserListener = new BroadcastingChaserListener(chaserHealth, processorListener);
-        EventContainer.Translator translator = new EventContainer.Translator();
-        chaser = new EventStoreChaser(eventSource, startingPosition, event -> disruptor.publishEvent(translator.setting(event)), chaserListener);
+        chaser = new EventStoreChaser(eventSource, startingPosition, disruptor, chaserListener);
 
         statusComponents = new ArrayList<>();
         statusComponents.add(Component.supplyInfo("event-subscription-description", "Subscription source (" + name + ")", () -> description));
