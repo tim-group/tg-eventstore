@@ -20,7 +20,6 @@ public class DisruptorDeserializationAdapter implements WorkHandler<EventContain
             deserializer.deserialize(eventContainer.event.eventRecord(), evt -> {
                 eventContainer.deserializedEvent = evt;
             });
-            processorListener.eventDeserialized(eventContainer.event.position());
         } catch (Exception e) {
             processorListener.eventDeserializationFailed(eventContainer.event.position(), e);
             throw e;

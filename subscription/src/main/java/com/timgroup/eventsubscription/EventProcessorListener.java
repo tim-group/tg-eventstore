@@ -8,6 +8,4 @@ public interface EventProcessorListener {
     void eventProcessed(Position position);
 
     void eventDeserializationFailed(Position position, Exception e);
-
-    void eventDeserialized(Position position);
 }

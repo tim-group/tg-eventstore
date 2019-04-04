@@ -54,9 +54,6 @@ public class SubscriptionListenerAdapter implements ChaserListener, EventProcess
         }
     }
 
-    @Override
-    public void eventDeserialized(Position position) { }
-
     private void checkStaleness() {
         //Quick fix - assign them locally to avoid race condition which sometimes can set the position to None which results in exceptions
         Optional<Position> fetchedPosition = latestFetchedPosition;

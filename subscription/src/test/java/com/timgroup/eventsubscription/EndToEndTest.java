@@ -187,12 +187,12 @@ public class EndToEndTest {
         List<ResolvedEvent> eventsInStore = store.readAllForwards().collect(Collectors.toList());
 
         verify(eventHandler).apply(
-                Matchers.eq(eventsInStore.get(0)),
+                Matchers.eq(eventsInStore.get(0).position()),
                 Matchers.eq(new DeserialisedEvent(eventRecord(clock.instant(), stream, 0, event1.type(), event1.data(), event1.metadata()))),
                 Matchers.anyBoolean());
 
         verify(eventHandler).apply(
-                Matchers.eq(eventsInStore.get(1)),
+                Matchers.eq(eventsInStore.get(1).position()),
                 Matchers.eq(new DeserialisedEvent(eventRecord(clock.instant(), stream, 1, event2.type(), event2.data(), event2.metadata()))),
                 Matchers.eq(true));
     }
@@ -224,12 +224,12 @@ public class EndToEndTest {
         List<ResolvedEvent> categoryEvents = store.readCategoryForwards("alpha").collect(Collectors.toList());
 
         verify(eventHandler).apply(
-                Matchers.eq(categoryEvents.get(0)),
+                Matchers.eq(categoryEvents.get(0).position()),
                 Matchers.eq(new DeserialisedEvent(eventRecord(clock.instant(), streamId("alpha", "1"), 0, event1.type(), event1.data(), event1.metadata()))),
                 Matchers.anyBoolean());
 
         verify(eventHandler).apply(
-                Matchers.eq(categoryEvents.get(1)),
+                Matchers.eq(categoryEvents.get(1).position()),
                 Matchers.eq(new DeserialisedEvent(eventRecord(clock.instant(), streamId("alpha", "2"), 0, event3.type(), event3.data(), event3.metadata()))),
                 Matchers.eq(true));
 
