@@ -19,10 +19,17 @@ public interface EventHandler {
         apply(deserialized);
     }
 
-    default void apply(Position position, DateTime timestamp, Event deserialized, boolean endOfBatch) {
+    @Deprecated
+    default void apply(Position position, Event deserialized, boolean endOfBatch) {
         apply(position, deserialized);
     }
 
+    @Deprecated
+    default void apply(Position position, DateTime timestamp, Event deserialized, boolean endOfBatch) {
+            apply(position, deserialized, endOfBatch);
+    }
+
+    @Deprecated
     default void apply(ResolvedEvent resolvedEvent, Event deserializedEvent, boolean endOfBatch) {
         apply(resolvedEvent.position(), new DateTime(resolvedEvent.eventRecord().timestamp().toEpochMilli()), deserializedEvent, endOfBatch);
     }
