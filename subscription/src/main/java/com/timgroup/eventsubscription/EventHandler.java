@@ -14,8 +14,13 @@ public interface EventHandler {
         throw new UnsupportedOperationException();
     }
 
-    default void apply(Position position, DateTime timestamp, Event deserialized, boolean endOfBatch) {
+
+    default void apply(Position position, Event deserialized) {
         apply(deserialized);
+    }
+
+    default void apply(Position position, DateTime timestamp, Event deserialized, boolean endOfBatch) {
+        apply(position, deserialized);
     }
 
     default void apply(ResolvedEvent resolvedEvent, Event deserializedEvent, boolean endOfBatch) {
