@@ -5,6 +5,7 @@ import com.timgroup.eventstore.api.Position;
 import javax.annotation.Nonnull;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public interface SubscriptionListener {
@@ -37,5 +38,22 @@ public interface SubscriptionListener {
 
     static SubscriptionListener onInitialCatchup(Runnable callback) {
         return onInitialCatchupAt(ignored -> callback.run());
+    }
+
+    static SubscriptionListener onTermination(BiConsumer<? super Position, ? super Throwable> consumer) {
+        return new SubscriptionListener() {
+            @Override
+            public void caughtUpAt(Position position) {
+            }
+
+            @Override
+            public void staleAtVersion(Optional<Position> position) {
+            }
+
+            @Override
+            public void terminated(Position position, Exception e) {
+                consumer.accept(position, e);
+            }
+        };
     }
 }
