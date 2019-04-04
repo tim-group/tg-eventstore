@@ -1,8 +1,6 @@
 package com.timgroup.eventsubscription;
 
 import com.timgroup.eventstore.api.Position;
-import com.timgroup.eventstore.api.ResolvedEvent;
-import org.joda.time.DateTime;
 
 import java.util.Arrays;
 import java.util.List;
@@ -22,16 +20,6 @@ public interface EventHandler {
     @Deprecated
     default void apply(Position position, Event deserialized, boolean endOfBatch) {
         apply(position, deserialized);
-    }
-
-    @Deprecated
-    default void apply(Position position, DateTime timestamp, Event deserialized, boolean endOfBatch) {
-            apply(position, deserialized, endOfBatch);
-    }
-
-    @Deprecated
-    default void apply(ResolvedEvent resolvedEvent, Event deserializedEvent, boolean endOfBatch) {
-        apply(resolvedEvent.position(), new DateTime(resolvedEvent.eventRecord().timestamp().toEpochMilli()), deserializedEvent, endOfBatch);
     }
 
     static EventHandler concat(EventHandler... handlers) {
