@@ -51,6 +51,15 @@ tasks.withType(JavaCompile).all {
     options.compilerArgs << "-parameters"
 }
 
+tasks.withType(ScalaCompile).all {
+    sourceCompatibility = "1.8"
+    targetCompatibility = "1.8"
+    options.encoding = "UTF-8"
+    options.deprecation = true
+    options.compilerArgs << "-parameters"
+    scalaCompileOptions.additionalParameters = ["-feature", "-language:implicitConversions", "-unchecked"]
+}
+
 tasks.withType(Jar).all {
     manifest {
         attributes(
