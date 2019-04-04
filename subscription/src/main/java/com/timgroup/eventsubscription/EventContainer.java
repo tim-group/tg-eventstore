@@ -2,10 +2,12 @@ package com.timgroup.eventsubscription;
 
 import com.lmax.disruptor.EventFactory;
 import com.lmax.disruptor.EventTranslator;
+import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
 public class EventContainer {
     ResolvedEvent event = null;
+    Position position = null;
     Event deserializedEvent = null;
 
     public static class Factory implements EventFactory<EventContainer> {
@@ -26,6 +28,7 @@ public class EventContainer {
         @Override
         public void translateTo(EventContainer eventContainer, long sequence) {
             eventContainer.event = currentEvent;
+            eventContainer.position = currentEvent.position();
         }
     }
 

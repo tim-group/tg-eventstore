@@ -15,14 +15,15 @@ public class DisruptorEventHandlerAdapter implements com.lmax.disruptor.EventHan
     public void onEvent(EventContainer eventContainer, long sequence, boolean endOfBatch) throws Exception {
         try {
             if (eventContainer.deserializedEvent != null) {
-                eventHandler.apply(eventContainer.event.position(), eventContainer.deserializedEvent, endOfBatch);
+                eventHandler.apply(eventContainer.position, eventContainer.deserializedEvent, endOfBatch);
             }
-            processorListener.eventProcessed(eventContainer.event.position());
+            processorListener.eventProcessed(eventContainer.position);
 
             eventContainer.event = null;
             eventContainer.deserializedEvent = null;
+            eventContainer.position = null;
         } catch (Exception e) {
-            processorListener.eventProcessingFailed(eventContainer.event.position(), e);
+            processorListener.eventProcessingFailed(eventContainer.position, e);
             throw e;
         }
     }

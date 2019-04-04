@@ -9,6 +9,9 @@ import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import com.timgroup.eventsubscription.healthcheck.InitialCatchupFuture;
 import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
+import com.timgroup.eventsubscription.lifecycleevents.CaughtUp;
+import com.timgroup.eventsubscription.lifecycleevents.InitialCatchupCompleted;
+import com.timgroup.eventsubscription.lifecycleevents.SubscriptionLifecycleEvent;
 import com.timgroup.structuredevents.LocalEventSink;
 import com.timgroup.structuredevents.StructuredEventMatcher;
 import com.timgroup.tucker.info.Component;
@@ -21,7 +24,6 @@ import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.junit.After;
 import org.junit.Test;
 import org.mockito.InOrder;
-import org.mockito.Matchers;
 import org.mockito.Mockito;
 
 import java.time.Duration;
@@ -29,8 +31,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
@@ -54,8 +58,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.core.StringContains.containsString;
 import static org.mockito.Matchers.argThat;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @SuppressWarnings("CodeBlock2Expr")
 public class EndToEndTest {
@@ -171,13 +173,17 @@ public class EndToEndTest {
     }
 
     @Test
-    public void invokes_event_handlers_with_both_event_record_and_deserialised_event() throws Exception {
+    public void invokes_event_handlers_with_position_and_deserialized_event() throws Exception {
         NewEvent event1 = newEvent();
         NewEvent event2 = newEvent();
         store.write(stream, Arrays.asList(event1, event2));
-        @SuppressWarnings("unchecked")
-        EventHandler eventHandler = Mockito.mock(EventHandler.class);
-        subscription = subscription(Deserializer.applying(EndToEndTest::deserialize), eventHandler);
+        List<EventWithPosition> receivedEvents = new CopyOnWriteArrayList<>();
+        subscription = subscription(Deserializer.applying(EndToEndTest::deserialize), new EventHandler() {
+            @Override
+            public void apply(Position position, Event deserialized) {
+                receivedEvents.add(new EventWithPosition(position, deserialized));
+            }
+        });
         subscription.start();
 
         eventually(() -> {
@@ -186,31 +192,35 @@ public class EndToEndTest {
 
         List<ResolvedEvent> eventsInStore = store.readAllForwards().collect(Collectors.toList());
 
-        verify(eventHandler).apply(
-                Matchers.eq(eventsInStore.get(0).position()),
-                Matchers.eq(new DeserialisedEvent(eventRecord(clock.instant(), stream, 0, event1.type(), event1.data(), event1.metadata()))),
-                Matchers.anyBoolean());
-
-        verify(eventHandler).apply(
-                Matchers.eq(eventsInStore.get(1).position()),
-                Matchers.eq(new DeserialisedEvent(eventRecord(clock.instant(), stream, 1, event2.type(), event2.data(), event2.metadata()))),
-                Matchers.eq(true));
+        assertThat(new ArrayList<>(receivedEvents).subList(0, 4), Contains.inOrder(
+                new EventWithPosition(eventsInStore.get(0).position(), new DeserialisedEvent(eventRecord(clock.instant(), stream, 0, event1.type(), event1.data(), event1.metadata()))),
+                new EventWithPosition(eventsInStore.get(1).position(), new DeserialisedEvent(eventRecord(clock.instant(), stream, 1, event2.type(), event2.data(), event2.metadata()))),
+                new EventWithPosition(eventsInStore.get(1).position(), new InitialCatchupCompleted(eventsInStore.get(1).position())),
+                new EventWithPosition(eventsInStore.get(1).position(), new CaughtUp(eventsInStore.get(1).position()))
+        ));
     }
 
     @Test
     public void processes_only_category_events() throws Exception {
+        List<Event> receivedEvents = new CopyOnWriteArrayList<>();
+
         NewEvent event1 = newEvent();
         NewEvent event2 = newEvent();
         NewEvent event3 = newEvent();
         store.write(streamId("alpha", "1"), singletonList(event1));
         store.write(streamId("beta", "1"), singletonList(event2));
         store.write(streamId("alpha", "2"), singletonList(event3));
-        @SuppressWarnings("unchecked")
-        EventHandler eventHandler = Mockito.mock(EventHandler.class);
         subscription = SubscriptionBuilder.<Event> eventSubscription("test")
                 .readingFrom(store, "alpha")
                 .deserializingUsing(Deserializer.applying(EndToEndTest::deserialize))
-                .publishingTo(eventHandler)
+                .publishingTo(new EventHandler() {
+                    @Override
+                    public void apply(Event event) {
+                        if (event instanceof DeserialisedEvent) {
+                            receivedEvents.add(event);
+                        }
+                    }
+                })
                 .withClock(clock)
                 .runningInParallelWithBuffer(1024)
                 .withRunFrequency(Duration.ofMillis(1L))
@@ -221,46 +231,38 @@ public class EndToEndTest {
             assertThat(subscription.health().get(), is(healthy));
         });
 
-        List<ResolvedEvent> categoryEvents = store.readCategoryForwards("alpha").collect(Collectors.toList());
-
-        verify(eventHandler).apply(
-                Matchers.eq(categoryEvents.get(0).position()),
-                Matchers.eq(new DeserialisedEvent(eventRecord(clock.instant(), streamId("alpha", "1"), 0, event1.type(), event1.data(), event1.metadata()))),
-                Matchers.anyBoolean());
-
-        verify(eventHandler).apply(
-                Matchers.eq(categoryEvents.get(1).position()),
-                Matchers.eq(new DeserialisedEvent(eventRecord(clock.instant(), streamId("alpha", "2"), 0, event3.type(), event3.data(), event3.metadata()))),
-                Matchers.eq(true));
-
-        verifyNoMoreInteractions(eventHandler);
+        assertThat(receivedEvents, Contains.inOrder(
+                new DeserialisedEvent(eventRecord(clock.instant(), streamId("alpha", "1"), 0, event1.type(), event1.data(), event1.metadata())),
+                new DeserialisedEvent(eventRecord(clock.instant(), streamId("alpha", "2"), 0, event3.type(), event3.data(), event3.metadata()))
+        ));
     }
 
     @Test
     public void starts_up_healthy_when_there_are_no_events() throws Exception {
-        AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = subscription(Deserializer.applying(EndToEndTest::deserialize), EventHandler.ofConsumer(e -> {
-            eventsProcessed.incrementAndGet();
-        }));
+        List<Event> eventsProcessed = new CopyOnWriteArrayList<>();
+        subscription = subscription(Deserializer.applying(EndToEndTest::deserialize), EventHandler.ofConsumer(eventsProcessed::add));
         subscription.start();
 
         eventually(() -> {
             assertThat(subscription.health().get(), is(healthy));
-            assertThat(eventsProcessed.get(), is(0));
+            assertThat(eventsProcessed.get(0), (Matcher) org.hamcrest.Matchers.isA(InitialCatchupCompleted.class));
+            assertThat(eventsProcessed.stream().anyMatch(e -> !(e instanceof SubscriptionLifecycleEvent)), is(false));
         });
     }
 
     @Test
     public void starts_up_healthy_when_there_are_no_events_after_fromversion() throws Exception {
+        List<Event> eventsProcessed = new CopyOnWriteArrayList<>();
+
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
         Position lastPosition = store.readAllForwards().map(ResolvedEvent::position).collect(last()).orElseThrow(() -> new AssertionError("No events"));
-        AtomicInteger eventsProcessed = new AtomicInteger();
-        subscription = subscription(Deserializer.applying(EndToEndTest::deserialize), EventHandler.ofConsumer(e -> eventsProcessed.incrementAndGet()), lastPosition);
+        subscription = subscription(Deserializer.applying(EndToEndTest::deserialize), EventHandler.ofConsumer(eventsProcessed::add), lastPosition);
         subscription.start();
 
         eventually(() -> {
             assertThat(subscription.health().get(), is(healthy));
-            assertThat(eventsProcessed.get(), is(0));
+            assertThat(eventsProcessed.get(0), (Matcher) org.hamcrest.Matchers.isA(InitialCatchupCompleted.class));
+            assertThat(eventsProcessed.stream().anyMatch(e -> !(e instanceof SubscriptionLifecycleEvent)), is(false));
         });
     }
 
@@ -407,5 +409,38 @@ public class EndToEndTest {
                 return EnumSet.noneOf(Characteristics.class);
             }
         };
+    }
+
+
+    public static class EventWithPosition {
+        public final Position position;
+        public final Event event;
+
+        public EventWithPosition(Position position, Event event) {
+            this.position = position;
+            this.event = event;
+        }
+
+        @Override
+        public String toString() {
+            return "EventWithPosition{" +
+                    "position=" + position +
+                    ", event=" + event +
+                    '}';
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            EventWithPosition that = (EventWithPosition) o;
+            return Objects.equals(position, that.position) &&
+                    Objects.equals(event, that.event);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(position, event);
+        }
     }
 }
