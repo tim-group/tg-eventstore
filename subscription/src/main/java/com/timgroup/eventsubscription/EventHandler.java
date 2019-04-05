@@ -26,6 +26,10 @@ public interface EventHandler {
         return SequencingEventHandler.flatten(Arrays.asList(this, requireNonNull(o)));
     }
 
+    default EventHandler andThen(Consumer<? super Event> c) {
+        return andThen(ofConsumer(c));
+    }
+
     static EventHandler concat(EventHandler... handlers) {
         return SequencingEventHandler.flatten(Arrays.asList(handlers));
     }
