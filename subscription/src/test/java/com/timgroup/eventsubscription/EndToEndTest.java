@@ -196,8 +196,8 @@ public class EndToEndTest {
         assertThat(new ArrayList<>(receivedEvents).subList(0, 4), Contains.inOrder(
                 new EventWithPosition(eventsInStore.get(0).position(), new DeserialisedEvent(eventRecord(clock.instant(), stream, 0, event1.type(), event1.data(), event1.metadata()))),
                 new EventWithPosition(eventsInStore.get(1).position(), new DeserialisedEvent(eventRecord(clock.instant(), stream, 1, event2.type(), event2.data(), event2.metadata()))),
-                new EventWithPosition(eventsInStore.get(1).position(), new InitialCatchupCompleted(eventsInStore.get(1).position())),
-                new EventWithPosition(eventsInStore.get(1).position(), new CaughtUp(eventsInStore.get(1).position()))
+                new EventWithPosition(eventsInStore.get(1).position(), new InitialCatchupCompleted(eventsInStore.get(1).position(), clock.instant())),
+                new EventWithPosition(eventsInStore.get(1).position(), new CaughtUp(eventsInStore.get(1).position(), clock.instant()))
         ));
     }
 

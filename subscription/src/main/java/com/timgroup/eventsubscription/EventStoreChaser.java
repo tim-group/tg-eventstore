@@ -6,6 +6,7 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventsubscription.lifecycleevents.CaughtUp;
 import com.timgroup.eventsubscription.lifecycleevents.InitialCatchupCompleted;
 
+import java.time.Clock;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -18,17 +19,20 @@ public class EventStoreChaser implements Runnable {
     private final EventContainer.Translator translator = new EventContainer.Translator();
 
     private Position lastPosition;
+    private final Clock clock;
     private boolean initialCatchupCompleted;
 
     public EventStoreChaser(
             Function<Position, Stream<ResolvedEvent>> eventSource,
             Position startingPosition,
             Disruptor<EventContainer> disruptor,
-            ChaserListener listener) {
+            ChaserListener listener,
+            Clock clock) {
         this.eventSource = requireNonNull(eventSource);
         this.disruptor = disruptor;
         this.listener = requireNonNull(listener);
         this.lastPosition = requireNonNull(startingPosition);
+        this.clock = clock;
     }
 
     @Override
@@ -44,13 +48,13 @@ public class EventStoreChaser implements Runnable {
 
             if (initialCatchupCompleted) {
                 disruptor.publishEvent((event, sequence) -> {
-                    event.deserializedEvent = new CaughtUp(lastPosition);
+                    event.deserializedEvent = new CaughtUp(lastPosition, clock.instant());
                     event.position = lastPosition;
                 });
             } else {
                 initialCatchupCompleted = true;
                 disruptor.publishEvent((event, sequence) -> {
-                    event.deserializedEvent = new InitialCatchupCompleted(lastPosition);
+                    event.deserializedEvent = new InitialCatchupCompleted(lastPosition, clock.instant());
                     event.position = lastPosition;
                 });
             }
