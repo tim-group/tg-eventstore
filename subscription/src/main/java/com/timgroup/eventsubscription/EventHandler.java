@@ -4,8 +4,9 @@ import com.timgroup.eventstore.api.Position;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Consumer;
+
+import static java.util.Objects.requireNonNull;
 
 public interface EventHandler {
     default void apply(Event deserialized) {
@@ -21,16 +22,20 @@ public interface EventHandler {
         apply(position, deserialized);
     }
 
-    static EventHandler concat(EventHandler... handlers) {
-        return new BroadcastingEventHandler(Arrays.asList(handlers));
+    default EventHandler andThen(EventHandler o) {
+        return SequencingEventHandler.flatten(Arrays.asList(this, requireNonNull(o)));
     }
 
-    static EventHandler concatAll(List<EventHandler> handlers) {
-        return new BroadcastingEventHandler(handlers);
+    static EventHandler concat(EventHandler... handlers) {
+        return SequencingEventHandler.flatten(Arrays.asList(handlers));
+    }
+
+    static EventHandler concatAll(List<? extends EventHandler> handlers) {
+        return SequencingEventHandler.flatten(handlers);
     }
 
     static EventHandler ofConsumer(Consumer<? super Event> consumer) {
-        Objects.requireNonNull(consumer);
+        requireNonNull(consumer);
 
         return new EventHandler() {
             @Override

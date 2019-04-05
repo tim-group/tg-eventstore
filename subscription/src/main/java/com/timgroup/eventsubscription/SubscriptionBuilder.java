@@ -153,7 +153,7 @@ public class SubscriptionBuilder {
             eventHandler = handlers.iterator().next();
         }
         else {
-            eventHandler = new BroadcastingEventHandler(handlers);
+            eventHandler = new SequencingEventHandler(handlers);
         }
 
         return new EventSubscription(
