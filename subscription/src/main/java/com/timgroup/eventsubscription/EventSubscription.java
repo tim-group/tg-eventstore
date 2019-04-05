@@ -98,8 +98,8 @@ public class EventSubscription {
         });
 
         disruptor.handleEventsWithWorkerPool(
-                new DisruptorDeserializationAdapter(deserializer, processorListener),
-                new DisruptorDeserializationAdapter(deserializer, processorListener)
+                new DisruptorDeserializationAdapter(deserializer),
+                new DisruptorDeserializationAdapter(deserializer)
         ).then(new DisruptorEventHandlerAdapter(eventHandler, processorListener));
 
         ChaserListener chaserListener = new BroadcastingChaserListener(chaserHealth, processorListener);

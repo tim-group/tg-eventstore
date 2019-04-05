@@ -157,15 +157,4 @@ public class EventSubscriptionStatusTest {
         assertThat(status.getReport().getValue().toString(), containsString("Event subscription terminated. Failed to process version 1: Failure from handler"));
         assertThat(status.getReport().getValue().toString(), containsString("EventSubscriptionStatusTest"));
     }
-
-    @Test public void
-    reports_failure_if_subscription_terminates_due_to_deserialization_failure() {
-        adapter.chaserReceived(new TestPosition(1));
-        adapter.chaserUpToDate(new TestPosition(1));
-        adapter.eventDeserializationFailed(new TestPosition(1), new RuntimeException("Failure from deserialization"));
-
-        assertThat(status.getReport().getStatus(), is(CRITICAL));
-        assertThat(status.getReport().getValue().toString(), containsString("Event subscription terminated. Failed to process version 1: Failure from deserialization"));
-        assertThat(status.getReport().getValue().toString(), containsString("EventSubscriptionStatusTest"));
-    }
 }

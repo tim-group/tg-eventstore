@@ -47,13 +47,6 @@ public class SubscriptionListenerAdapter implements ChaserListener, EventProcess
         checkStaleness();
     }
 
-    @Override
-    public void eventDeserializationFailed(Position position, Exception e) {
-        for (SubscriptionListener listener : listeners) {
-            listener.terminated(position, e);
-        }
-    }
-
     private void checkStaleness() {
         //Quick fix - assign them locally to avoid race condition which sometimes can set the position to None which results in exceptions
         Optional<Position> fetchedPosition = latestFetchedPosition;

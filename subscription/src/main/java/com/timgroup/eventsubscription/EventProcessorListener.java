@@ -6,6 +6,4 @@ public interface EventProcessorListener {
     void eventProcessingFailed(Position position, Exception e);
 
     void eventProcessed(Position position);
-
-    void eventDeserializationFailed(Position position, Exception e);
 }

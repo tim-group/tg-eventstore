@@ -12,6 +12,7 @@ import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
 import com.timgroup.eventsubscription.lifecycleevents.CaughtUp;
 import com.timgroup.eventsubscription.lifecycleevents.InitialCatchupCompleted;
 import com.timgroup.eventsubscription.lifecycleevents.SubscriptionLifecycleEvent;
+import com.timgroup.eventsubscription.lifecycleevents.SubscriptionTerminated;
 import com.timgroup.structuredevents.LocalEventSink;
 import com.timgroup.structuredevents.StructuredEventMatcher;
 import com.timgroup.tucker.info.Component;
@@ -20,6 +21,7 @@ import com.youdevise.testutils.matchers.Contains;
 import junit.framework.AssertionFailedError;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.junit.After;
 import org.junit.Test;
@@ -36,7 +38,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
@@ -125,11 +126,12 @@ public class EndToEndTest {
 
     @Test
     public void does_not_continue_processing_events_if_event_processing_failed_on_a_previous_event() throws Exception {
+        List<Event> eventsProcessed = new CopyOnWriteArrayList<>();
+
         store.write(stream, Arrays.asList(newEvent(), newEvent()));
-        AtomicInteger eventsProcessed = new AtomicInteger();
         subscription = subscription(Deserializer.applying(EndToEndTest::deserialize), EventHandler.ofConsumer(e -> {
-            eventsProcessed.incrementAndGet();
-            if (((DeserialisedEvent) e).event.eventNumber() == 0) {
+            eventsProcessed.add(e);
+            if (e instanceof DeserialisedEvent && ((DeserialisedEvent) e).event.eventNumber() == 0) {
                 throw new RuntimeException("failure");
             }
         }));
@@ -140,7 +142,10 @@ public class EndToEndTest {
         eventually(() -> {
             assertThat(statusComponent().getReport().getStatus(), is(CRITICAL));
             assertThat(statusComponent().getReport().getValue().toString(), containsString("Event subscription terminated. Failed to process version 1: failure"));
-            assertThat(eventsProcessed.get(), is(1));
+            assertThat(eventsProcessed, Contains.inOrder(
+                    Matchers.is(new DeserialisedEvent(store.readAllForwards().collect(Collectors.toList()).get(0).eventRecord())),
+                    Matchers.instanceOf(SubscriptionTerminated.class)
+            ));
             Mockito.verify(listener).terminated(argThat(inMemoryPosition(1)), argThat(anExceptionOfType(RuntimeException.class).withTheMessage("failure")));
         });
 
@@ -149,26 +154,22 @@ public class EndToEndTest {
 
     @Test
     public void does_not_continue_processing_events_if_deserialisation_failed_on_a_previous_event() throws Exception {
+        List<Event> eventsProcessed = new CopyOnWriteArrayList<>();
         store.write(stream, Arrays.asList(newEvent(), newEvent(), newEvent()));
-        AtomicInteger eventsProcessed = new AtomicInteger();
         subscription = subscription(Deserializer.applying(e -> {
             if (e.eventNumber() == 0) {
                 throw new RuntimeException("Failed to deserialize first event");
-            }
-            else {
+            } else {
                 return deserialize(e);
             }
-        }), EventHandler.ofConsumer(e1 -> {
-            eventsProcessed.incrementAndGet();
-            throw new UnsupportedOperationException();
-        }));
+        }), EventHandler.ofConsumer(eventsProcessed::add));
         subscription.start();
 
         Thread.sleep(50L);
 
         eventually(() -> {
-            assertThat(eventsProcessed.get(), is(0));
             Mockito.verify(listener).terminated(argThat(inMemoryPosition(1)), argThat(anExceptionOfType(RuntimeException.class).withTheMessage("Failed to deserialize first event")));
+            assertThat(eventsProcessed, Contains.only(Matchers.instanceOf(SubscriptionTerminated.class)));
         });
     }
 
