@@ -21,7 +21,6 @@ import com.youdevise.testutils.matchers.Contains;
 import junit.framework.AssertionFailedError;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
-import org.hamcrest.Matchers;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.junit.After;
 import org.junit.Test;
@@ -47,6 +46,7 @@ import java.util.stream.Collectors;
 
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static com.timgroup.eventstore.api.StreamId.streamId;
+import static com.timgroup.eventsubscription.SubscriptionBuilder.eventSubscription;
 import static com.timgroup.tucker.info.Health.State.healthy;
 import static com.timgroup.tucker.info.Health.State.ill;
 import static com.timgroup.tucker.info.Status.CRITICAL;
@@ -56,9 +56,16 @@ import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.core.StringContains.containsString;
 import static org.mockito.Matchers.argThat;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @SuppressWarnings("CodeBlock2Expr")
 public class EndToEndTest {
@@ -67,7 +74,7 @@ public class EndToEndTest {
     private final JavaInMemoryEventStore store = new JavaInMemoryEventStore(clock);
 
     private final LocalEventSink eventSink = new LocalEventSink();
-    private final SubscriptionListener listener = Mockito.mock(SubscriptionListener.class);
+    private final SubscriptionListener listener = mock(SubscriptionListener.class);
     private final InitialCatchupFuture initialCatchupFuture = new InitialCatchupFuture();
 
     private EventSubscription subscription;
@@ -104,10 +111,10 @@ public class EndToEndTest {
             assertThat(eventSink.events(), Contains.only(StructuredEventMatcher.ofType("InitialReplayCompleted")));
         });
 
-        InOrder inOrder = Mockito.inOrder(listener);
-        inOrder.verify(listener, Mockito.atLeastOnce()).staleAtVersion(Mockito.eq(Optional.empty()));
-        inOrder.verify(listener, Mockito.atLeastOnce()).caughtUpAt(argThat(inMemoryPosition(3)));
-        Mockito.verify(listener, Mockito.never()).terminated(Mockito.any(), Mockito.any());
+        InOrder inOrder = inOrder(listener);
+        inOrder.verify(listener, atLeastOnce()).staleAtVersion(eq(Optional.empty()));
+        inOrder.verify(listener, atLeastOnce()).caughtUpAt(argThat(inMemoryPosition(3)));
+        verify(listener, never()).terminated(Mockito.any(), Mockito.any());
 
         assertThat(initialCatchupFuture.isDone(), equalTo(true));
     }
@@ -143,10 +150,10 @@ public class EndToEndTest {
             assertThat(statusComponent().getReport().getStatus(), is(CRITICAL));
             assertThat(statusComponent().getReport().getValue().toString(), containsString("Event subscription terminated. Failed to process version 1: failure"));
             assertThat(eventsProcessed, Contains.inOrder(
-                    Matchers.is(new DeserialisedEvent(store.readAllForwards().collect(Collectors.toList()).get(0).eventRecord())),
-                    Matchers.instanceOf(SubscriptionTerminated.class)
+                    equalTo(new DeserialisedEvent(store.readAllForwards().collect(Collectors.toList()).get(0).eventRecord())),
+                    instanceOf(SubscriptionTerminated.class)
             ));
-            Mockito.verify(listener).terminated(argThat(inMemoryPosition(1)), argThat(anExceptionOfType(RuntimeException.class).withTheMessage("failure")));
+            verify(listener).terminated(argThat(inMemoryPosition(1)), argThat(anExceptionOfType(RuntimeException.class).withTheMessage("failure")));
         });
 
         assertThat(initialCatchupFuture.isCompletedExceptionally(), equalTo(true));
@@ -168,8 +175,8 @@ public class EndToEndTest {
         Thread.sleep(50L);
 
         eventually(() -> {
-            Mockito.verify(listener).terminated(argThat(inMemoryPosition(1)), argThat(anExceptionOfType(RuntimeException.class).withTheMessage("Failed to deserialize first event")));
-            assertThat(eventsProcessed, Contains.only(Matchers.instanceOf(SubscriptionTerminated.class)));
+            verify(listener).terminated(argThat(inMemoryPosition(1)), argThat(anExceptionOfType(RuntimeException.class).withTheMessage("Failed to deserialize first event")));
+            assertThat(eventsProcessed, Contains.only(instanceOf(SubscriptionTerminated.class)));
         });
     }
 
@@ -211,7 +218,7 @@ public class EndToEndTest {
         store.write(streamId("alpha", "1"), singletonList(event1));
         store.write(streamId("beta", "1"), singletonList(event2));
         store.write(streamId("alpha", "2"), singletonList(event3));
-        subscription = SubscriptionBuilder.<Event> eventSubscription("test")
+        subscription = eventSubscription("test")
                 .readingFrom(store, "alpha")
                 .deserializingUsing(Deserializer.applying(EndToEndTest::deserialize))
                 .publishingTo(new EventHandler() {
@@ -246,7 +253,7 @@ public class EndToEndTest {
 
         eventually(() -> {
             assertThat(subscription.health().get(), is(healthy));
-            assertThat(eventsProcessed.get(0), (Matcher) org.hamcrest.Matchers.isA(InitialCatchupCompleted.class));
+            assertThat(eventsProcessed.get(0), instanceOf(InitialCatchupCompleted.class));
             assertThat(eventsProcessed.stream().anyMatch(e -> !(e instanceof SubscriptionLifecycleEvent)), is(false));
         });
     }
@@ -262,7 +269,7 @@ public class EndToEndTest {
 
         eventually(() -> {
             assertThat(subscription.health().get(), is(healthy));
-            assertThat(eventsProcessed.get(0), (Matcher) org.hamcrest.Matchers.isA(InitialCatchupCompleted.class));
+            assertThat(eventsProcessed.get(0), instanceOf(InitialCatchupCompleted.class));
             assertThat(eventsProcessed.stream().anyMatch(e -> !(e instanceof SubscriptionLifecycleEvent)), is(false));
         });
     }
@@ -272,7 +279,7 @@ public class EndToEndTest {
     }
 
     private EventSubscription subscription(Deserializer<DeserialisedEvent> deserializer, EventHandler eventHandler, Position startingPosition) {
-        return SubscriptionBuilder.<Event>eventSubscription("test")
+        return eventSubscription("test")
                 .withClock(clock)
                 .withRunFrequency(Duration.ofMillis(1))
                 .withMaxInitialReplayDuration(Duration.ofSeconds(320))
