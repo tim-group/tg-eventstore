@@ -24,6 +24,7 @@ import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.junit.After;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 
@@ -59,13 +60,13 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.core.StringContains.containsString;
-import static org.mockito.Matchers.argThat;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.hamcrest.MockitoHamcrest.argThat;
 
 @SuppressWarnings("CodeBlock2Expr")
 public class EndToEndTest {
@@ -114,7 +115,7 @@ public class EndToEndTest {
         InOrder inOrder = inOrder(listener);
         inOrder.verify(listener, atLeastOnce()).staleAtVersion(eq(Optional.empty()));
         inOrder.verify(listener, atLeastOnce()).caughtUpAt(argThat(inMemoryPosition(3)));
-        verify(listener, never()).terminated(Mockito.any(), Mockito.any());
+        verify(listener, never()).terminated(ArgumentMatchers.any(), Mockito.any());
 
         assertThat(initialCatchupFuture.isDone(), equalTo(true));
     }
