@@ -18,6 +18,7 @@ public class DisruptorEventHandlerAdapter implements com.lmax.disruptor.EventHan
     @Override
     public void onEvent(EventContainer eventContainer, long sequence, boolean endOfBatch) throws Exception {
         if (eventContainer.deserializedEvent instanceof CaughtUp && !endOfBatch) {
+            clear(eventContainer);
             return;
         }
 
@@ -34,13 +35,17 @@ public class DisruptorEventHandlerAdapter implements com.lmax.disruptor.EventHan
                 processorListener.eventProcessed(eventContainer.position);
             }
 
-            eventContainer.event = null;
-            eventContainer.deserializedEvent = null;
-            eventContainer.position = null;
+            clear(eventContainer);
         } catch (Exception e) {
             processorListener.eventProcessingFailed(eventContainer.position, e);
             eventHandler.apply(eventContainer.position, new SubscriptionTerminated(eventContainer.position, e), endOfBatch);
             throw e;
         }
+    }
+
+    private void clear(EventContainer eventContainer) {
+        eventContainer.event = null;
+        eventContainer.deserializedEvent = null;
+        eventContainer.position = null;
     }
 }
