@@ -6,6 +6,7 @@ import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventsubscription.Event;
 import com.timgroup.eventsubscription.EventHandler;
 import com.timgroup.eventsubscription.lifecycleevents.CatchupEvent;
+import com.timgroup.eventsubscription.lifecycleevents.SubscriptionTerminated;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -17,23 +18,28 @@ public final class ServerSubscriptionListener implements SubscriptionListener, E
     private volatile Throwable failureException;
 
     @Override
-    public void caughtUpAt(Position position) {
-        monitor.enter();
-        this.latestPosition = position;
-        monitor.leave();
-    }
-
-    @Override
     public void apply(Position position, Event deserialized) {
         if (deserialized instanceof CatchupEvent) {
             monitor.enter();
             this.latestPosition = position;
+            monitor.leave();
+        } else if (deserialized instanceof SubscriptionTerminated) {
+            monitor.enter();
+            this.latestPosition = position;
+            this.failureException = ((SubscriptionTerminated) deserialized).exception;
             monitor.leave();
         }
     }
 
     @Override
     public void staleAtVersion(Optional<Position> position) { }
+
+    @Override
+    public void caughtUpAt(Position position) {
+        monitor.enter();
+        this.latestPosition = position;
+        monitor.leave();
+    }
 
     @Override
     public void terminated(Position position, Exception e) {
