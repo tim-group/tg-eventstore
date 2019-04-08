@@ -1,5 +1,6 @@
 package com.timgroup.eventsubscription;
 
+import com.timgroup.eventsubscription.lifecycleevents.CaughtUp;
 import com.timgroup.eventsubscription.lifecycleevents.SubscriptionLifecycleEvent;
 import com.timgroup.eventsubscription.lifecycleevents.SubscriptionTerminated;
 
@@ -16,6 +17,10 @@ public class DisruptorEventHandlerAdapter implements com.lmax.disruptor.EventHan
 
     @Override
     public void onEvent(EventContainer eventContainer, long sequence, boolean endOfBatch) throws Exception {
+        if (eventContainer.deserializedEvent instanceof CaughtUp && !endOfBatch) {
+            return;
+        }
+
         try {
             if (eventContainer.deserializedEvent != null) {
                 if (eventContainer.deserializedEvent instanceof SubscriptionTerminated) {
