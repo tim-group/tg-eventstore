@@ -19,6 +19,10 @@ public interface SubscriptionListener {
 
     void terminated(Position position, Exception e);
 
+    @Deprecated
+    /**
+     * @deprecated Use EventHandler::onInitialCatchup
+     * */
     static SubscriptionListener onInitialCatchupAt(Consumer<? super Position> callback) {
         return new SubscriptionListener() {
             private final AtomicBoolean seenCatchup = new AtomicBoolean();
@@ -40,10 +44,18 @@ public interface SubscriptionListener {
         };
     }
 
+    @Deprecated
+    /**
+     * @deprecated Use EventHandler::onInitialCatchup
+     * */
     static SubscriptionListener onInitialCatchup(Runnable callback) {
         return onInitialCatchupAt(ignored -> callback.run());
     }
 
+    @Deprecated
+    /**
+     * @deprecated Use EventHandler::onTermination
+     * */
     static SubscriptionListener onTermination(BiConsumer<? super Position, ? super Throwable> consumer) {
         return new SubscriptionListener() {
             @Override

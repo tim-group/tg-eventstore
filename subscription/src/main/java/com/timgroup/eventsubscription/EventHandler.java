@@ -1,9 +1,12 @@
 package com.timgroup.eventsubscription;
 
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventsubscription.lifecycleevents.InitialCatchupCompleted;
+import com.timgroup.eventsubscription.lifecycleevents.SubscriptionTerminated;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
@@ -55,4 +58,31 @@ public interface EventHandler {
     }
 
     EventHandler DISCARD = ofConsumer(e -> {});
+
+
+    static EventHandler onInitialCatchupAt(Consumer<? super Position> callback) {
+        return new EventHandler() {
+            @Override
+            public void apply(Position position, Event event) {
+                if (event instanceof InitialCatchupCompleted) {
+                    callback.accept(position);
+                }
+            }
+        };
+    }
+
+    static EventHandler onInitialCatchup(Runnable callback) {
+        return onInitialCatchupAt(ignored -> callback.run());
+    }
+
+    static EventHandler onTermination(BiConsumer<? super Position, ? super Throwable> consumer) {
+        return new EventHandler() {
+            @Override
+            public void apply(Position position, Event deserialized) {
+                if (deserialized instanceof SubscriptionTerminated) {
+                    consumer.accept(position, ((SubscriptionTerminated) deserialized).exception);
+                }
+            }
+        };
+    }
 }
