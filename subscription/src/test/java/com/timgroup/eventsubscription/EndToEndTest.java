@@ -7,6 +7,7 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
+import com.timgroup.eventsubscription.healthcheck.DurationThreshold;
 import com.timgroup.eventsubscription.healthcheck.InitialCatchupFuture;
 import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
 import com.timgroup.eventsubscription.lifecycleevents.CaughtUp;
@@ -23,8 +24,10 @@ import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.junit.After;
+import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
+import org.junit.rules.ExpectedException;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 
@@ -70,6 +73,10 @@ import static org.mockito.hamcrest.MockitoHamcrest.argThat;
 
 @SuppressWarnings("CodeBlock2Expr")
 public class EndToEndTest {
+
+    @Rule
+    public final ExpectedException thrown = ExpectedException.none();
+
     private final ManualClock clock = ManualClock.createDefault();
     private final StreamId stream = streamId("any", "any");
     private final JavaInMemoryEventStore store = new JavaInMemoryEventStore(clock);
@@ -95,20 +102,20 @@ public class EndToEndTest {
 
         eventually(() -> {
             assertThat(subscription.health().get(), is(ill));
-            assertThat(statusComponent().getReport(), is(new Report(OK, "Stale, catching up. No events processed yet. (Stale for PT0S)")));
+            assertThat(statusComponent().getReport(), is(new Report(OK, "Awaiting initial catchup. No events processed yet. (Stale for PT0S)")));
         });
 
         eventProcessing.allowProcessing(1);
         eventually(() -> {
-            assertThat(statusComponent().getReport(), is(new Report(OK, "Stale, catching up. Currently at version 1. (Stale for PT0S)")));
+            assertThat(statusComponent().getReport(), is(new Report(OK, "Awaiting initial catchup. Currently at position 1. (Stale for PT0S)")));
         });
 
         clock.bumpSeconds(123);
-        eventProcessing.allowProcessing(2);
+        eventProcessing.continueProcessing();
 
         eventually(() -> {
             assertThat(subscription.health().get(), is(healthy));
-            assertThat(statusComponent().getReport(), is(new Report(OK, "Caught up at version 3. Initial replay took PT2M3S")));
+            assertThat(statusComponent().getReport(), is(new Report(OK, "Caught up at position 3. Initial replay took PT2M3S")));
             assertThat(eventSink.events(), Contains.only(StructuredEventMatcher.ofType("InitialReplayCompleted")));
         });
 
@@ -128,7 +135,7 @@ public class EndToEndTest {
 
         eventually(() -> {
             assertThat(statusComponent().getReport().getStatus(), is(CRITICAL));
-            assertThat(statusComponent().getReport().getValue().toString(), containsString("Event subscription terminated. Failed to process version 1: failure"));
+            assertThat(statusComponent().getReport().getValue().toString(), containsString("Event subscription terminated. Failed to process position 1: failure"));
         });
     }
 
@@ -149,7 +156,7 @@ public class EndToEndTest {
 
         eventually(() -> {
             assertThat(statusComponent().getReport().getStatus(), is(CRITICAL));
-            assertThat(statusComponent().getReport().getValue().toString(), containsString("Event subscription terminated. Failed to process version 1: failure"));
+            assertThat(statusComponent().getReport().getValue().toString(), containsString("Event subscription terminated. Failed to process position 1: failure"));
             assertThat(eventsProcessed, Contains.inOrder(
                     equalTo(new DeserialisedEvent(store.readAllForwards().collect(Collectors.toList()).get(0).eventRecord())),
                     instanceOf(SubscriptionTerminated.class)
@@ -275,6 +282,18 @@ public class EndToEndTest {
         });
     }
 
+    @Test public void
+    constructing_subscription_with_staleness_same_as_run_frequency_fails() {
+        thrown.expectMessage("Staleness threshold is configured <= run frequency. This will result in a flickering alert.");
+
+        SubscriptionBuilder.eventSubscription("test")
+                .withRunFrequency(Duration.ofSeconds(1))
+                .withStalenessThreshold(DurationThreshold.warningThresholdWithCriticalRatio(Duration.ofSeconds(1), 2))
+                .readingFrom(store)
+                .deserializingUsing((event, consumer) -> {})
+                .build();
+    }
+
     private EventSubscription subscription(Deserializer<DeserialisedEvent> deserializer, EventHandler eventHandler) {
         return subscription(deserializer, eventHandler, store.emptyStorePosition());
     }
@@ -379,6 +398,10 @@ public class EndToEndTest {
 
         void allowProcessing(int count) {
             lock.release(count);
+        }
+
+        void continueProcessing() {
+            lock.release(Integer.MAX_VALUE);
         }
     }
 

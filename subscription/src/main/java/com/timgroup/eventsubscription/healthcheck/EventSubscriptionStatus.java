@@ -1,6 +1,11 @@
 package com.timgroup.eventsubscription.healthcheck;
 
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventsubscription.Event;
+import com.timgroup.eventsubscription.EventHandler;
+import com.timgroup.eventsubscription.lifecycleevents.CaughtUp;
+import com.timgroup.eventsubscription.lifecycleevents.InitialCatchupCompleted;
+import com.timgroup.eventsubscription.lifecycleevents.SubscriptionTerminated;
 import com.timgroup.structuredevents.EventSink;
 import com.timgroup.structuredevents.SimpleEvent;
 import com.timgroup.tucker.info.Component;
@@ -11,13 +16,12 @@ import com.timgroup.tucker.info.Status;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Optional;
 
 import static com.timgroup.tucker.info.Status.CRITICAL;
 import static com.timgroup.tucker.info.Status.OK;
 import static com.timgroup.tucker.info.Status.WARNING;
 
-public final class EventSubscriptionStatus extends Component implements Health, SubscriptionListener {
+public final class EventSubscriptionStatus extends Component implements Health, EventHandler {
     private final String name;
     private final Clock clock;
     private final EventSink eventSink;
@@ -28,7 +32,8 @@ public final class EventSubscriptionStatus extends Component implements Health, 
     private volatile Duration initialReplayDuration;
     private volatile Position currentPosition;
     private volatile Report terminatedReport;
-    private volatile Instant staleSince;
+    private volatile Instant lastCaughtUpAt;
+
 
     public EventSubscriptionStatus(String name, Clock clock, DurationThreshold initialReplay, DurationThreshold staleness, EventSink eventSink) {
         super("event-subscription-status-" + name, "Event subscription status (" + name + ")");
@@ -37,7 +42,7 @@ public final class EventSubscriptionStatus extends Component implements Health, 
         this.staleness = staleness;
         this.initialReplay = initialReplay;
         this.startTime = Instant.now(clock);
-        this.staleSince = Instant.now(clock);
+        this.lastCaughtUpAt = Instant.now(clock);
         this.eventSink = eventSink;
     }
 
@@ -47,22 +52,25 @@ public final class EventSubscriptionStatus extends Component implements Health, 
             return terminatedReport;
         }
 
-        Instant staleSinceSnap = this.staleSince;
-        if (staleSinceSnap != null) {
-            Duration staleFor = Duration.between(staleSinceSnap, Instant.now(clock));
-            Status status = initialReplayDuration != null ? staleness.classify(staleFor) : initialReplay.classify(staleFor);
+        Duration staleFor = Duration.between(lastCaughtUpAt, Instant.now(clock));
+        if (initialReplayDuration == null) {
+            Status status = initialReplay.classify(staleFor);
+            String currentVersionText = currentPosition != null ? "Currently at position " + currentPosition + "." : "No events processed yet.";
 
-            String currentVersionText = currentPosition != null ?  "Currently at version " + currentPosition + "." : "No events processed yet.";
-            return new Report(status, "Stale, catching up. " + currentVersionText + " (Stale for " + staleFor + ")");
-        } else if (initialReplayDuration != null) {
-            if (initialReplayDuration.compareTo(initialReplay.getWarning()) < 0) {
-                return new Report(OK, "Caught up at version " + currentPosition + ". Initial replay took " + initialReplayDuration);
-            } else {
-                return new Report(WARNING, "Caught up at version " + currentPosition + ". Initial replay took " + initialReplayDuration + "; " +
-                        "this is longer than expected limit of " + initialReplay.getWarning() + ".");
-            }
+            return new Report(status, "Awaiting initial catchup. " + currentVersionText + " (Stale for " + staleFor + ")");
         } else {
-            throw new RuntimeException("Not stale and no replay completed");
+            Status status = staleness.classify(staleFor);
+            if (status == Status.OK) {
+                if (initialReplayDuration.compareTo(initialReplay.getWarning()) < 0) {
+                    return new Report(OK, "Caught up at position " + currentPosition + ". Initial replay took " + initialReplayDuration);
+                } else {
+                    return new Report(WARNING, "Caught up at position " + currentPosition + ". Initial replay took " + initialReplayDuration + "; " +
+                            "this is longer than expected limit of " + initialReplay.getWarning() + ".");
+                }
+            } else {
+                String currentVersionText = currentPosition != null ? "Currently at position " + currentPosition + "." : "No events processed yet.";
+                return new Report(status, "Stale, catching up. " + currentVersionText + " (Stale for " + staleFor + ")");
+            }
         }
     }
 
@@ -71,28 +79,19 @@ public final class EventSubscriptionStatus extends Component implements Health, 
         return initialReplayDuration != null ? State.healthy : State.ill;
     }
 
+
     @Override
-    public void caughtUpAt(Position position) {
-        if (initialReplayDuration == null) {
+    public void apply(Position position, Event event) {
+        currentPosition = position;
+        if (event instanceof InitialCatchupCompleted) {
             initialReplayDuration = Duration.between(startTime, Instant.now(clock));
             eventSink.sendEvent(SimpleEvent.ofType("InitialReplayCompleted").withField("name", name).withField("time_ms", initialReplayDuration.toMillis()));
+            lastCaughtUpAt = ((InitialCatchupCompleted) event).timestamp();
+        } else if (event instanceof CaughtUp) {
+            lastCaughtUpAt = ((CaughtUp) event).timestamp();
+        } else if (event instanceof SubscriptionTerminated) {
+            Exception e = ((SubscriptionTerminated) event).exception;
+            terminatedReport = new Report(CRITICAL, "Event subscription terminated. Failed to process position " + position + ": " + e.getMessage() + " at " + e.getStackTrace()[0]);
         }
-
-        staleSince = null;
-
-        currentPosition = position;
-    }
-
-    @Override
-    public void staleAtVersion(Optional<Position> position) {
-        if (staleSince == null) {
-            staleSince = Instant.now(clock);
-        }
-        currentPosition = position.orElse(null);
-    }
-
-    @Override
-    public void terminated(Position position, Exception e) {
-        terminatedReport = new Report(CRITICAL, "Event subscription terminated. Failed to process version " + position + ": " + e.getMessage() + " at " + e.getStackTrace()[0]);
     }
 }

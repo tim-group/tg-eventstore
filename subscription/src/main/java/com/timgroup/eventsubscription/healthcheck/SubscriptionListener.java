@@ -8,6 +8,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
+@Deprecated
+/**
+ * @deprecated EventHandler should be used handling the relevant SubscriptionLifecycleEvent
+ * */
 public interface SubscriptionListener {
     void caughtUpAt(Position position);
 

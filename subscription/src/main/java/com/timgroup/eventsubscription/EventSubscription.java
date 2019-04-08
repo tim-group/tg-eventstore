@@ -64,10 +64,7 @@ public class EventSubscription {
         ChaserHealth chaserHealth = new ChaserHealth(name, clock, runFrequency);
         subscriptionStatus = new EventSubscriptionStatus(name, clock, initialReplay, staleness, eventSink);
 
-        List<SubscriptionListener> subListeners = new ArrayList<>();
-        subListeners.add(subscriptionStatus);
-        subListeners.addAll(listeners);
-        SubscriptionListenerAdapter processorListener = new SubscriptionListenerAdapter(startingPosition, subListeners);
+        SubscriptionListenerAdapter processorListener = new SubscriptionListenerAdapter(startingPosition, listeners);
 
         chaserExecutor = Executors.newScheduledThreadPool(1, new NamedThreadFactory("EventChaser-" + name));
         eventHandlerExecutor = Executors.newCachedThreadPool(new NamedThreadFactory("EventSubscription-" + name));
@@ -100,7 +97,16 @@ public class EventSubscription {
         disruptor.handleEventsWithWorkerPool(
                 new DisruptorDeserializationAdapter(deserializer),
                 new DisruptorDeserializationAdapter(deserializer)
-        ).then(new DisruptorEventHandlerAdapter(eventHandler, processorListener));
+        ).then(new DisruptorEventHandlerAdapter(new EventHandler() {
+            @Override
+            public void apply(Position position, Event deserialized, boolean endOfBatch) {
+                try {
+                    eventHandler.apply(position, deserialized, endOfBatch);
+                } finally {
+                    subscriptionStatus.apply(position, deserialized, endOfBatch);
+                }
+            }
+        }, processorListener));
 
         ChaserListener chaserListener = new BroadcastingChaserListener(chaserHealth, processorListener);
         chaser = new EventStoreChaser(eventSource, startingPosition, disruptor, chaserListener, clock);

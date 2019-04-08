@@ -26,7 +26,7 @@ public class SubscriptionBuilder {
     private Clock clock = Clock.systemUTC();
     private Duration runFrequency = Duration.ofSeconds(1);
     private DurationThreshold initialReplay = new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(2));
-    private DurationThreshold staleness = new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(30));
+    private DurationThreshold staleness;
     private int bufferSize = 1024;
     private final List<EventHandler> handlers = new ArrayList<>();
     private final List<SubscriptionListener> listeners = new ArrayList<>();
@@ -154,6 +154,14 @@ public class SubscriptionBuilder {
         }
         else {
             eventHandler = new SequencingEventHandler(handlers);
+        }
+
+        if (staleness == null) {
+            staleness = new DurationThreshold(runFrequency.multipliedBy(5), runFrequency.multipliedBy(30));
+        }
+
+        if (staleness.getWarning().compareTo(runFrequency) <= 0) {
+            throw new RuntimeException("Staleness threshold is configured <= run frequency. This will result in a flickering alert.");
         }
 
         return new EventSubscription(
