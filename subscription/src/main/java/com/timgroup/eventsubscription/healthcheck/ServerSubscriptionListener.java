@@ -12,7 +12,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-public final class ServerSubscriptionListener implements SubscriptionListener, EventHandler {
+public final class ServerSubscriptionListener implements EventHandler {
     private final Monitor monitor = new Monitor();
     private volatile Position latestPosition;
     private volatile Throwable failureException;
@@ -29,24 +29,6 @@ public final class ServerSubscriptionListener implements SubscriptionListener, E
             this.failureException = ((SubscriptionTerminated) deserialized).exception;
             monitor.leave();
         }
-    }
-
-    @Override
-    public void staleAtVersion(Optional<Position> position) { }
-
-    @Override
-    public void caughtUpAt(Position position) {
-        monitor.enter();
-        this.latestPosition = position;
-        monitor.leave();
-    }
-
-    @Override
-    public void terminated(Position position, Exception e) {
-        monitor.enter();
-        this.latestPosition = position;
-        this.failureException = e;
-        monitor.leave();
     }
 
     public void await(Position position, PositionCodec positionCodec) {

@@ -5,7 +5,6 @@ import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventsubscription.healthcheck.DurationThreshold;
-import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
 import com.timgroup.structuredevents.EventSink;
 import com.timgroup.structuredevents.Slf4jEventSink;
 
@@ -29,7 +28,6 @@ public class SubscriptionBuilder {
     private DurationThreshold staleness;
     private int bufferSize = 1024;
     private final List<EventHandler> handlers = new ArrayList<>();
-    private final List<SubscriptionListener> listeners = new ArrayList<>();
 
     private Function<Position, Stream<ResolvedEvent>> reader = null;
     private Position startingPosition = null;
@@ -117,23 +115,6 @@ public class SubscriptionBuilder {
         return this;
     }
 
-    public SubscriptionBuilder withListeners(SubscriptionListener... listeners) {
-        for (SubscriptionListener listener : listeners) {
-            withListener(listener);
-        }
-        return this;
-    }
-
-    public SubscriptionBuilder withListeners(Collection<? extends SubscriptionListener> listeners) {
-        listeners.forEach(this::withListener);
-        return this;
-    }
-
-    public SubscriptionBuilder withListener(SubscriptionListener listener) {
-        this.listeners.add(requireNonNull(listener));
-        return this;
-    }
-
     public SubscriptionBuilder withEventSink(EventSink eventSink) {
         this.eventSink = requireNonNull(eventSink);
         return this;
@@ -176,7 +157,6 @@ public class SubscriptionBuilder {
                 startingPosition,
                 initialReplay,
                 staleness,
-                listeners,
                 eventSink
         );
     }

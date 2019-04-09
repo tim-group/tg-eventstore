@@ -10,8 +10,6 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventsubscription.healthcheck.ChaserHealth;
 import com.timgroup.eventsubscription.healthcheck.DurationThreshold;
 import com.timgroup.eventsubscription.healthcheck.EventSubscriptionStatus;
-import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
-import com.timgroup.eventsubscription.healthcheck.SubscriptionListenerAdapter;
 import com.timgroup.structuredevents.EventSink;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Health;
@@ -57,14 +55,11 @@ public class EventSubscription {
                 Position startingPosition,
                 DurationThreshold initialReplay,
                 DurationThreshold staleness,
-                List<SubscriptionListener> listeners,
                 EventSink eventSink
     ) {
         this.runFrequency = runFrequency;
         ChaserHealth chaserHealth = new ChaserHealth(name, clock, runFrequency);
         subscriptionStatus = new EventSubscriptionStatus(name, clock, initialReplay, staleness, eventSink);
-
-        SubscriptionListenerAdapter processorListener = new SubscriptionListenerAdapter(startingPosition, listeners);
 
         chaserExecutor = Executors.newScheduledThreadPool(1, new NamedThreadFactory("EventChaser-" + name));
         eventHandlerExecutor = Executors.newCachedThreadPool(new NamedThreadFactory("EventSubscription-" + name));
@@ -106,10 +101,9 @@ public class EventSubscription {
                     subscriptionStatus.apply(position, deserialized);
                 }
             }
-        }, processorListener));
+        }));
 
-        ChaserListener chaserListener = new BroadcastingChaserListener(chaserHealth, processorListener);
-        chaser = new EventStoreChaser(eventSource, startingPosition, disruptor, chaserListener, clock);
+        chaser = new EventStoreChaser(eventSource, startingPosition, disruptor, chaserHealth, clock);
 
         statusComponents = new ArrayList<>();
         statusComponents.add(Component.supplyInfo("event-subscription-description", "Subscription source (" + name + ")", () -> description));

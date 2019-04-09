@@ -6,11 +6,10 @@ import com.timgroup.eventsubscription.EventHandler;
 import com.timgroup.eventsubscription.lifecycleevents.InitialCatchupCompleted;
 import com.timgroup.eventsubscription.lifecycleevents.SubscriptionTerminated;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-public final class InitialCatchupFuture extends CompletableFuture<Position> implements SubscriptionListener, EventHandler {
+public final class InitialCatchupFuture extends CompletableFuture<Position> implements EventHandler {
     private final EventHandler downstream;
 
     public InitialCatchupFuture() {
@@ -19,20 +18,6 @@ public final class InitialCatchupFuture extends CompletableFuture<Position> impl
 
     public InitialCatchupFuture(EventHandler downstream) {
         this.downstream = downstream;
-    }
-
-    @Override
-    public void caughtUpAt(Position position) {
-        complete(position);
-    }
-
-    @Override
-    public void staleAtVersion(Optional<Position> position) {
-    }
-
-    @Override
-    public void terminated(Position position, Exception e) {
-        completeExceptionally(new InitialCatchupFailedException(position, e));
     }
 
     @Override

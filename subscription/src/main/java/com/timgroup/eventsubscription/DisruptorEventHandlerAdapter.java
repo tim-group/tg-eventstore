@@ -1,18 +1,15 @@
 package com.timgroup.eventsubscription;
 
 import com.timgroup.eventsubscription.lifecycleevents.CaughtUp;
-import com.timgroup.eventsubscription.lifecycleevents.SubscriptionLifecycleEvent;
 import com.timgroup.eventsubscription.lifecycleevents.SubscriptionTerminated;
 
 import static java.util.Objects.requireNonNull;
 
 public class DisruptorEventHandlerAdapter implements com.lmax.disruptor.EventHandler<EventContainer> {
     private final EventHandler eventHandler;
-    private final EventProcessorListener processorListener;
 
-    public DisruptorEventHandlerAdapter(EventHandler eventHandler, EventProcessorListener processorListener) {
+    public DisruptorEventHandlerAdapter(EventHandler eventHandler) {
         this.eventHandler = requireNonNull(eventHandler);
-        this.processorListener = requireNonNull(processorListener);
     }
 
     @Override
@@ -31,13 +28,8 @@ public class DisruptorEventHandlerAdapter implements com.lmax.disruptor.EventHan
                 eventHandler.apply(eventContainer.position, eventContainer.deserializedEvent);
             }
 
-            if (!(eventContainer.deserializedEvent instanceof SubscriptionLifecycleEvent)) {
-                processorListener.eventProcessed(eventContainer.position);
-            }
-
             clear(eventContainer);
         } catch (Exception e) {
-            processorListener.eventProcessingFailed(eventContainer.position, e);
             eventHandler.apply(eventContainer.position, new SubscriptionTerminated(eventContainer.position, e));
             throw e;
         }

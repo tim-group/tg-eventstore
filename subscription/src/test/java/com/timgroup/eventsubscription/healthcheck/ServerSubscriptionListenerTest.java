@@ -1,5 +1,8 @@
 package com.timgroup.eventsubscription.healthcheck;
 
+import com.timgroup.eventsubscription.lifecycleevents.CaughtUp;
+import com.timgroup.eventsubscription.lifecycleevents.InitialCatchupCompleted;
+import com.timgroup.eventsubscription.lifecycleevents.SubscriptionTerminated;
 import org.junit.After;
 import org.junit.Test;
 
@@ -26,14 +29,14 @@ public class ServerSubscriptionListenerTest {
     @Test public void
     awaits_for_caught_up() throws InterruptedException {
         ServerSubscriptionListener listener = new ServerSubscriptionListener();
-        listener.caughtUpAt(new TestPosition(1));
+        listener.apply(new TestPosition(1), new InitialCatchupCompleted(new TestPosition(1), null));
 
         executorService.submit(() -> {
             listener.await(new TestPosition(2), testPositionCodec);
             latch.countDown();
         });
 
-        listener.caughtUpAt(new TestPosition(2));
+        listener.apply(new TestPosition(2), new CaughtUp(new TestPosition(1), null));
         if (!latch.await(200, TimeUnit.MILLISECONDS))
             throw new AssertionError("listener await didn't complete");
     }
@@ -43,7 +46,7 @@ public class ServerSubscriptionListenerTest {
         ServerSubscriptionListener listener = new ServerSubscriptionListener();
         Exception expected = new Exception("Termination exception");
 
-        listener.terminated(new TestPosition(1), expected);
+        listener.apply(new TestPosition(1), new SubscriptionTerminated(new TestPosition(1), expected));
 
         try {
             listener.await(new TestPosition(Long.MAX_VALUE), testPositionCodec);

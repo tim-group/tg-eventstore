@@ -9,7 +9,6 @@ import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import com.timgroup.eventsubscription.healthcheck.DurationThreshold;
 import com.timgroup.eventsubscription.healthcheck.InitialCatchupFuture;
-import com.timgroup.eventsubscription.healthcheck.SubscriptionListener;
 import com.timgroup.eventsubscription.lifecycleevents.CaughtUp;
 import com.timgroup.eventsubscription.lifecycleevents.InitialCatchupCompleted;
 import com.timgroup.eventsubscription.lifecycleevents.SubscriptionLifecycleEvent;
@@ -23,13 +22,11 @@ import junit.framework.AssertionFailedError;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
+import org.hamcrest.TypeSafeMatcher;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
-import org.mockito.ArgumentMatchers;
 import org.junit.rules.ExpectedException;
-import org.mockito.InOrder;
-import org.mockito.Mockito;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -55,7 +52,6 @@ import static com.timgroup.tucker.info.Health.State.healthy;
 import static com.timgroup.tucker.info.Health.State.ill;
 import static com.timgroup.tucker.info.Status.CRITICAL;
 import static com.timgroup.tucker.info.Status.OK;
-import static com.youdevise.testutils.matchers.ExceptionMatcher.anExceptionOfType;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -63,13 +59,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.core.StringContains.containsString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.hamcrest.MockitoHamcrest.argThat;
 
 @SuppressWarnings("CodeBlock2Expr")
 public class EndToEndTest {
@@ -82,7 +71,6 @@ public class EndToEndTest {
     private final JavaInMemoryEventStore store = new JavaInMemoryEventStore(clock);
 
     private final LocalEventSink eventSink = new LocalEventSink();
-    private final SubscriptionListener listener = mock(SubscriptionListener.class);
     private final InitialCatchupFuture initialCatchupFuture = new InitialCatchupFuture();
 
     private EventSubscription subscription;
@@ -113,17 +101,13 @@ public class EndToEndTest {
         clock.bumpSeconds(123);
         eventProcessing.continueProcessing();
 
+        List<ResolvedEvent> allEventsInStore = store.readAllForwards().collect(Collectors.toList());
+
         eventually(() -> {
             assertThat(subscription.health().get(), is(healthy));
             assertThat(statusComponent().getReport(), is(new Report(OK, "Caught up at position 3. Initial replay took PT2M3S")));
             assertThat(eventSink.events(), Contains.only(StructuredEventMatcher.ofType("InitialReplayCompleted")));
         });
-
-        InOrder inOrder = inOrder(listener);
-        inOrder.verify(listener, atLeastOnce()).staleAtVersion(eq(Optional.empty()));
-        inOrder.verify(listener, atLeastOnce()).caughtUpAt(argThat(inMemoryPosition(3)));
-        verify(listener, never()).terminated(ArgumentMatchers.any(), Mockito.any());
-
         assertThat(initialCatchupFuture.isDone(), equalTo(true));
     }
 
@@ -159,9 +143,8 @@ public class EndToEndTest {
             assertThat(statusComponent().getReport().getValue().toString(), containsString("Event subscription terminated. Failed to process position 1: failure"));
             assertThat(eventsProcessed, Contains.inOrder(
                     equalTo(new DeserialisedEvent(store.readAllForwards().collect(Collectors.toList()).get(0).eventRecord())),
-                    instanceOf(SubscriptionTerminated.class)
+                    subscriptionTerminatedWithMessage("failure")
             ));
-            verify(listener).terminated(argThat(inMemoryPosition(1)), argThat(anExceptionOfType(RuntimeException.class).withTheMessage("failure")));
         });
 
         assertThat(initialCatchupFuture.isCompletedExceptionally(), equalTo(true));
@@ -183,8 +166,7 @@ public class EndToEndTest {
         Thread.sleep(50L);
 
         eventually(() -> {
-            verify(listener).terminated(argThat(inMemoryPosition(1)), argThat(anExceptionOfType(RuntimeException.class).withTheMessage("Failed to deserialize first event")));
-            assertThat(eventsProcessed, Contains.only(instanceOf(SubscriptionTerminated.class)));
+            assertThat(eventsProcessed, Contains.only(subscriptionTerminatedWithMessage("Failed to deserialize first event")));
         });
     }
 
@@ -307,8 +289,7 @@ public class EndToEndTest {
                 .deserializingUsing(deserializer)
                 .publishingTo(eventHandler)
                 .withEventSink(eventSink)
-                .withListener(listener)
-                .withListener(initialCatchupFuture)
+                .publishingTo(initialCatchupFuture)
                 .build();
     }
 
@@ -443,6 +424,23 @@ public class EndToEndTest {
         };
     }
 
+    private static Matcher<? super Event> subscriptionTerminatedWithMessage(String msg) {
+        return new TypeSafeMatcher<Event>() {
+            @Override
+            protected boolean matchesSafely(Event item) {
+                if (item instanceof SubscriptionTerminated) {
+                    SubscriptionTerminated subscriptionTerminated = (SubscriptionTerminated) item;
+                    return subscriptionTerminated.exception.getMessage().contains(msg);
+                }
+                return false;
+            }
+
+            @Override
+            public void describeTo(Description description) {
+                description.appendText("SubscriptionTerminated with msg " + msg);
+            }
+        };
+    }
 
     public static class EventWithPosition {
         public final Position position;
