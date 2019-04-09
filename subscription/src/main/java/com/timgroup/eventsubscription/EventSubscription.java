@@ -99,11 +99,11 @@ public class EventSubscription {
                 new DisruptorDeserializationAdapter(deserializer)
         ).then(new DisruptorEventHandlerAdapter(new EventHandler() {
             @Override
-            public void apply(Position position, Event deserialized, boolean endOfBatch) {
+            public void apply(Position position, Event deserialized) {
                 try {
-                    eventHandler.apply(position, deserialized, endOfBatch);
+                    eventHandler.apply(position, deserialized);
                 } finally {
-                    subscriptionStatus.apply(position, deserialized, endOfBatch);
+                    subscriptionStatus.apply(position, deserialized);
                 }
             }
         }, processorListener));

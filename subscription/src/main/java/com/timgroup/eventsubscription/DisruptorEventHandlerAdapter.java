@@ -28,7 +28,7 @@ public class DisruptorEventHandlerAdapter implements com.lmax.disruptor.EventHan
                     throw ((SubscriptionTerminated) eventContainer.deserializedEvent).exception;
                 }
 
-                eventHandler.apply(eventContainer.position, eventContainer.deserializedEvent, endOfBatch);
+                eventHandler.apply(eventContainer.position, eventContainer.deserializedEvent);
             }
 
             if (!(eventContainer.deserializedEvent instanceof SubscriptionLifecycleEvent)) {
@@ -38,7 +38,7 @@ public class DisruptorEventHandlerAdapter implements com.lmax.disruptor.EventHan
             clear(eventContainer);
         } catch (Exception e) {
             processorListener.eventProcessingFailed(eventContainer.position, e);
-            eventHandler.apply(eventContainer.position, new SubscriptionTerminated(eventContainer.position, e), endOfBatch);
+            eventHandler.apply(eventContainer.position, new SubscriptionTerminated(eventContainer.position, e));
             throw e;
         }
     }

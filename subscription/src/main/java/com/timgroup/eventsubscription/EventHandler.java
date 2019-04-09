@@ -20,11 +20,6 @@ public interface EventHandler {
         apply(deserialized);
     }
 
-    @Deprecated
-    default void apply(Position position, Event deserialized, boolean endOfBatch) {
-        apply(position, deserialized);
-    }
-
     default EventHandler andThen(EventHandler o) {
         return SequencingEventHandler.flatten(Arrays.asList(this, requireNonNull(o)));
     }

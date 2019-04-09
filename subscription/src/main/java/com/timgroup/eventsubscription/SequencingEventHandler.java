@@ -30,13 +30,6 @@ final class SequencingEventHandler implements EventHandler {
     }
 
     @Override
-    public void apply(Position position, Event deserialized, boolean endOfBatch) {
-        for (EventHandler handler : handlers) {
-            handler.apply(position, deserialized, endOfBatch);
-        }
-    }
-
-    @Override
     public void apply(Position position, Event deserialized) {
         for (EventHandler handler : handlers) {
             handler.apply(position, deserialized);
