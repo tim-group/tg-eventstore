@@ -105,8 +105,8 @@ public class S3ArchiverIntegrationTest {
 
     @BeforeClass
     public static void verifyS3CredentialsSupplied() {
-        assumeThat("S3 credentials must be supplied via env variables",
-                System.getenv("S3_ACCESS_KEY"), Matchers.any(String.class));
+        assumeThat("S3 credentials must be supplied via properties file",
+                ConfigLoader.loadConfig(S3_PROPERTIES_FILE).getProperty("S3_ACCESS_KEY"), Matchers.any(String.class));
     }
 
     @Before public void
