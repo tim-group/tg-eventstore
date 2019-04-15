@@ -32,7 +32,9 @@ import net.ttsui.junit.rules.pending.PendingRule;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.hamcrest.FeatureMatcher;
 import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -71,6 +73,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assume.assumeThat;
 import static org.mockito.Mockito.doReturn;
 
 public class S3ArchiverIntegrationTest {
@@ -93,16 +96,32 @@ public class S3ArchiverIntegrationTest {
     private final Clock fixedClock = Clock.fixed(fixedEventTimestamp, ZoneId.systemDefault());
     private final BatchingPolicy twoEventsPerBatch =  BatchingPolicy.fixedNumberOfEvents(2);
     private final MetricRegistry metricRegistry = new MetricRegistry();
+    private Properties properties;
 
     @Rule public PendingRule pendingRule = new PendingRule();
     @Rule public TestName testNameRule = new TestName();
     private int uncompressed_batch_size_limit_bytes = 10_000;
 
+
+    @BeforeClass
+    public static void verifyS3CredentialsSupplied() {
+        assumeThat("S3 credentials must be supplied via env variables",
+                System.getenv("S3_ACCESS_KEY"), Matchers.any(String.class));
+    }
+
     @Before public void
     configure() {
-        Properties properties = ConfigLoader.loadConfig("config.properties");
+        bucketName = System.getenv("S3_BUCKET");
+
+        properties = new Properties();
+
+        properties.setProperty("s3.accessKey",  System.getenv("S3_ACCESS_KEY"));
+        properties.setProperty("s3.secretKey",  System.getenv("S3_SECRET_KEY"));
+        properties.setProperty("tg.eventstore.archive.bucketName", bucketName);
+        properties.setProperty("s3.region",  System.getenv("S3_REGION"));
+        properties.setProperty("s3.protocol",  "HTTPS");
+
         amazonS3 = new S3ClientFactory().fromProperties(properties);
-        bucketName = properties.getProperty("tg.eventstore.archive.bucketName");
         eventStoreId = "test-eventstore-" + descendingCounter + "-" + testName + "." + testNameRule.getMethodName() + "-" + RandomStringUtils.randomAlphabetic(10);
     }
 
@@ -393,8 +412,7 @@ public class S3ArchiverIntegrationTest {
         assertThat(report.getStatus(), equalTo(Status.OK));
         assertThat(report.getValue().toString(), allOf(containsString("is encrypted"), containsString("AES256")));
 
-        Properties properties = ConfigLoader.loadConfig("config.properties");
-        properties.put("s3.region", "eu-west-1");
+        properties.setProperty("s3.region",  "eu-west-1");
         AmazonS3 euWest1AmazonS3 = new S3ClientFactory().fromProperties(properties);
         String bucketThatIsUnlikelyToEverBeEncrypted = "test-infra";
         Component unencryptedBucketComponent = new S3ArchiveBucketConfigurationComponent(euWest1AmazonS3, bucketThatIsUnlikelyToEverBeEncrypted);
