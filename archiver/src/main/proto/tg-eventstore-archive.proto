@@ -1,0 +1,20 @@
+package s3archiver;
+
+option java_package = "com.timgroup.eventstore.archiver";
+option java_outer_classname = "EventStoreArchiverProtos";
+
+message Timestamp {
+    required int64 seconds = 1;
+    required int64 nanos = 2;
+}
+
+message Event {
+    required int64 position = 1;
+    required Timestamp timestamp = 2;
+    required string streamCategory = 3;
+    required string streamId = 4;
+    required int64 eventNumber = 5;
+    required string eventType = 6;
+    required bytes data = 7;
+    required bytes metadata = 8;
+}

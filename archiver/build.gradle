@@ -1,0 +1,116 @@
+plugins {
+    id "java-library"
+    id "idea"
+    id "com.google.protobuf" version "0.8.8"
+    id "com.timgroup.jarmangit"
+    id "maven-publish"
+}
+
+group = 'com.timgroup'
+if (buildNumber) version = '0.0.' + buildNumber
+
+repositories {
+    maven {
+        url = "$repoUrl/groups/public"
+    }
+}
+
+protobuf {
+    protoc {
+        artifact = 'com.github.os72:protoc:2.4.1'
+    }
+}
+
+dependencies {
+    api project(":api")
+    api project(":mysql") 
+    api project(":subscription")
+    api "com.google.protobuf:protobuf-java:2.4.1"
+    api "com.timgroup:Tucker:1.0.1522" // autobump
+    api "com.timgroup:tim-structured-events:0.4.1261" // autobump
+
+    implementation "com.google.code.findbugs:jsr305:3.0.2"
+    implementation "com.timgroup:tim-logger:1.5.1095" // autobump
+    implementation "com.timgroup:tim-remote-file-storage-s3:0.0.1161" // autobump
+
+    runtimeOnly "javax.xml.bind:jaxb-api:2.3.0"
+    runtimeOnly "com.sun.xml.bind:jaxb-core:2.3.0"
+    runtimeOnly "com.sun.xml.bind:jaxb-impl:2.3.0"
+    runtimeOnly "com.sun.xml.ws:jaxws-rt:2.3.2"
+    runtimeOnly "javax.annotation:javax.annotation-api:1.3.1"
+    
+    testImplementation project(":api:testlib")
+    testImplementation project(":memory")
+
+    testImplementation "junit:junit:4.12"
+    testImplementation "org.hamcrest:hamcrest-core:1.3"
+    testImplementation "org.hamcrest:hamcrest-library:1.3"
+
+    testImplementation "com.timgroup:tg-config-java-bindings:1.0.49" // autobump
+    testImplementation "org.apache.commons:commons-lang3:3.3.2"
+    testImplementation "com.timgroup:clocks-testing:1.0.1091" // autobump
+    testImplementation "net.ttsui.junit.rules.pending:pending:0.0.1055"
+    testImplementation "org.mockito:mockito-core:2.26.0"
+    testImplementation "com.youdevise:Matchers:0.0.1287" // autobump
+}
+
+tasks.withType(JavaCompile).all {
+    sourceCompatibility = "1.8"
+    targetCompatibility = "1.8"
+    options.encoding = "UTF-8"
+    options.incremental = true
+    options.deprecation = true
+    options.compilerArgs << "-parameters"
+    options.compilerArgs << "-Xlint:unchecked"
+}
+
+tasks.withType(Jar) {
+    manifest {
+        attributes(
+                'Implementation-Title': project.name,
+                'Implementation-Version': project.version,
+                'Implementation-Vendor': 'TIM Group Ltd'
+        )
+    }
+}
+
+
+
+task sourcesJar(type: Jar, dependsOn: ["generateProto", "classes"]) {
+    archiveClassifier = 'sources'
+    from sourceSets.main.allSource
+    from "$buildDir/generated/source/proto/main/java"
+}
+
+
+assemble.dependsOn(sourcesJar)
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+assemble.dependsOn(javadocJar)
+
+
+publishing {
+    repositories {
+        if (project.hasProperty("repoUrl")) {
+            maven {
+                url "${project.repoUrl}/repositories/yd-release-candidates"
+                credentials {
+                    username = project.repoUsername
+                    password = project.repoPassword
+                }
+            }
+        }
+    }
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId "eventstore-archiver"
+            from components.java
+            artifact(sourcesJar)
+            artifact(javadocJar)
+        }
+    }
+}
