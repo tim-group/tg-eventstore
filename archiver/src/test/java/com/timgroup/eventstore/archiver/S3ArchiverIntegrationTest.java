@@ -76,6 +76,8 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assume.assumeThat;
 import static org.mockito.Mockito.doReturn;
 
+
+//TO run the test, please follow instructions in README.md in this module.
 public class S3ArchiverIntegrationTest {
 
     public static final String S3_PROPERTIES_FILE = "s3_do_not_check_in.properties";
@@ -106,7 +108,7 @@ public class S3ArchiverIntegrationTest {
     @BeforeClass
     public static void verifyS3CredentialsSupplied() {
         assumeThat("S3 credentials must be supplied via properties file",
-                ConfigLoader.loadConfig(S3_PROPERTIES_FILE).getProperty("S3_ACCESS_KEY"), Matchers.any(String.class));
+                ConfigLoader.loadConfig(S3_PROPERTIES_FILE).getProperty("s3.accessKey"), Matchers.any(String.class));
     }
 
     @Before public void
