@@ -111,7 +111,7 @@ public class S3ArchiverIntegrationTest {
 
     @Before public void
     configure() {
-        bucketName = System.getenv("S3_BUCKET");
+        bucketName = System.getenv("S3_BUCKET1");
 
         properties = new Properties();
 
