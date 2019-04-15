@@ -78,6 +78,7 @@ import static org.mockito.Mockito.doReturn;
 
 public class S3ArchiverIntegrationTest {
 
+    public static final String S3_PROPERTIES_FILE = "s3_do_not_check_in.properties";
     private AmazonS3 amazonS3;
     private String bucketName;
     private String eventStoreId;
@@ -96,7 +97,6 @@ public class S3ArchiverIntegrationTest {
     private final Clock fixedClock = Clock.fixed(fixedEventTimestamp, ZoneId.systemDefault());
     private final BatchingPolicy twoEventsPerBatch =  BatchingPolicy.fixedNumberOfEvents(2);
     private final MetricRegistry metricRegistry = new MetricRegistry();
-    private Properties properties;
 
     @Rule public PendingRule pendingRule = new PendingRule();
     @Rule public TestName testNameRule = new TestName();
@@ -111,17 +111,9 @@ public class S3ArchiverIntegrationTest {
 
     @Before public void
     configure() {
-        bucketName = System.getenv("S3_BUCKET");
-
-        properties = new Properties();
-
-        properties.setProperty("s3.accessKey",  System.getenv("S3_ACCESS_KEY"));
-        properties.setProperty("s3.secretKey",  System.getenv("S3_SECRET_KEY"));
-        properties.setProperty("tg.eventstore.archive.bucketName", bucketName);
-        properties.setProperty("s3.region",  System.getenv("S3_REGION"));
-        properties.setProperty("s3.protocol",  "HTTPS");
-
+        Properties properties = ConfigLoader.loadConfig(S3_PROPERTIES_FILE);
         amazonS3 = new S3ClientFactory().fromProperties(properties);
+        bucketName = properties.getProperty("tg.eventstore.archive.bucketName");
         eventStoreId = "test-eventstore-" + descendingCounter + "-" + testName + "." + testNameRule.getMethodName() + "-" + RandomStringUtils.randomAlphabetic(10);
     }
 
@@ -412,7 +404,9 @@ public class S3ArchiverIntegrationTest {
         assertThat(report.getStatus(), equalTo(Status.OK));
         assertThat(report.getValue().toString(), allOf(containsString("is encrypted"), containsString("AES256")));
 
-        properties.setProperty("s3.region",  "eu-west-1");
+        Properties properties = ConfigLoader.loadConfig(S3_PROPERTIES_FILE);
+        properties.put("s3.region", "eu-west-1");
+
         AmazonS3 euWest1AmazonS3 = new S3ClientFactory().fromProperties(properties);
         String bucketThatIsUnlikelyToEverBeEncrypted = "test-infra";
         Component unencryptedBucketComponent = new S3ArchiveBucketConfigurationComponent(euWest1AmazonS3, bucketThatIsUnlikelyToEverBeEncrypted);
