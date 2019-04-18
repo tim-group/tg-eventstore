@@ -56,6 +56,8 @@ import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.core.StringContains.containsString;
@@ -186,6 +188,7 @@ public class EndToEndTest {
 
         eventually(() -> {
             assertThat(subscription.health().get(), is(healthy));
+            assertThat(receivedEvents, hasSize(greaterThanOrEqualTo(4)));
         });
 
         List<ResolvedEvent> eventsInStore = store.readAllForwards().collect(Collectors.toList());
