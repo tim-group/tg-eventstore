@@ -11,14 +11,9 @@ import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 
+@FunctionalInterface
 public interface EventHandler {
-    default void apply(Event deserialized) {
-        throw new UnsupportedOperationException();
-    }
-
-    default void apply(Position position, Event deserialized) {
-        apply(deserialized);
-    }
+    void apply(Position position, Event deserialized);
 
     default EventHandler andThen(EventHandler o) {
         return SequencingEventHandler.flatten(Arrays.asList(this, requireNonNull(o)));
@@ -41,7 +36,7 @@ public interface EventHandler {
 
         return new EventHandler() {
             @Override
-            public void apply(Event deserialized) {
+            public void apply(Position position, Event deserialized) {
                 consumer.accept(deserialized);
             }
 
@@ -52,31 +47,30 @@ public interface EventHandler {
         };
     }
 
-    EventHandler DISCARD = ofConsumer(e -> {});
-
+    EventHandler DISCARD = (position, event) -> {};
 
     static EventHandler onInitialCatchupAt(Consumer<? super Position> callback) {
-        return new EventHandler() {
-            @Override
-            public void apply(Position position, Event event) {
-                if (event instanceof InitialCatchupCompleted) {
-                    callback.accept(position);
-                }
+        requireNonNull(callback);
+
+        return (position, event) -> {
+            if (event instanceof InitialCatchupCompleted) {
+                callback.accept(position);
             }
         };
     }
 
     static EventHandler onInitialCatchup(Runnable callback) {
+        requireNonNull(callback);
+
         return onInitialCatchupAt(ignored -> callback.run());
     }
 
     static EventHandler onTermination(BiConsumer<? super Position, ? super Throwable> consumer) {
-        return new EventHandler() {
-            @Override
-            public void apply(Position position, Event deserialized) {
-                if (deserialized instanceof SubscriptionTerminated) {
-                    consumer.accept(position, ((SubscriptionTerminated) deserialized).exception);
-                }
+        requireNonNull(consumer);
+
+        return (position, deserialized) -> {
+            if (deserialized instanceof SubscriptionTerminated) {
+                consumer.accept(position, ((SubscriptionTerminated) deserialized).exception);
             }
         };
     }

@@ -214,14 +214,11 @@ public class EndToEndTest {
         subscription = eventSubscription("test")
                 .readingFrom(store, "alpha")
                 .deserializingUsing(Deserializer.applying(EndToEndTest::deserialize))
-                .publishingTo(new EventHandler() {
-                    @Override
-                    public void apply(Event event) {
-                        if (event instanceof DeserialisedEvent) {
-                            receivedEvents.add(event);
-                        }
+                .publishingTo(EventHandler.ofConsumer(event -> {
+                    if (event instanceof DeserialisedEvent) {
+                        receivedEvents.add(event);
                     }
-                })
+                }))
                 .withClock(clock)
                 .runningInParallelWithBuffer(1024)
                 .withRunFrequency(Duration.ofMillis(1L))
@@ -365,14 +362,15 @@ public class EndToEndTest {
     }
 
     private static EventHandler failingHandler(Supplier<RuntimeException> supplier) {
-        return EventHandler.ofConsumer(e -> { throw supplier.get(); });
+        requireNonNull(supplier);
+        return (position, event) -> { throw supplier.get(); };
     }
 
     private static final class BlockingEventHandler implements EventHandler {
         private final Semaphore lock = new Semaphore(0);
 
         @Override
-        public void apply(Event deserialised) {
+        public void apply(Position position, Event deserialized) {
             try {
                 lock.acquire();
             } catch (InterruptedException e) {
@@ -445,13 +443,13 @@ public class EndToEndTest {
         };
     }
 
-    public static class EventWithPosition {
+    public static final class EventWithPosition {
         public final Position position;
         public final Event event;
 
         public EventWithPosition(Position position, Event event) {
-            this.position = position;
-            this.event = event;
+            this.position = requireNonNull(position);
+            this.event = requireNonNull(event);
         }
 
         @Override

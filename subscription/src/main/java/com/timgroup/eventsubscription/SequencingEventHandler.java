@@ -36,13 +36,6 @@ final class SequencingEventHandler implements EventHandler {
         }
     }
 
-    @Override
-    public void apply(Event deserialized) {
-        for (EventHandler handler : handlers) {
-            handler.apply(deserialized);
-        }
-    }
-
     @VisibleForTesting
     int size() {
         return handlers.size();
