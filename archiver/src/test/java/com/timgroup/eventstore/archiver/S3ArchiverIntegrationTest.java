@@ -32,7 +32,6 @@ import net.ttsui.junit.rules.pending.PendingRule;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.hamcrest.FeatureMatcher;
 import org.hamcrest.Matcher;
-import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -43,6 +42,7 @@ import org.mockito.Mockito;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -73,7 +73,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assume.assumeThat;
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.doReturn;
 
 
@@ -107,8 +107,7 @@ public class S3ArchiverIntegrationTest {
 
     @BeforeClass
     public static void verifyS3CredentialsSupplied() {
-        assumeThat("S3 credentials must be supplied via properties file",
-                ConfigLoader.loadConfig(S3_PROPERTIES_FILE).getProperty("s3.accessKey"), Matchers.any(String.class));
+        assumeTrue("S3 credentials must be supplied via properties file", Files.exists(Paths.get(S3_PROPERTIES_FILE)));
     }
 
     @Before public void
