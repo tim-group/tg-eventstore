@@ -398,25 +398,6 @@ public class S3ArchiverIntegrationTest {
                 )))));
     }
 
-    @Test public void
-    monitors_that_bucket_is_encrypted() {
-        Component encryptedBucketComponent = new S3ArchiveBucketConfigurationComponent(amazonS3, bucketName);
-        Report report = encryptedBucketComponent.getReport();
-        assertThat(report.getStatus(), equalTo(Status.OK));
-        assertThat(report.getValue().toString(), allOf(containsString("is encrypted"), containsString("AES256")));
-
-        Properties properties = ConfigLoader.loadConfig(S3_PROPERTIES_FILE);
-        properties.put("s3.region", "eu-west-1");
-
-        AmazonS3 euWest1AmazonS3 = new S3ClientFactory().fromProperties(properties);
-        String bucketThatIsUnlikelyToEverBeEncrypted = "test-infra";
-        Component unencryptedBucketComponent = new S3ArchiveBucketConfigurationComponent(euWest1AmazonS3, bucketThatIsUnlikelyToEverBeEncrypted);
-
-        Report unencryptedBucketReport = unencryptedBucketComponent.getReport();
-        assertThat(unencryptedBucketReport.getStatus(), equalTo(Status.WARNING));
-        assertThat(unencryptedBucketReport.getValue().toString(), containsString("Could not verify default server-side encryption algorithm AES256"));
-    }
-
     private Matcher<Component> tuckerComponent(Matcher<Status> statusMatcher, Matcher<String> valueMatcher) {
         return allOf(
                 new FeatureMatcher<Component, Status>(statusMatcher, "status", "status") {
