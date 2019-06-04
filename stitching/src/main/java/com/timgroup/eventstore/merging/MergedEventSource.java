@@ -28,6 +28,11 @@ public final class MergedEventSource implements EventSource {
 
     @SuppressWarnings("WeakerAccess")
     public MergedEventSource(Clock clock, MergingStrategy<?> mergingStrategy, NamedReaderWithCodec... namedReaders) {
+        this(false, clock, mergingStrategy, namedReaders);
+    }
+
+    @SuppressWarnings("WeakerAccess")
+    public MergedEventSource(boolean fallBackToStartingPosition, Clock clock, MergingStrategy<?> mergingStrategy, NamedReaderWithCodec... namedReaders) {
         checkArgument(
             Stream.of(namedReaders).map(nr -> nr.name).distinct().count() == namedReaders.length,
             "reader names must be unique"
@@ -35,7 +40,7 @@ public final class MergedEventSource implements EventSource {
 
         this.namedReaders = namedReaders;
         this.eventReader = new MergedEventReader(clock, mergingStrategy, this.namedReaders);
-        this.mergedEventReaderPositionCodec = MergedEventReaderPosition.codecFor(namedReaders);
+        this.mergedEventReaderPositionCodec = MergedEventReaderPosition.codecFor(fallBackToStartingPosition, namedReaders);
     }
 
     public static MergedEventSource effectiveTimestampMergedEventSource(Clock clock, NamedReaderWithCodec... namedReaders) {
@@ -43,7 +48,10 @@ public final class MergedEventSource implements EventSource {
     }
 
     public static MergedEventSource effectiveTimestampMergedEventSource(Clock clock, Duration delay, NamedReaderWithCodec... namedReaders) {
-        return new MergedEventSource(clock, new MergingStrategy.EffectiveTimestampMergingStrategy().withDelay(delay), namedReaders);
+        return effectiveTimestampMergedEventSource(false, clock, delay, namedReaders);
+    }
+    public static MergedEventSource effectiveTimestampMergedEventSource(boolean fallBackToStartingPosition, Clock clock, Duration delay, NamedReaderWithCodec... namedReaders) {
+        return new MergedEventSource(fallBackToStartingPosition, clock, new MergingStrategy.EffectiveTimestampMergingStrategy().withDelay(delay), namedReaders);
     }
 
     public static MergedEventSource streamOrderMergedEventSource(Clock clock, NamedReaderWithCodec... namedReaders) {

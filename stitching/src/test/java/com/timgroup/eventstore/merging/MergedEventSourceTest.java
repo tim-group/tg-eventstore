@@ -7,6 +7,7 @@ import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
@@ -280,6 +281,39 @@ public final class MergedEventSourceTest {
         ));
     }
 
+    @Test public void
+    supports_reading_all_forwards_from_multiple_input_streams_where_not_all_input_streams_are_present_in_the_start_position() {
+        JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
+        JavaInMemoryEventStore input2 = new JavaInMemoryEventStore(clock);
+
+        MergedEventSource mergedEventSource = MergedEventSource.effectiveTimestampMergedEventSource(
+                true,
+                clock,
+                Duration.ZERO,
+                new NamedReaderWithCodec("a", input1, JavaInMemoryEventStore.CODEC),
+                new NamedReaderWithCodec("b", input2, JavaInMemoryEventStore.CODEC)
+        );
+
+        Instant instant = clock.instant();
+        inputEventArrived(input1, streamId("baz", "bob"), newEvent("CoolenessAdded",   new byte[0], "{\"effective_timestamp\":\"2014-01-23T00:23:54Z\"}".getBytes(UTF_8)));
+        inputEventArrived(input1, streamId("foo", "bar"), newEvent("CoolenessRemoved", new byte[0], "{\"effective_timestamp\":\"2016-01-23T00:23:54Z\"}".getBytes(UTF_8)));
+
+        clock.advanceTo(instant.plusSeconds(1));
+        Position position = mergedEventSource.positionCodec().deserializePosition("{\"a\":\"1\"}");
+
+        List<EventRecord> mergedEvents = mergedEventSource.readAll().readAllForwards(position).map(ResolvedEvent::eventRecord).collect(Collectors.toList());
+
+        assertThat(mergedEvents, contains(
+                anEventRecord(
+                        instant,
+                        streamId("foo", "bar"),
+                        0L,
+                        "CoolenessRemoved",
+                        new byte[0],
+                        "{\"effective_timestamp\":\"2016-01-23T00:23:54Z\"}".getBytes(UTF_8)
+                )
+        ));
+    }
     @Test public void
     when_delay_is_set_to_zero_and_no_time_passes_still_allows_events_through() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);

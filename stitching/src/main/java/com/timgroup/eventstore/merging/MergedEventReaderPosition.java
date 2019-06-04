@@ -55,6 +55,10 @@ final class MergedEventReaderPosition implements Position {
     private static final JsonFactory JSON_FACTORY = new JsonFactory();
 
     public static PositionCodec codecFor(NamedReaderWithCodec... namedReaders) {
+        return codecFor(false, namedReaders);
+    }
+
+    public static PositionCodec codecFor(boolean fallBackToStartingPosition, NamedReaderWithCodec... namedReaders) {
         return PositionCodec.fromComparator(
                 MergedEventReaderPosition.class,
                 serialisedPosition -> {
@@ -95,7 +99,12 @@ final class MergedEventReaderPosition implements Position {
 
                         for (int i = 0; i < namedReaders.length; i++) {
                             if (deserialisedPositions[i] == null) {
-                                throw new IllegalArgumentException("Bad position, containing no key for " + namedReaders[i].name + " :" + serialisedPosition);
+                                if (fallBackToStartingPosition) {
+                                    names[i] = namedReaders[i].name;
+                                    deserialisedPositions[i] = namedReaders[i].startingPosition;
+                                } else {
+                                    throw new IllegalArgumentException("Bad position, containing no key for " + namedReaders[i].name + " :" + serialisedPosition);
+                                }
                             }
                         }
 
