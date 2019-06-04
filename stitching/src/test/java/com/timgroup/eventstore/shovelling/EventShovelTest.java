@@ -42,7 +42,7 @@ public final class EventShovelTest {
     private final EventShovel underTest = new EventShovel(inputSource.readAll(), inputSource.positionCodec(), outputSource);
 
     @Test public void
-    it_shovels_all_events() throws Exception {
+    it_shovels_all_events() {
         inputEventArrived(streamId("david", "tom"), newEvent("CoolenessAdded", new byte[0], new byte[0]));
         inputEventArrived(streamId("david", "tom"), newEvent("CoolenessChanged", new byte[0], new byte[0]));
         inputEventArrived(streamId("foo", "bar"), newEvent("CoolenessRemoved", new byte[0], new byte[0]));
@@ -58,7 +58,7 @@ public final class EventShovelTest {
                         0L,
                         "CoolenessAdded",
                         new byte[0],
-                        "{\"shovel_position\":\"1\"}".getBytes(UTF_8)
+                        new byte[0]
                 ),
                 anEventRecord(
                         clock.instant(),
@@ -80,7 +80,7 @@ public final class EventShovelTest {
     }
 
     @Test public void
-    it_shovels_only_events_that_it_has_not_previously_shovelled() throws Exception {
+    it_shovels_only_events_that_it_has_not_previously_shovelled() {
         inputEventArrived(streamId("previous", "event"), newEvent("CoolenessRemoved", new byte[0], new byte[0]));
         underTest.shovelAllNewlyAvailableEvents();
 
@@ -102,7 +102,7 @@ public final class EventShovelTest {
     }
 
     @Test public void
-    a_new_shovel_shovels_only_events_that_it_has_not_previously_shovelled() throws Exception {
+    a_new_shovel_shovels_only_events_that_it_has_not_previously_shovelled() {
         inputEventArrived(streamId("david", "tom"), newEvent("CoolenessRemoved", new byte[0], new byte[0]));
         inputEventArrived(streamId("another", "stream"), newEvent("TooMuchCoolness", new byte[0], new byte[0]));
         underTest.shovelAllNewlyAvailableEvents();
@@ -139,7 +139,7 @@ public final class EventShovelTest {
     }
 
     @Test public void
-    maintains_metadata_from_upstream() throws Exception {
+    maintains_metadata_from_upstream() {
         String originalMetadata = "{\"effective_timestamp\":\"2015-02-12T04:23:34Z\"}";
         inputEventArrived(streamId("david", "tom"), newEvent("CoolenessAdded", new byte[0], originalMetadata.getBytes(UTF_8)));
 
@@ -160,7 +160,7 @@ public final class EventShovelTest {
     }
 
     @Test public void
-    it_does_optimistic_locking() throws Exception {
+    it_does_optimistic_locking() {
         inputEventArrived(streamId("david", "tom"), newEvent("CoolenessAdded", new byte[0], new byte[0]));
         inputEventArrived(streamId("foo", "bar"), newEvent("CoolenessRemoved", new byte[0], new byte[0]));
         inputEventArrived(streamId("david", "tom"), newEvent("CoolenessChanged", new byte[0], new byte[0]));
@@ -182,7 +182,7 @@ public final class EventShovelTest {
     }
 
     @Test public void
-    batching_works() throws Exception {
+    batching_works() {
         inputEventArrived(streamId("david", "tom"),
                             newEvent("CoolenessAdded", new byte[0], new byte[0]),
                             newEvent("CoolenessRemoved", new byte[0], new byte[0]),
@@ -203,7 +203,7 @@ public final class EventShovelTest {
     }
 
     @Test public void
-    handles_contended_out_of_order_writes_using_idempotent_writes() throws Exception {
+    handles_contended_out_of_order_writes_using_idempotent_writes() {
         inputEventArrived(streamId("bar", "tom"), newEvent("CoolenessAdded", "{\"data\":1}".getBytes(), "{\"md\":1}".getBytes()));
         inputEventArrived(streamId("foo", "david"), newEvent("CoolenessRemoved", "{\"data\":2}".getBytes(), "{\"md\":2}".getBytes()));
         inputEventArrived(streamId("bar", "tom"), newEvent("CoolenessChanged", "{\"data\":3}".getBytes(), "{\"md\":3}".getBytes()));
@@ -264,7 +264,7 @@ public final class EventShovelTest {
     }
 
     @Test public void
-    fails_idempotent_writes_if_event_data_changes() throws Exception {
+    fails_idempotent_writes_if_event_data_changes() {
         inputEventArrived(streamId("bar", "tom"), newEvent("CoolenessAdded", "{\"data\":1}".getBytes(), "{\"md\":1}".getBytes()));
         inputEventArrived(streamId("foo", "david"), newEvent("CoolenessRemoved", "{\"data\":2}".getBytes(), "{\"md\":2}".getBytes()));
         inputEventArrived(streamId("bar", "tom"), newEvent("CoolenessChanged", "{\"data\":3}".getBytes(), "{\"md\":3}".getBytes()));
@@ -305,7 +305,7 @@ public final class EventShovelTest {
     }
 
     @Test public void
-    fails_idempotent_writes_if_event_metadata_changes() throws Exception {
+    fails_idempotent_writes_if_event_metadata_changes() {
         inputEventArrived(streamId("bar", "tom"), newEvent("CoolenessAdded", "{\"data\":1}".getBytes(), "{\"md\":1}".getBytes()));
         inputEventArrived(streamId("foo", "david"), newEvent("CoolenessRemoved", "{\"data\":2}".getBytes(), "{\"md\":2}".getBytes()));
         inputEventArrived(streamId("bar", "tom"), newEvent("CoolenessChanged", "{\"data\":3}".getBytes(), "{\"md\":3}".getBytes()));
@@ -346,7 +346,7 @@ public final class EventShovelTest {
     }
 
     @Test public void
-    it_can_shovel_to_a_cateogry_whilst_other_clients_are_writing_to_the_output() throws Exception {
+    it_can_shovel_to_a_cateogry_whilst_other_clients_are_writing_to_the_output() {
 
         EventShovel shovelForCategory = new EventShovel(inputSource.readAll(), inputSource.positionCodec(), outputSource, "coolness");
 

@@ -8,7 +8,6 @@ import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.EventStreamWriter;
-import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
@@ -26,9 +25,9 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.google.common.collect.Collections2.transform;
 import static com.google.common.collect.Iterators.partition;
 import static com.google.common.collect.Iterators.peekingIterator;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
@@ -100,19 +99,7 @@ public final class EventShovel {
                 .orElse(reader.emptyStorePosition());
 
         try (Stream<ResolvedEvent> resolvedEventStream = reader.readAllForwards(currentPosition)) {
-            writeEvents(resolvedEventStream.map(evt -> {
-                EventRecord record = evt.eventRecord();
-                lastProcessedEvent.updateValue(INFO, record.streamId() + " eventNumber=" + record.eventNumber());
-                return new NewEventWithStreamId(
-                        redefineStreamId(record.streamId()),
-                        record.eventNumber(),
-                        newEvent(
-                                record.eventType(),
-                                record.data(),
-                                createMetadataWithShovelPosition(evt.position(), record.metadata())
-                        )
-                );
-            }));
+            writeEvents(resolvedEventStream);
         }
     }
 
@@ -139,17 +126,26 @@ public final class EventShovel {
         return Optional.ofNullable(json.readTree(data)).orElseThrow(() -> new IOException("blank json data"));
     }
 
-    private void writeEvents(Stream<NewEventWithStreamId> eventsToWrite) {
-        Iterator<Iterator<NewEventWithStreamId>> partitionedByStream = batchBy(
-                eventsToWrite.iterator(),
-                e -> e.streamId);
+    private void writeEvents(Stream<ResolvedEvent> eventsToWrite) {
+        Iterator<Iterator<ResolvedEvent>> partitionedByStream = batchBy(
+                eventsToWrite.iterator(), e -> redefineStreamId(e.eventRecord().streamId()));
 
         while (partitionedByStream.hasNext()) {
-            Iterator<List<NewEventWithStreamId>> batches = partition(partitionedByStream.next(), maxBatchSize);
+            Iterator<List<ResolvedEvent>> batches = partition(partitionedByStream.next(), maxBatchSize);
             while (batches.hasNext()) {
-                List<NewEventWithStreamId> batch = batches.next();
-                NewEventWithStreamId first = batch.get(0);
-                outputWriter.write(first.streamId, transform(batch, e -> e.event), first.eventNumber - 1);
+                List<ResolvedEvent> batch = batches.next();
+                ResolvedEvent first = batch.get(0);
+                ResolvedEvent last = batch.get(batch.size() - 1);
+                StreamId redefinedStreamId = redefineStreamId(first.eventRecord().streamId());
+                outputWriter.write(redefinedStreamId, batch.stream().map(evt -> {
+                    EventRecord record = evt.eventRecord();
+                    return newEvent(
+                            record.eventType(),
+                            record.data(),
+                            evt.equals(last) ? createMetadataWithShovelPosition(evt.position(), record.metadata()) : record.metadata()
+                    );
+                }).collect(Collectors.toList()), first.eventRecord().eventNumber() - 1);
+                lastProcessedEvent.updateValue(INFO, redefinedStreamId + " eventNumber=" + last.eventRecord().eventNumber());
             }
         }
     }
@@ -200,17 +196,4 @@ public final class EventShovel {
     public Iterable<Component> monitoring() {
         return singletonList(lastProcessedEvent);
     }
-
-    private static final class NewEventWithStreamId {
-        private final StreamId streamId;
-        private final long eventNumber;
-        private final NewEvent event;
-
-        public NewEventWithStreamId(StreamId streamId, long eventNumber, NewEvent event) {
-            this.streamId = streamId;
-            this.eventNumber = eventNumber;
-            this.event = event;
-        }
-    }
-
 }
