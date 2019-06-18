@@ -105,10 +105,30 @@ public final class IdempotentEventStreamWriter implements EventStreamWriter {
     @SuppressWarnings("WeakerAccess")
     public static final IsCompatible BASIC_COMPATIBILITY_CHECK = (a, b) -> {
         if (!a.eventRecord().eventType().equals(b.type())) {
-            throw new IncompatibleNewEventException("Event types don't match -- old: " + a.eventRecord().eventType() + ", new: " + b.type(), a, b);
+            throw new IncompatibleNewEventException(
+                String.format(
+                    "Event types don't match -- old: %s, new: %s (bodies old: %s, new %s)",
+                    a.eventRecord().eventType(),
+                    b.type(),
+                    new String(a.eventRecord().data(), UTF_8),
+                    new String(b.data(), UTF_8)
+                ),
+                a,
+                b
+            );
         }
         if (!Arrays.equals(a.eventRecord().data(), b.data())) {
-            throw new IncompatibleNewEventException("Event bodies don't match -- old: " + new String(a.eventRecord().data(), UTF_8) + ", new: " + new String(b.data(), UTF_8), a, b);
+            throw new IncompatibleNewEventException(
+                String.format(
+                    "Event bodies don't match -- old: %s, new: %s (types old: %s, new %s)",
+                    new String(a.eventRecord().data(), UTF_8),
+                    new String(b.data(), UTF_8),
+                    a.eventRecord().eventType(),
+                    b.type()
+                ),
+                a,
+                b
+            );
         }
     };
 
