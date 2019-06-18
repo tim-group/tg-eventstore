@@ -120,11 +120,10 @@ public final class IdempotentEventStreamWriter implements EventStreamWriter {
         if (!Arrays.equals(a.eventRecord().data(), b.data())) {
             throw new IncompatibleNewEventException(
                 String.format(
-                    "Event bodies don't match -- old: %s, new: %s (types old: %s, new %s)",
+                    "Event bodies don't match -- old: %s, new: %s (type %s)",
                     new String(a.eventRecord().data(), UTF_8),
                     new String(b.data(), UTF_8),
-                    a.eventRecord().eventType(),
-                    b.type()
+                    a.eventRecord().eventType()
                 ),
                 a,
                 b
