@@ -7,6 +7,7 @@ import com.timgroup.tucker.info.Report;
 import com.timgroup.tucker.info.Status;
 
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import static java.lang.String.format;
 
@@ -15,10 +16,18 @@ import static java.lang.String.format;
  */
 public final class EventStoreConnectionComponent extends Component {
     private final EventSource eventSource;
+    private final Supplier<String> eventSourceMetadataSupplier;
 
     public EventStoreConnectionComponent(String id, String label, EventSource eventSource) {
         super(id, label);
         this.eventSource = eventSource;
+        this.eventSourceMetadataSupplier = () -> "none supplied";
+    }
+
+    public EventStoreConnectionComponent(String id, String label, EventSource eventSource, Supplier<String> eventSourceMetadataSupplier) {
+        super(id, label);
+        this.eventSource = eventSource;
+        this.eventSourceMetadataSupplier = eventSourceMetadataSupplier;
     }
 
     @Override
@@ -30,10 +39,14 @@ public final class EventStoreConnectionComponent extends Component {
             String durationText = (after - before) + "ms";
 
             return new Report(Status.OK, maybeLastEvent
-                    .map(event -> format("last event read in %s: %s", durationText, event.locator()))
-                    .orElse("empty event store read in " + durationText));
+                    .map(event -> format("last event read in %s: %s%n%s", durationText, event.locator(), metadataText()))
+                    .orElse(format("empty event store read in %s%n%s", durationText, metadataText())));
         } catch (RuntimeException e) {
-            return new Report(Status.CRITICAL, e.getMessage());
+            return new Report(Status.CRITICAL, format("%s%n%s", e.getMessage(), metadataText()));
         }
+    }
+
+    private String metadataText() {
+        return format("EventStore metadata: %s", eventSourceMetadataSupplier.get());
     }
 }

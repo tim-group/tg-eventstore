@@ -621,15 +621,15 @@ public abstract class JavaEventStoreTest {
         };
     }
 
-    private static NewEvent anEvent() {
+    static NewEvent anEvent() {
         return newEvent(UUID.randomUUID().toString(), randomData(), randomData());
     }
 
-    private static String randomCategory() {
+    protected static String randomCategory() {
         return "stream_" + UUID.randomUUID().toString().replace("-", "");
     }
 
-    private static byte[] randomData() {
+    protected static byte[] randomData() {
         return ("{\n  \"value\": \"" + UUID.randomUUID() + "\"\n}").getBytes(UTF_8);
     }
 

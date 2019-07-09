@@ -15,9 +15,11 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Properties;
+import java.util.function.Supplier;
 
 import static java.util.Collections.singletonList;
 
@@ -83,7 +85,19 @@ public class BasicMysqlEventSource implements EventSource {
     public Collection<Component> monitoring() {
         String id = "EventStore-" + this.name;
         String label = "EventStore (name=" + this.name + ", tableName=" + this.tableName +")";
-        return singletonList(new EventStoreConnectionComponent(id, label, this));
+        return singletonList(new EventStoreConnectionComponent(id, label, this, eventSourceMetadataSupplier()));
+    }
+
+    private Supplier<String> eventSourceMetadataSupplier() {
+        try (Connection dbConnection = connectionProvider.getConnection()) {
+            DatabaseMetaData metaData = dbConnection.getMetaData();
+            String user = metaData.getUserName();
+            String jdbcUrl = metaData.getURL();
+            String prefix = user != null && !user.isEmpty() ? user + " @ " + jdbcUrl : jdbcUrl;
+            return () -> prefix;
+        } catch (SQLException e) {
+            return () -> "Unable to determine event source metadata: " + e.getMessage();
+        }
     }
 
     @Override

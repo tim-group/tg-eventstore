@@ -2,16 +2,29 @@ package com.timgroup.eventstore.mysql;
 
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.JavaEventStoreTest;
+import com.timgroup.eventstore.api.NewEvent;
+import com.timgroup.eventstore.api.StreamId;
+import com.timgroup.tucker.info.Component;
 import com.typesafe.config.Config;
+import org.hamcrest.core.StringContains;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Test;
 
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Collections;
+import java.util.UUID;
 
+import static com.timgroup.eventstore.api.NewEvent.newEvent;
+import static com.timgroup.eventstore.api.StreamId.streamId;
 import static com.typesafe.config.ConfigFactory.parseString;
 import static com.typesafe.config.ConfigParseOptions.defaults;
 import static com.typesafe.config.ConfigSyntax.PROPERTIES;
+import static java.util.Arrays.asList;
+import static java.util.Collections.singleton;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.StringContains.containsString;
 
 public class BasicMysqlEventSourceTest extends JavaEventStoreTest {
     static {
@@ -47,6 +60,21 @@ public class BasicMysqlEventSourceTest extends JavaEventStoreTest {
     @Override
     public EventSource eventSource() {
         return eventSource;
+    }
+
+    @Test
+    public void monitoring_provides_connection_component_containing_metadata_of_underlying_mysql_database() {
+        Component onlyComponent = eventSource().monitoring().iterator().next();
+        assertThat(onlyComponent.getReport().getValue().toString(),
+                containsString("jdbc:mysql://localhost:3306/sql_eventstore"));
+
+        eventSource().writeStream().write(
+                streamId(randomCategory(), "the-stream-1"),
+                singleton(newEvent("type-A", randomData(), randomData()))
+        );
+
+        assertThat(onlyComponent.getReport().getValue().toString(),
+                containsString("jdbc:mysql://localhost:3306/sql_eventstore"));
     }
 
     @After
