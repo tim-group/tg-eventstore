@@ -33,8 +33,8 @@ dependencies {
     testImplementation "junit:junit:4.12"
     testImplementation "org.hamcrest:hamcrest-core:1.3"
     testImplementation "org.hamcrest:hamcrest-library:1.3"
-    testImplementation "com.timgroup:clocks-testing:1.0.1092" // autobump
-    testImplementation "com.timgroup:clocks-joda-testing:1.0.1092" // autobump
+    testImplementation "com.timgroup:clocks-testing:1.0.1093" // autobump
+    testImplementation "com.timgroup:clocks-joda-testing:1.0.1093" // autobump
     testImplementation "org.scalatest:scalatest_$scalaApiVersion:3.0.1"
     testCompileOnly "org.joda:joda-convert:1.3.1"
     testRuntimeOnly "org.pegdown:pegdown:1.4.2"
