@@ -6,7 +6,6 @@ import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.EventStreamWriter;
-import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.tucker.info.Component;
 
@@ -19,6 +18,7 @@ import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
+import static java.util.Comparator.comparing;
 
 public final class MergedEventSource implements EventSource {
 
@@ -88,25 +88,11 @@ public final class MergedEventSource implements EventSource {
     public PositionCodec positionCodecComparing(String eventSourceName) {
         int componentIndex = indexOf(eventSourceName);
 
-        return new PositionCodec() {
-            @Override
-            public Position deserializePosition(String string) {
-                return mergedEventReaderPositionCodec.deserializePosition(string);
-            }
-
-            @Override
-            public String serializePosition(Position position) {
-                return mergedEventReaderPositionCodec.serializePosition(position);
-            }
-
-            @Override
-            public int comparePositions(Position left, Position right) {
-                MergedEventReaderPosition mergedLeft = (MergedEventReaderPosition) left;
-                MergedEventReaderPosition mergedRight = (MergedEventReaderPosition) right;
-
-                return namedReaders[componentIndex].codec.comparePositions(mergedLeft.inputPositions[componentIndex], mergedRight.inputPositions[componentIndex]);
-            }
-        };
+        return PositionCodec.fromComparator(MergedEventReaderPosition.class,
+                string -> (MergedEventReaderPosition) mergedEventReaderPositionCodec.deserializePosition(string),
+                mergedEventReaderPositionCodec::serializePosition,
+                comparing(pos -> pos.inputPositions[componentIndex], namedReaders[componentIndex].codec::comparePositions)
+        );
     }
 
     private int indexOf(String eventSourceName) {
