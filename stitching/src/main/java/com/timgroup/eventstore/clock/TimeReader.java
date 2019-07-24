@@ -19,7 +19,7 @@ import java.util.stream.Stream;
 import static com.timgroup.eventstore.api.EventRecord.eventRecord;
 import static java.util.Objects.requireNonNull;
 
-public class TimeReader implements EventReader, PositionCodec {
+public final class TimeReader implements EventReader {
     private final Instant start;
     private final Duration accuracy;
     private final Clock clock;
@@ -33,7 +33,7 @@ public class TimeReader implements EventReader, PositionCodec {
     @Nonnull
     public static NamedReaderWithCodec timePassedEventStream(Instant start, Duration accuracy, Clock clock) {
         TimeReader timeReader = new TimeReader(start, accuracy, clock);
-        return new NamedReaderWithCodec("Clock", timeReader, timeReader);
+        return new NamedReaderWithCodec("Clock", timeReader, TimePosition.CODEC);
     }
 
     @CheckReturnValue
@@ -64,16 +64,6 @@ public class TimeReader implements EventReader, PositionCodec {
     }
 
     @Override
-    public Position deserializePosition(String string) {
-        return new TimePosition(Long.parseLong(string));
-    }
-
-    @Override
-    public String serializePosition(Position position) {
-        return Long.toString(((TimePosition) position).value);
-    }
-
-    @Override
     public String toString() {
         return "TimeReader{" +
                 "start=" + start +
@@ -83,6 +73,11 @@ public class TimeReader implements EventReader, PositionCodec {
     }
 
     private static final class TimePosition implements Position, Comparable<TimePosition> {
+        static final PositionCodec CODEC = PositionCodec.ofComparable(TimePosition.class,
+                string -> new TimePosition(Long.parseLong(string)),
+                position -> Long.toString(position.value)
+        );
+
         private final long value;
 
         private TimePosition(long value) {
