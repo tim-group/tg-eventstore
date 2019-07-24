@@ -32,6 +32,11 @@ public interface PositionCodec {
             public int comparePositions(Position left, Position right) {
                 return comparator.compare(clazz.cast(left), clazz.cast(right));
             }
+
+            @Override
+            public String toString() {
+                return "PositionCodec{" + clazz.getName() + ", " + comparator + "}";
+            }
         };
     }
 
@@ -53,6 +58,11 @@ public interface PositionCodec {
             @Override
             public int comparePositions(Position left, Position right) {
                 return clazz.cast(left).compareTo(clazz.cast(right));
+            }
+
+            @Override
+            public String toString() {
+                return "PositionCodec{" + clazz.getName() + "}";
             }
         };
     }
