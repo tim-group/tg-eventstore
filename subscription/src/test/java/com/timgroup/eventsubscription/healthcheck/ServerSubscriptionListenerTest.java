@@ -17,7 +17,6 @@ import static org.junit.Assert.fail;
 
 public class ServerSubscriptionListenerTest {
 
-    private final TestPositionCodec testPositionCodec = new TestPositionCodec();
     private final CountDownLatch latch = new CountDownLatch(1);
     private final ExecutorService executorService = Executors.newFixedThreadPool(1);
 
@@ -32,7 +31,7 @@ public class ServerSubscriptionListenerTest {
         listener.apply(new TestPosition(1), new InitialCatchupCompleted(new TestPosition(1), null));
 
         executorService.submit(() -> {
-            listener.await(new TestPosition(2), testPositionCodec);
+            listener.await(new TestPosition(2), TestPosition.CODEC);
             latch.countDown();
         });
 
@@ -49,7 +48,7 @@ public class ServerSubscriptionListenerTest {
         listener.apply(new TestPosition(1), new SubscriptionTerminated(new TestPosition(1), expected));
 
         try {
-            listener.await(new TestPosition(Long.MAX_VALUE), testPositionCodec);
+            listener.await(new TestPosition(Long.MAX_VALUE), TestPosition.CODEC);
         } catch (IllegalStateException e) {
             assertThat(e.getCause(), equalTo(expected));
             return;

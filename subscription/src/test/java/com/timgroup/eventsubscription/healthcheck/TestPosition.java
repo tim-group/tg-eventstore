@@ -1,8 +1,17 @@
 package com.timgroup.eventsubscription.healthcheck;
 
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 
-class TestPosition implements Position {
+import java.util.Comparator;
+
+final class TestPosition implements Position {
+    static final PositionCodec CODEC = PositionCodec.fromComparator(TestPosition.class,
+            string -> new TestPosition(Long.parseLong(string)),
+            position -> Long.toString(position.value),
+            Comparator.comparingLong(position -> position.value)
+    );
+
     private final long value;
 
     TestPosition(long value) {
