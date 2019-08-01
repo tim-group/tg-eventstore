@@ -13,6 +13,8 @@ import com.timgroup.tucker.info.Component;
 import javax.annotation.Nonnull;
 import java.util.Collection;
 
+import static java.util.Collections.emptyList;
+
 public class S3ArchivedEventSource implements EventSource {
     private final S3ListableStorage s3ListableStorage;
     private final S3DownloadableStorageWithoutDestinationFile s3DownloadableStorage;
@@ -51,6 +53,7 @@ public class S3ArchivedEventSource implements EventSource {
 
     @Nonnull
     @Override
+    @Deprecated
     public PositionCodec positionCodec() {
         return S3ArchivePosition.CODEC;
     }
@@ -58,6 +61,6 @@ public class S3ArchivedEventSource implements EventSource {
     @Nonnull
     @Override
     public Collection<Component> monitoring() {
-        return null;
+        return emptyList();
     }
 }

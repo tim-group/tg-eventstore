@@ -52,6 +52,7 @@ public final class FlatFilesystemEventSource implements EventSource {
 
     @Nonnull
     @Override
+    @Deprecated
     public PositionCodec positionCodec() {
         return FlatFilesystemPosition.CODEC;
     }

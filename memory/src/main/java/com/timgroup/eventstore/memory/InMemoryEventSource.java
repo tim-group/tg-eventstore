@@ -56,6 +56,7 @@ public class InMemoryEventSource implements EventSource {
 
     @Override
     @Nonnull
+    @Deprecated
     public PositionCodec positionCodec() {
         return JavaInMemoryEventStore.CODEC;
     }

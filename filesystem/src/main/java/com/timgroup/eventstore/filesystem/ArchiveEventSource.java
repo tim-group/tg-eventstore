@@ -49,6 +49,7 @@ public final class ArchiveEventSource implements EventSource {
 
     @Nonnull
     @Override
+    @Deprecated
     public PositionCodec positionCodec() {
         return ArchivePosition.CODEC;
     }

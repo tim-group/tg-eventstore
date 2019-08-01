@@ -65,6 +65,7 @@ public final class MergedEventSource implements EventSource {
 
     @Nonnull
     @Override
+    @Deprecated
     public PositionCodec positionCodec() {
         return eventReader.positionCodec();
     }

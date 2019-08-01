@@ -79,6 +79,7 @@ public class LegacyMysqlEventSource implements EventSource {
 
     @Nonnull
     @Override
+    @Deprecated
     public PositionCodec positionCodec() {
         return LegacyMysqlEventPosition.CODEC;
     }

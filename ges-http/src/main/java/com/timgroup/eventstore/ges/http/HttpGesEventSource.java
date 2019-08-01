@@ -46,6 +46,7 @@ public class HttpGesEventSource implements EventSource {
 
     @Nonnull
     @Override
+    @Deprecated
     public PositionCodec positionCodec() {
         return HttpGesEventStreamReader.GesHttpPosition.CODEC;
     }

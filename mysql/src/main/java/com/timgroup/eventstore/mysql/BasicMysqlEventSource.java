@@ -76,6 +76,7 @@ public class BasicMysqlEventSource implements EventSource {
 
     @Nonnull
     @Override
+    @Deprecated
     public PositionCodec positionCodec() {
         return BasicMysqlEventStorePosition.CODEC;
     }
