@@ -13,29 +13,14 @@ import javax.annotation.Nonnull;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Collection;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.lang.String.format;
-import static java.util.Comparator.comparing;
 
 public final class MergedEventSource implements EventSource {
 
     private final MergedEventReader eventReader;
-    private final PositionCodec mergedEventReaderPositionCodec;
-    private final NamedReaderWithCodec[] namedReaders;
 
     @SuppressWarnings("WeakerAccess")
     public MergedEventSource(Clock clock, MergingStrategy<?> mergingStrategy, NamedReaderWithCodec... namedReaders) {
-        checkArgument(
-            Stream.of(namedReaders).map(nr -> nr.name).distinct().count() == namedReaders.length,
-            "reader names must be unique"
-        );
-
-        this.namedReaders = namedReaders;
-        this.eventReader = new MergedEventReader(clock, mergingStrategy, this.namedReaders);
-        this.mergedEventReaderPositionCodec = MergedEventReaderPosition.codecFor(namedReaders);
+        this.eventReader = new MergedEventReader(clock, mergingStrategy, namedReaders);
     }
 
     public static MergedEventSource effectiveTimestampMergedEventSource(Clock clock, NamedReaderWithCodec... namedReaders) {
@@ -81,30 +66,12 @@ public final class MergedEventSource implements EventSource {
     @Nonnull
     @Override
     public PositionCodec positionCodec() {
-        return mergedEventReaderPositionCodec;
+        return eventReader.positionCodec();
     }
 
     @Nonnull
     public PositionCodec positionCodecComparing(String eventSourceName) {
-        int componentIndex = indexOf(eventSourceName);
-
-        return PositionCodec.fromComparator(MergedEventReaderPosition.class,
-                string -> (MergedEventReaderPosition) mergedEventReaderPositionCodec.deserializePosition(string),
-                mergedEventReaderPositionCodec::serializePosition,
-                comparing(pos -> pos.inputPositions[componentIndex], namedReaders[componentIndex].codec::comparePositions)
-        );
-    }
-
-    private int indexOf(String eventSourceName) {
-        for (int i = 0; i < namedReaders.length; i++) {
-            if (namedReaders[i].name.equals(eventSourceName)) {
-                return i;
-            }
-        }
-
-        throw new IllegalArgumentException(format("Event source with name '%s' does not exist. Configured sources are: %s",
-                eventSourceName,
-                Stream.of(namedReaders).map(n -> "'" + n.name + "'").collect(Collectors.joining(","))));
+        return eventReader.positionCodecComparing(eventSourceName);
     }
 
     @Nonnull
@@ -115,9 +82,6 @@ public final class MergedEventSource implements EventSource {
 
     @Override
     public String toString() {
-        return "MergedEventSource{" +
-                "eventReader=" + eventReader +
-                ", mergedEventReaderPositionCodec=" + mergedEventReaderPositionCodec +
-                '}';
+        return "MergedEventSource{" + eventReader + "}";
     }
 }

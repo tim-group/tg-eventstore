@@ -1,15 +1,16 @@
 package com.timgroup.eventstore.memory;
 
+import com.timgroup.eventstore.api.EventSource;
+import com.timgroup.eventstore.api.JavaEventStoreTest;
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
+import com.timgroup.eventstore.api.ResolvedEvent;
+import org.junit.Test;
+
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
-
-import com.timgroup.eventstore.api.EventSource;
-import com.timgroup.eventstore.api.JavaEventStoreTest;
-import com.timgroup.eventstore.api.Position;
-import com.timgroup.eventstore.api.ResolvedEvent;
-import org.junit.Test;
 
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -24,6 +25,9 @@ public class JavaInMemoryEventStoreTest extends JavaEventStoreTest {
         return new InMemoryEventSource(eventStore);
     }
 
+    private PositionCodec positionCodec() {
+        return eventSource().readAll().positionCodec();
+    }
 
     @Test
     public void orders_positions_numerically() throws Exception {
@@ -33,7 +37,7 @@ public class JavaInMemoryEventStoreTest extends JavaEventStoreTest {
                 position(1L),
                 position(100L)
         );
-        assertThat(positions.stream().sorted(eventSource().positionCodec()::comparePositions).collect(toList()), equalTo(Arrays.asList(
+        assertThat(positions.stream().sorted(positionCodec()::comparePositions).collect(toList()), equalTo(Arrays.asList(
                 position(1L),
                 position(2L),
                 position(10L),
@@ -49,6 +53,6 @@ public class JavaInMemoryEventStoreTest extends JavaEventStoreTest {
     }
 
     private Position position(long n) {
-        return eventSource().positionCodec().deserializePosition(Long.toString(n));
+        return positionCodec().deserializePosition(Long.toString(n));
     }
 }

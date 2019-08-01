@@ -11,16 +11,21 @@ import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.lang.String.format;
+import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 import static java.util.Spliterator.DISTINCT;
 import static java.util.Spliterator.NONNULL;
 import static java.util.Spliterator.ORDERED;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
@@ -31,7 +36,12 @@ final class MergedEventReader implements EventReader {
     private final List<NamedReaderWithCodec> readers;
     private final PositionCodec positionCodec;
 
-    public MergedEventReader(Clock clock, MergingStrategy<?> mergingStrategy, NamedReaderWithCodec... readers) {
+    MergedEventReader(Clock clock, MergingStrategy<?> mergingStrategy, NamedReaderWithCodec... readers) {
+        checkArgument(
+                Arrays.stream(readers).map(nr -> nr.name).distinct().count() == readers.length,
+                "reader names must be unique"
+        );
+
         this.clock = requireNonNull(clock);
         this.mergingStrategy = requireNonNull(mergingStrategy);
         this.readers = ImmutableList.copyOf(readers);
@@ -86,6 +96,29 @@ final class MergedEventReader implements EventReader {
     @Override
     public PositionCodec positionCodec() {
         return positionCodec;
+    }
+
+    @Nonnull
+    public PositionCodec positionCodecComparing(String eventSourceName) {
+        int componentIndex = indexOf(eventSourceName);
+
+        return PositionCodec.fromComparator(MergedEventReaderPosition.class,
+                string -> (MergedEventReaderPosition) positionCodec.deserializePosition(string),
+                positionCodec::serializePosition,
+                comparing(pos -> pos.inputPositions[componentIndex], readers.get(componentIndex).codec::comparePositions)
+        );
+    }
+
+    private int indexOf(String eventSourceName) {
+        for (int i = 0; i < readers.size(); i++) {
+            if (readers.get(i).name.equals(eventSourceName)) {
+                return i;
+            }
+        }
+
+        throw new IllegalArgumentException(format("Event source with name '%s' does not exist. Configured sources are: %s",
+                eventSourceName,
+                readers.stream().map(n -> "'" + n.name + "'").collect(joining(","))));
     }
 
     @Override

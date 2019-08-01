@@ -12,7 +12,6 @@ import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
-import com.timgroup.eventstore.archiver.monitoring.S3ArchiveBucketConfigurationComponent;
 import com.timgroup.eventstore.memory.InMemoryEventSource;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import com.timgroup.eventsubscription.SubscriptionBuilder;
@@ -25,7 +24,6 @@ import com.timgroup.remotefilestorage.s3.S3ListableStorage;
 import com.timgroup.remotefilestorage.s3.S3UploadableStorage;
 import com.timgroup.remotefilestorage.s3.S3UploadableStorageForInputStream;
 import com.timgroup.tucker.info.Component;
-import com.timgroup.tucker.info.Report;
 import com.timgroup.tucker.info.Status;
 import com.youdevise.testutils.matchers.Contains;
 import net.ttsui.junit.rules.pending.PendingRule;
@@ -228,9 +226,9 @@ public class S3ArchiverIntegrationTest {
 
         assertThat(archiver.lastEventInLiveEventStore(), equalTo(Optional.empty()));
         liveEventSource.writeStream().write(stream_1, asList(event_1, event_2, event_3, event_4));
-        assertThat(archiver.lastEventInLiveEventStore().map(ResolvedEvent::position), equalTo(Optional.of(liveEventSource.positionCodec().deserializePosition("4"))));
+        assertThat(archiver.lastEventInLiveEventStore().map(ResolvedEvent::position), equalTo(Optional.of(liveEventSource.readAll().positionCodec().deserializePosition("4"))));
         liveEventSource.writeStream().write(stream_1, asList(event_5));
-        assertThat(archiver.lastEventInLiveEventStore().map(ResolvedEvent::position), equalTo(Optional.of(liveEventSource.positionCodec().deserializePosition("5"))));
+        assertThat(archiver.lastEventInLiveEventStore().map(ResolvedEvent::position), equalTo(Optional.of(liveEventSource.readAll().positionCodec().deserializePosition("5"))));
     }
 
     @Test public void

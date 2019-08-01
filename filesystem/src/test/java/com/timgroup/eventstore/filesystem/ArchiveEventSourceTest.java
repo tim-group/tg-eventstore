@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.filesystem;
 
+import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import org.apache.commons.compress.archivers.cpio.CpioArchiveEntry;
 import org.apache.commons.compress.archivers.cpio.CpioArchiveOutputStream;
@@ -38,11 +39,11 @@ public class ArchiveEventSourceTest {
 
         assertThat(events, contains(
                 eventRecord(Instant.EPOCH, streamId("testCategory", "testId"), 0, "EventType", "xyzzy".getBytes(), "".getBytes())
-                        .toResolvedEvent(eventSource.positionCodec().deserializePosition("00000000.testCategory.testId.0.EventType")),
+                        .toResolvedEvent(eventSource.readAll().positionCodec().deserializePosition("00000000.testCategory.testId.0.EventType")),
                 eventRecord(Instant.EPOCH, streamId("testCategory", "testId"), 1, "EventType", "abcde".getBytes(), "12345".getBytes())
-                        .toResolvedEvent(eventSource.positionCodec().deserializePosition("00000001.testCategory.testId.1.EventType")),
+                        .toResolvedEvent(eventSource.readAll().positionCodec().deserializePosition("00000001.testCategory.testId.1.EventType")),
                 eventRecord(Instant.EPOCH, streamId("testCategory", "testId"), 2, "EventType", "nnnnn".getBytes(), "".getBytes())
-                        .toResolvedEvent(eventSource.positionCodec().deserializePosition("00000002.testCategory.testId.2.EventType"))
+                        .toResolvedEvent(eventSource.readAll().positionCodec().deserializePosition("00000002.testCategory.testId.2.EventType"))
         ));
     }
 
@@ -56,12 +57,13 @@ public class ArchiveEventSourceTest {
             writeEntry(cpioOutput, "00000002.testCategory.testId.2.EventType.data", "nnnnn");
         }
         ArchiveEventSource eventSource = new ArchiveEventSource(tempFile);
+        EventReader archiveReader = eventSource.readAll();
 
-        List<ResolvedEvent> events = eventSource.readAll().readAllForwards(eventSource.positionCodec().deserializePosition("00000001.testCategory.testId.1.EventType")).collect(toList());
+        List<ResolvedEvent> events = archiveReader.readAllForwards(archiveReader.positionCodec().deserializePosition("00000001.testCategory.testId.1.EventType")).collect(toList());
 
         assertThat(events, contains(
                 eventRecord(Instant.EPOCH, streamId("testCategory", "testId"), 2, "EventType", "nnnnn".getBytes(), "".getBytes())
-                        .toResolvedEvent(eventSource.positionCodec().deserializePosition("00000002.testCategory.testId.2.EventType"))
+                        .toResolvedEvent(archiveReader.positionCodec().deserializePosition("00000002.testCategory.testId.2.EventType"))
         ));
     }
 

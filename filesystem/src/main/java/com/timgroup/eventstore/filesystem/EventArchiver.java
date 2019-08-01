@@ -6,7 +6,6 @@ import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.Position;
-import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import org.apache.commons.compress.archivers.ArchiveEntry;
@@ -33,14 +32,11 @@ public final class EventArchiver {
     private final EventCategoryReader categoryReader;
     @Nonnull
     private final EventStreamReader streamReader;
-    @Nonnull
-    private final PositionCodec positionCodec;
 
     public EventArchiver(EventSource eventSource) {
         this.storeReader = eventSource.readAll();
         this.categoryReader = eventSource.readCategory();
         this.streamReader = eventSource.readStream();
-        this.positionCodec = eventSource.positionCodec();
     }
 
     public void archiveStore(Path outputFile) throws IOException {

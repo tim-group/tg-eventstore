@@ -79,12 +79,24 @@ public final class EventShovel {
         lastProcessedEvent.updateValue(INFO, "none");
     }
 
+    public EventShovel(int maxBatchSize, EventReader reader, EventSource output) {
+        this(maxBatchSize, reader, reader.positionCodec(), output, null);
+    }
+
     public EventShovel(int maxBatchSize, EventReader reader, PositionCodec readerPositionCodec, EventSource output) {
         this(maxBatchSize, reader, readerPositionCodec, output, null);
     }
 
+    public EventShovel(EventReader reader, EventSource output) {
+        this(reader, reader.positionCodec(), output, null);
+    }
+
     public EventShovel(EventReader reader, PositionCodec readerPositionCodec, EventSource output) {
         this(reader, readerPositionCodec, output, null);
+    }
+
+    public EventShovel(EventReader reader, EventSource output, @Nullable String outputCategory) {
+        this(reader, reader.positionCodec(), output, outputCategory);
     }
 
     public EventShovel(EventReader reader, PositionCodec readerPositionCodec, EventSource output, @Nullable String outputCategory) {

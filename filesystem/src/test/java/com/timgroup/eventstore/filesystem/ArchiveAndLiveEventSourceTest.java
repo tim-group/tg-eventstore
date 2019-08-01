@@ -59,13 +59,13 @@ public class ArchiveAndLiveEventSourceTest {
 
         assertThat(events, Contains.inOrder(
                 eventRecord(Instant.EPOCH, streamId("testCategory", "testId"), 0, "EventType", "xyzzy".getBytes(), "".getBytes())
-                        .toResolvedEvent(eventSource.positionCodec().deserializePosition("00000001.testCategory.testId.1.EventType.cpio:00000000.testCategory.testId.0.EventType")),
+                        .toResolvedEvent(eventSource.readAll().positionCodec().deserializePosition("00000001.testCategory.testId.1.EventType.cpio:00000000.testCategory.testId.0.EventType")),
                 eventRecord(Instant.EPOCH, streamId("testCategory", "testId"), 1, "EventType", "abcde".getBytes(), "12345".getBytes())
-                        .toResolvedEvent(eventSource.positionCodec().deserializePosition("00000001.testCategory.testId.1.EventType.cpio:00000001.testCategory.testId.1.EventType")),
+                        .toResolvedEvent(eventSource.readAll().positionCodec().deserializePosition("00000001.testCategory.testId.1.EventType.cpio:00000001.testCategory.testId.1.EventType")),
                 eventRecord(Instant.EPOCH, streamId("testCategory", "testId"), 2, "EventType", "nnnnn".getBytes(), "".getBytes())
-                        .toResolvedEvent(eventSource.positionCodec().deserializePosition("00000002.testCategory.testId.2.EventType.cpio:00000002.testCategory.testId.2.EventType")),
+                        .toResolvedEvent(eventSource.readAll().positionCodec().deserializePosition("00000002.testCategory.testId.2.EventType.cpio:00000002.testCategory.testId.2.EventType")),
                 eventRecord(liveEventTime, streamId("testCategory", "testId"), 3, "EventType", "zzzzz".getBytes(), "aaaaa".getBytes())
-                        .toResolvedEvent(eventSource.positionCodec().deserializePosition("00000002.testCategory.testId.2.EventType.cpio:00000002.testCategory.testId.2.EventType:4"))
+                        .toResolvedEvent(eventSource.readAll().positionCodec().deserializePosition("00000002.testCategory.testId.2.EventType.cpio:00000002.testCategory.testId.2.EventType:4"))
         ));
     }
 

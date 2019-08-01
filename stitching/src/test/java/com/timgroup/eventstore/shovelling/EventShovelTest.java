@@ -39,7 +39,7 @@ public final class EventShovelTest {
     private final InMemoryEventSource outputSource = new InMemoryEventSource(new JavaInMemoryEventStore(clock));
 
 
-    private final EventShovel underTest = new EventShovel(inputSource.readAll(), inputSource.positionCodec(), outputSource);
+    private final EventShovel underTest = new EventShovel(inputSource.readAll(), outputSource);
 
     @Test public void
     it_shovels_all_events() {
@@ -108,7 +108,7 @@ public final class EventShovelTest {
         underTest.shovelAllNewlyAvailableEvents();
 
         inputEventArrived(streamId("david", "tom"), newEvent("CoolenessAdded", new byte[0], new byte[0]));
-        new EventShovel(inputSource.readAll(), inputSource.positionCodec(), outputSource).shovelAllNewlyAvailableEvents();
+        new EventShovel(inputSource.readAll(), outputSource).shovelAllNewlyAvailableEvents();
 
         List<EventRecord> shovelledEvents = outputSource.readAll().readAllForwards().map(ResolvedEvent::eventRecord).collect(Collectors.toList());
 
@@ -176,7 +176,7 @@ public final class EventShovelTest {
                 }
             }
         });
-        new EventShovel(inputSource.readAll(), inputSource.positionCodec(), contendedOutputSource).shovelAllNewlyAvailableEvents();
+        new EventShovel(inputSource.readAll(), contendedOutputSource).shovelAllNewlyAvailableEvents();
 
         assertThat(expectedVersionsSeen, contains(-1L, -1L, 0L));
     }
@@ -197,7 +197,7 @@ public final class EventShovelTest {
             }
         });
 
-        new EventShovel(2, inputSource.readAll(), inputSource.positionCodec(), rememberingBatchsizesEventStore).shovelAllNewlyAvailableEvents();
+        new EventShovel(2, inputSource.readAll(), rememberingBatchsizesEventStore).shovelAllNewlyAvailableEvents();
 
         assertThat(batchSizes, contains(2, 1));
     }
@@ -210,7 +210,7 @@ public final class EventShovelTest {
 
         // pretend another shovel shovelled these events, but reverse the order of events 1 and 2, and remove event 3.
         InMemoryEventSource pretendOutputSource = new InMemoryEventSource(new JavaInMemoryEventStore(clock));
-        new EventShovel(inputSource.readAll(), inputSource.positionCodec(), pretendOutputSource).shovelAllNewlyAvailableEvents();
+        new EventShovel(inputSource.readAll(), pretendOutputSource).shovelAllNewlyAvailableEvents();
         InMemoryEventSource outputSource = new InMemoryEventSource(new JavaInMemoryEventStore(clock));
         ResolvedEvent eventFromOtherShovel1 = pretendOutputSource.readCategory().readCategoryForwards("foo").iterator().next();
         outputSource.writeStream().write(
@@ -234,7 +234,7 @@ public final class EventShovelTest {
         );
 
         // test our shovel against the out-of-order mess
-        new EventShovel(inputSource.readAll(), inputSource.positionCodec(), outputSource).shovelAllNewlyAvailableEvents();
+        new EventShovel(inputSource.readAll(), outputSource).shovelAllNewlyAvailableEvents();
 
         List<EventRecord> shovelledEvents = outputSource.readAll().readAllForwards().map(ResolvedEvent::eventRecord).collect(Collectors.toList());
         assertThat(shovelledEvents, contains(
@@ -271,7 +271,7 @@ public final class EventShovelTest {
 
         // pretend another shovel shovelled these events, but reverse the order of events 1 and 2, and remove event 3.
         InMemoryEventSource pretendOutputSource = new InMemoryEventSource(new JavaInMemoryEventStore(clock));
-        new EventShovel(inputSource.readAll(), inputSource.positionCodec(), pretendOutputSource).shovelAllNewlyAvailableEvents();
+        new EventShovel(inputSource.readAll(), pretendOutputSource).shovelAllNewlyAvailableEvents();
         InMemoryEventSource outputSource = new InMemoryEventSource(new JavaInMemoryEventStore(clock));
         ResolvedEvent eventFromOtherShovel1 = pretendOutputSource.readCategory().readCategoryForwards("foo").iterator().next();
         outputSource.writeStream().write(
@@ -294,7 +294,7 @@ public final class EventShovelTest {
                 )
         );
 
-        EventShovel eventShovel = new EventShovel(inputSource.readAll(), inputSource.positionCodec(), outputSource);
+        EventShovel eventShovel = new EventShovel(inputSource.readAll(), outputSource);
 
         try {
             eventShovel.shovelAllNewlyAvailableEvents();
@@ -312,7 +312,7 @@ public final class EventShovelTest {
 
         // pretend another shovel shovelled these events, but reverse the order of events 1 and 2, and remove event 3.
         InMemoryEventSource pretendOutputSource = new InMemoryEventSource(new JavaInMemoryEventStore(clock));
-        new EventShovel(inputSource.readAll(), inputSource.positionCodec(), pretendOutputSource).shovelAllNewlyAvailableEvents();
+        new EventShovel(inputSource.readAll(), pretendOutputSource).shovelAllNewlyAvailableEvents();
         InMemoryEventSource outputSource = new InMemoryEventSource(new JavaInMemoryEventStore(clock));
         ResolvedEvent eventFromOtherShovel1 = pretendOutputSource.readCategory().readCategoryForwards("foo").iterator().next();
         outputSource.writeStream().write(
@@ -335,7 +335,7 @@ public final class EventShovelTest {
                 )
         );
 
-        EventShovel eventShovel = new EventShovel(inputSource.readAll(), inputSource.positionCodec(), outputSource);
+        EventShovel eventShovel = new EventShovel(inputSource.readAll(), outputSource);
 
         try {
             eventShovel.shovelAllNewlyAvailableEvents();
@@ -348,7 +348,7 @@ public final class EventShovelTest {
     @Test public void
     it_can_shovel_to_a_cateogry_whilst_other_clients_are_writing_to_the_output() {
 
-        EventShovel shovelForCategory = new EventShovel(inputSource.readAll(), inputSource.positionCodec(), outputSource, "coolness");
+        EventShovel shovelForCategory = new EventShovel(inputSource.readAll(), outputSource, "coolness");
 
         inputEventArrived(streamId("coolness", "tom"), newEvent("CoolenessAdded", new byte[0], new byte[0]));
         outputSource.writeStream().write(StreamId.streamId("hotness", "foo"), ImmutableList.of(newEvent("HotnessAdded", "{\"data\":1}".getBytes(), "{\"md\":1}".getBytes())));

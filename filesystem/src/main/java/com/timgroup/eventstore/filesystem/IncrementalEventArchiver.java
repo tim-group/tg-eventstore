@@ -1,8 +1,8 @@
 package com.timgroup.eventstore.filesystem;
 
+import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.Position;
-import com.timgroup.eventstore.api.PositionCodec;
 import org.slf4j.Logger;
 
 import javax.annotation.Nonnull;
@@ -26,15 +26,15 @@ public final class IncrementalEventArchiver {
     private final Path archiveDirectory;
     private final boolean createInitial;
     @Nonnull
-    private final PositionCodec positionCodec;
+    private final EventReader storeReader;
     @Nonnull
     private final EventArchiver eventArchiver;
 
     public IncrementalEventArchiver(@Nonnull EventSource eventSource, @Nonnull Path archiveDirectory, boolean createInitial) {
-        this.positionCodec = eventSource.positionCodec();
         this.archiveDirectory = requireNonNull(archiveDirectory);
         this.createInitial = createInitial;
         this.eventArchiver = new EventArchiver(eventSource);
+        this.storeReader = eventSource.readAll();
     }
 
     public void archiveEvents() throws IOException {
@@ -50,7 +50,7 @@ public final class IncrementalEventArchiver {
             Files.delete(tempFile);
         } else {
             String basename = ArchivePosition.CODEC.serializePosition(archivedTo.get().getArchivePosition());
-            String serialisedPosition = positionCodec.serializePosition(archivedTo.get().getInputPosition());
+            String serialisedPosition = storeReader.positionCodec().serializePosition(archivedTo.get().getInputPosition());
             Files.write(tempFile.resolveSibling(basename + ".position.txt"), serialisedPosition.getBytes(UTF_8));
             Path archivePath = tempFile.resolveSibling(basename + ".cpio");
             Files.move(tempFile, archivePath);
@@ -63,7 +63,7 @@ public final class IncrementalEventArchiver {
         if (positionFiles.isEmpty())
             return Optional.empty();
         Path file = positionFiles.get(positionFiles.size() - 1);
-        Position inputPosition = positionCodec.deserializePosition(Files.readAllLines(file).get(0));
+        Position inputPosition = storeReader.positionCodec().deserializePosition(Files.readAllLines(file).get(0));
         Position archivePosition = ArchivePosition.CODEC.deserializePosition(file.getFileName().toString().replaceFirst("\\.position\\.txt$", ""));
         return Optional.of(new ArchiveBoundary(inputPosition, archivePosition, 0L));
     }

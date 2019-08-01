@@ -97,7 +97,7 @@ public final class ArchiveAndLiveEventSource implements EventSource, EventReader
             private void openLiveStream() {
                 if (liveSpliterator == null) {
                     String sourcePositionString = archiveEventSource.readSourcePosition(lastArchivePosition);
-                    Position cutoverSourcePosition = liveEventSource.positionCodec().deserializePosition(sourcePositionString);
+                    Position cutoverSourcePosition = liveEventSource.readAll().positionCodec().deserializePosition(sourcePositionString);
                     Stream<ResolvedEvent> liveStream = liveEventSource.readAll().readAllForwards(cutoverSourcePosition); // TODO store close action
                     liveSpliterator = liveStream.spliterator();
                 }
@@ -150,10 +150,10 @@ public final class ArchiveAndLiveEventSource implements EventSource, EventReader
     @Override
     public PositionCodec positionCodec() {
         return PositionCodec.fromComparator(ArchiveAndLivePosition.class,
-                str -> ArchiveAndLivePosition.deserialise(str, liveEventSource.positionCodec()),
-                pos -> ArchiveAndLivePosition.serialise(pos, liveEventSource.positionCodec()),
+                str -> ArchiveAndLivePosition.deserialise(str, liveEventSource.readAll().positionCodec()),
+                pos -> ArchiveAndLivePosition.serialise(pos, liveEventSource.readAll().positionCodec()),
                 comparing(ArchiveAndLivePosition::getArchiveDirectoryPosition)
-                        .thenComparing(nullsFirst(comparing(ArchiveAndLivePosition::getLivePosition, liveEventSource.positionCodec()::comparePositions))));
+                        .thenComparing(nullsFirst(comparing(ArchiveAndLivePosition::getLivePosition, liveEventSource.readAll().positionCodec()::comparePositions))));
     }
 
     @Nonnull

@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.filesystem;
 
+import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.youdevise.testutils.matchers.Contains;
@@ -41,16 +42,17 @@ public class ArchiveDirectoryEventSourceTest {
         Files.write(temporaryFolder.newFile("00000002.testCategory.testId.2.EventType.position.txt").toPath(), "2".getBytes(UTF_8));
 
         ArchiveDirectoryEventSource eventSource = new ArchiveDirectoryEventSource(temporaryFolder.getRoot().toPath());
+        EventReader archiveReader = eventSource.readAll();
 
-        List<ResolvedEvent> events = eventSource.readAll().readAllForwards().collect(toList());
+        List<ResolvedEvent> events = archiveReader.readAllForwards().collect(toList());
 
         assertThat(events, Contains.inOrder(
                 eventRecord(Instant.EPOCH, streamId("testCategory", "testId"), 0, "EventType", "xyzzy".getBytes(), "".getBytes())
-                        .toResolvedEvent(eventSource.positionCodec().deserializePosition("00000001.testCategory.testId.1.EventType.cpio:00000000.testCategory.testId.0.EventType")),
+                        .toResolvedEvent(archiveReader.positionCodec().deserializePosition("00000001.testCategory.testId.1.EventType.cpio:00000000.testCategory.testId.0.EventType")),
                 eventRecord(Instant.EPOCH, streamId("testCategory", "testId"), 1, "EventType", "abcde".getBytes(), "12345".getBytes())
-                        .toResolvedEvent(eventSource.positionCodec().deserializePosition("00000001.testCategory.testId.1.EventType.cpio:00000001.testCategory.testId.1.EventType")),
+                        .toResolvedEvent(archiveReader.positionCodec().deserializePosition("00000001.testCategory.testId.1.EventType.cpio:00000001.testCategory.testId.1.EventType")),
                 eventRecord(Instant.EPOCH, streamId("testCategory", "testId"), 2, "EventType", "nnnnn".getBytes(), "".getBytes())
-                        .toResolvedEvent(eventSource.positionCodec().deserializePosition("00000002.testCategory.testId.2.EventType.cpio:00000002.testCategory.testId.2.EventType"))
+                        .toResolvedEvent(archiveReader.positionCodec().deserializePosition("00000002.testCategory.testId.2.EventType.cpio:00000002.testCategory.testId.2.EventType"))
         ));
     }
 
@@ -65,8 +67,9 @@ public class ArchiveDirectoryEventSourceTest {
         Files.write(temporaryFolder.newFile("00000001.testCategory.testId.1.EventType.position.txt").toPath(), "1".getBytes(UTF_8));
 
         ArchiveDirectoryEventSource eventSource = new ArchiveDirectoryEventSource(temporaryFolder.getRoot().toPath());
+        EventReader archiveReader = eventSource.readAll();
 
-        List<ResolvedEvent> initialEvents = eventSource.readAll().readAllForwards().collect(toList());
+        List<ResolvedEvent> initialEvents = archiveReader.readAllForwards().collect(toList());
 
         Position startExclusive = initialEvents.get(initialEvents.size() - 1).position();
 
@@ -76,11 +79,11 @@ public class ArchiveDirectoryEventSourceTest {
         }
         Files.write(temporaryFolder.newFile("00000002.testCategory.testId.2.EventType.position.txt").toPath(), "2".getBytes(UTF_8));
 
-        List<ResolvedEvent> events = eventSource.readAll().readAllForwards(startExclusive).collect(toList());
+        List<ResolvedEvent> events = archiveReader.readAllForwards(startExclusive).collect(toList());
 
         assertThat(events, Contains.inOrder(
                 eventRecord(Instant.EPOCH, streamId("testCategory", "testId"), 2, "EventType", "nnnnn".getBytes(), "".getBytes())
-                        .toResolvedEvent(eventSource.positionCodec().deserializePosition("00000002.testCategory.testId.2.EventType.cpio:00000002.testCategory.testId.2.EventType"))
+                        .toResolvedEvent(archiveReader.positionCodec().deserializePosition("00000002.testCategory.testId.2.EventType.cpio:00000002.testCategory.testId.2.EventType"))
         ));
     }
 

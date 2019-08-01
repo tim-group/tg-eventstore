@@ -24,7 +24,7 @@ public final class BackfillStitchingEventSource implements EventSource {
     public BackfillStitchingEventSource(EventSource backfill, EventSource live, Position liveCutoffStartPosition) {
         this.backfill = backfill;
         this.live = live;
-        this.positionCodec = StitchedPosition.codec(backfill.positionCodec(), live.positionCodec());
+        this.positionCodec = StitchedPosition.codec(backfill.positionCodec(), live.positionCodec()); // only for deprecated accessor
         this.eventReader = new BackfillStitchingEventReader(backfill, live, liveCutoffStartPosition);
     }
 
@@ -54,6 +54,7 @@ public final class BackfillStitchingEventSource implements EventSource {
 
     @Nonnull
     @Override
+    @Deprecated
     public PositionCodec positionCodec() {
         return positionCodec;
     }

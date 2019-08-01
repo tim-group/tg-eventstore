@@ -1,6 +1,11 @@
 package com.timgroup.eventstore.stitching;
 
-import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.EventSource;
+import com.timgroup.eventstore.api.EventStreamWriter;
+import com.timgroup.eventstore.api.NewEvent;
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.InMemoryEventSource;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Before;
@@ -40,7 +45,7 @@ public final class BackfillStitchingEventSourceTest  {
         liveWriter.write(StreamId.streamId("category_1", "stream2"), Collections.singleton(event("L3")));
 
 
-        Position stitchPosition = live.positionCodec().deserializePosition("4");
+        Position stitchPosition = live.readAll().positionCodec().deserializePosition("4");
         eventSource = new BackfillStitchingEventSource(backfill, live, stitchPosition);
     }
 
@@ -65,7 +70,7 @@ public final class BackfillStitchingEventSourceTest  {
     generates_stitched_positions() {
         List<String> readEvents = eventSource.readAll().readAllForwards()
                 .map(ResolvedEvent::position)
-                .map(p -> eventSource.positionCodec().serializePosition(p))
+                .map(p -> eventSource.readAll().positionCodec().serializePosition(p))
                 .collect(toList());
 
         assertThat(readEvents, contains(
