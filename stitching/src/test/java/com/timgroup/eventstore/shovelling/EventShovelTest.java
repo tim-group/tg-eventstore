@@ -15,7 +15,7 @@ import org.junit.Test;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Instant;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -31,7 +31,7 @@ import static org.hamcrest.Matchers.contains;
 
 public final class EventShovelTest {
 
-    private final ManualClock clock = new ManualClock(Instant.parse("2009-04-12T22:12:32Z"), ZoneId.of("UTC"));
+    private final ManualClock clock = new ManualClock(Instant.parse("2009-04-12T22:12:32Z"), ZoneOffset.UTC);
 
     private final JavaInMemoryEventStore inputReader = new JavaInMemoryEventStore(clock);
     private final InMemoryEventSource inputSource = new InMemoryEventSource(inputReader);

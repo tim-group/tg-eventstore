@@ -20,7 +20,7 @@ import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -43,7 +43,7 @@ import static org.hamcrest.Matchers.lessThan;
 public final class MergedEventSourceTest {
     @Rule public final ExpectedException thrown = ExpectedException.none();
 
-    private final ManualClock clock = new ManualClock(Instant.parse("2009-04-12T22:12:32Z"), ZoneId.of("UTC"));
+    private final ManualClock clock = new ManualClock(Instant.parse("2009-04-12T22:12:32Z"), ZoneOffset.UTC);
 
     @Test public void
     supports_reading_all_forwards_from_a_single_input_stream() throws Exception {

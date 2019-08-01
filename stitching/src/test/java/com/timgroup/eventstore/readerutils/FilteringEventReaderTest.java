@@ -3,20 +3,25 @@ package com.timgroup.eventstore.readerutils;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.timgroup.clocks.testing.ManualClock;
-import com.timgroup.eventstore.api.*;
+import com.timgroup.eventstore.api.EventRecord;
+import com.timgroup.eventstore.api.EventRecordMatcher;
+import com.timgroup.eventstore.api.NewEvent;
+import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.InMemoryEventSource;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Test;
 
 import java.time.Instant;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 
+import static com.timgroup.eventstore.api.EventRecordMatcher.anEventRecord;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.eventstore.api.StreamId.streamId;
-import static com.timgroup.eventstore.api.EventRecordMatcher.anEventRecord;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -24,7 +29,7 @@ import static org.hamcrest.Matchers.is;
 
 public final class FilteringEventReaderTest {
 
-    private final ManualClock clock = new ManualClock(Instant.parse("2009-04-12T22:12:32Z"), ZoneId.of("UTC"));
+    private final ManualClock clock = new ManualClock(Instant.parse("2009-04-12T22:12:32Z"), ZoneOffset.UTC);
     private final JavaInMemoryEventStore inputReader = new JavaInMemoryEventStore(clock);
     private final InMemoryEventSource inputSource = new InMemoryEventSource(inputReader);
 

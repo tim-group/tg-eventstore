@@ -11,7 +11,7 @@ import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Test;
 
 import java.time.Instant;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,7 +26,7 @@ import static org.hamcrest.Matchers.is;
 
 public final class RekeyingEventReaderTest {
 
-    private final ManualClock clock = new ManualClock(Instant.parse("2009-04-12T22:12:32Z"), ZoneId.of("UTC"));
+    private final ManualClock clock = new ManualClock(Instant.parse("2009-04-12T22:12:32Z"), ZoneOffset.UTC);
 
     @Test
     public void

@@ -21,7 +21,7 @@ import static org.junit.Assert.assertThat;
 
 public class PeriodReaderTest {
 
-    private final ManualClock clock = new ManualClock(LocalDate.of(2018, 6, 6).atStartOfDay().toInstant(ZoneOffset.UTC), ZoneOffset.UTC);
+    private final ManualClock clock = new ManualClock(Instant.parse("2018-06-06T00:00:00Z"), ZoneOffset.UTC);
     private final PeriodReader monthsReader = PeriodReader.monthsPassedEventStream(
                 StreamId.streamId("periodic", "months"),
                 LocalDate.of(2018, 4, 1),
