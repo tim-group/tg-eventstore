@@ -33,7 +33,7 @@ public final class RekeyingEventReaderTest {
     supports_reading_from_all_forwards_from_multiple_input_streams() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
 
-        RekeyingEventReader reader = RekeyingEventReader.rekeying(input1, JavaInMemoryEventStore.CODEC, streamId("food", "all"));
+        RekeyingEventReader reader = RekeyingEventReader.rekeying(input1, streamId("food", "all"));
 
         Instant instant = clock.instant();
         inputEventArrived(input1, streamId("cheese", "brie"), "CoolenessAdded");
@@ -84,7 +84,7 @@ public final class RekeyingEventReaderTest {
     supports_reading_from_a_given_position_from_multiple_input_streams() throws Exception {
         JavaInMemoryEventStore input1 = new JavaInMemoryEventStore(clock);
 
-        RekeyingEventReader reader = RekeyingEventReader.rekeying(input1, JavaInMemoryEventStore.CODEC, streamId("food", "all"));
+        RekeyingEventReader reader = RekeyingEventReader.rekeying(input1, streamId("food", "all"));
 
         Instant instant = clock.instant();
         inputEventArrived(input1, streamId("cheese", "brie"), "CoolenessAdded");

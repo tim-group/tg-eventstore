@@ -33,6 +33,10 @@ public final class RekeyingEventReader implements EventReader {
         this.newStreamId = requireNonNull(newStreamId);
     }
 
+    public static RekeyingEventReader rekeying(EventReader underlying, StreamId newKey) {
+        return new RekeyingEventReader(underlying, underlying.storePositionCodec(), newKey);
+    }
+
     public static RekeyingEventReader rekeying(EventReader underlying, PositionCodec underlyingPositionCodec, StreamId newKey) {
         return new RekeyingEventReader(underlying, underlyingPositionCodec, newKey);
     }
