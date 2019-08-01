@@ -1,5 +1,5 @@
 plugins {
-    id "java-library"
+    id "java"
     id "com.timgroup.jarmangit"
     id "maven-publish"
 }
@@ -14,21 +14,21 @@ repositories {
 }
 
 dependencies {
-    compile project(":mysql")
-    compile "io.dropwizard.metrics:metrics-core:3.2.3"
-    compile "io.dropwizard.metrics:metrics-jvm:3.2.3"
-    compile "io.dropwizard.metrics:metrics-graphite:3.2.3"
-    api project(":api")
+    implementation project(":mysql")
+    implementation "io.dropwizard.metrics:metrics-core:3.2.3"
+    implementation "io.dropwizard.metrics:metrics-jvm:3.2.3"
+    implementation "io.dropwizard.metrics:metrics-graphite:3.2.3"
+    implementation project(":api")
     compileOnly "com.google.code.findbugs:jsr305:1.3.9"
     implementation "com.google.guava:guava:28.0-jre"
-    runtime "mysql:mysql-connector-java:$mysqlJdbcVersion"
-    testCompile project(":api:testlib")
-    testCompile project(":memory")
+    runtimeOnly "mysql:mysql-connector-java:$mysqlJdbcVersion"
+    testImplementation project(":api:testlib")
+    testImplementation project(":memory")
 
-    testCompile "junit:junit:4.12"
-    testCompile "org.hamcrest:hamcrest-core:1.3"
-    testCompile "org.hamcrest:hamcrest-library:1.3"
-    testCompile "com.timgroup:clocks-testing:1.0.1095" // autobump
+    testImplementation "junit:junit:4.12"
+    testImplementation "org.hamcrest:hamcrest-core:1.3"
+    testImplementation "org.hamcrest:hamcrest-library:1.3"
+    testImplementation "com.timgroup:clocks-testing:1.0.1095" // autobump
 }
 
 tasks.withType(JavaCompile).all {

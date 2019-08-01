@@ -26,15 +26,15 @@ dependencies {
     compile project(":memory")
     compileOnly "org.joda:joda-convert:1.3.1"
 
-    testCompile project(":api-legacy:testlib")
-    testCompile "junit:junit:4.12"
-    testCompile "org.hamcrest:hamcrest-core:1.3"
-    testCompile "org.hamcrest:hamcrest-library:1.3"
-    testCompile "com.timgroup:clocks-joda-testing:1.0.1095" // autobump
-    testCompile "com.timgroup:clocks-testing:1.0.1095" // autobump
-    testCompile "org.scalatest:scalatest_$scalaApiVersion:3.0.1"
+    testImplementation project(":api-legacy:testlib")
+    testImplementation "junit:junit:4.12"
+    testImplementation "org.hamcrest:hamcrest-core:1.3"
+    testImplementation "org.hamcrest:hamcrest-library:1.3"
+    testImplementation "com.timgroup:clocks-joda-testing:1.0.1095" // autobump
+    testImplementation "com.timgroup:clocks-testing:1.0.1095" // autobump
+    testImplementation "org.scalatest:scalatest_$scalaApiVersion:3.0.1"
     testCompileOnly "org.joda:joda-convert:1.3.1"
-    testRuntime "org.pegdown:pegdown:1.4.2"
+    testRuntimeOnly "org.pegdown:pegdown:1.4.2"
 }
 
 check.dependsOn("scalatest")
