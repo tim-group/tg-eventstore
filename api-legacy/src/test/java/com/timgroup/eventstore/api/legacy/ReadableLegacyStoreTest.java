@@ -3,6 +3,7 @@ package com.timgroup.eventstore.api.legacy;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import org.junit.Test;
@@ -102,6 +103,12 @@ public class ReadableLegacyStoreTest {
         @Override
         public Position emptyStorePosition() {
             return toPosition(-1L);
+        }
+
+        @Nonnull
+        @Override
+        public PositionCodec positionCodec() {
+            throw new UnsupportedOperationException();
         }
 
         private static final class Pos implements Position {

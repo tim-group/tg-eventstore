@@ -3,6 +3,7 @@ package com.timgroup.eventstore.filesystem;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.NoSuchStreamException;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 
@@ -47,6 +48,12 @@ final class FilteringStreamReader implements EventStreamReader {
         if (!streamExistsPredicate.test(streamId)) throw new NoSuchStreamException(streamId);
         return underlying.readAllBackwards()
                 .filter(re -> re.eventRecord().streamId().equals(streamId) && re.eventRecord().eventNumber() < eventNumber);
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec streamPositionCodec() {
+        return underlying.positionCodec();
     }
 
     @Override

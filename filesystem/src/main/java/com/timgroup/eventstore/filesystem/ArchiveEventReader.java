@@ -2,6 +2,7 @@ package com.timgroup.eventstore.filesystem;
 
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import org.apache.commons.compress.archivers.cpio.CpioArchiveEntry;
 import org.apache.commons.compress.archivers.cpio.CpioArchiveInputStream;
@@ -46,6 +47,12 @@ public class ArchiveEventReader implements EventReader {
     @Override
     public Position emptyStorePosition() {
         return ArchivePosition.EMPTY;
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec positionCodec() {
+        return ArchivePosition.CODEC;
     }
 
     private InputStream openFile() throws IOException {

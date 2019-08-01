@@ -7,6 +7,7 @@ import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.NoSuchStreamException;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
@@ -165,6 +166,24 @@ public final class LegacyMysqlEventReader implements EventReader, EventStreamRea
         ensureStreamExists(streamId);
         //noinspection ConstantConditions
         return readLastEvent().get();
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec categoryPositionCodec() {
+        return LegacyMysqlEventPosition.CODEC;
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec positionCodec() {
+        return LegacyMysqlEventPosition.CODEC;
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec streamPositionCodec() {
+        return LegacyMysqlEventPosition.CODEC;
     }
 
     @Override

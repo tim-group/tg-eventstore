@@ -2,6 +2,7 @@ package com.timgroup.eventstore.filesystem;
 
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 
@@ -120,6 +121,12 @@ final class FlatFilesystemEventReader implements EventReader {
     @Override
     public Position emptyStorePosition() {
         return FlatFilesystemPosition.EMPTY;
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec positionCodec() {
+        return FlatFilesystemPosition.CODEC;
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.timgroup.eventstore.readerutils;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
 import javax.annotation.CheckReturnValue;
@@ -68,6 +69,12 @@ public class TransformingEventReader implements EventReader {
     @Override
     public Optional<ResolvedEvent> readLastEvent() {
         return underlying.readLastEvent().map(transformer);
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec positionCodec() {
+        return underlying.positionCodec();
     }
 
     @Override

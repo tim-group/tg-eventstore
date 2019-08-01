@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -77,6 +78,12 @@ public class HttpGesEventReader implements EventReader {
     @Override
     public Position emptyStorePosition() {
         return null;
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec positionCodec() {
+        return HttpGesEventStreamReader.GesHttpPosition.CODEC;
     }
 
     @Override

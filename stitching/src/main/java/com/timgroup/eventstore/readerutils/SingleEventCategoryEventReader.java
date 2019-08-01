@@ -4,6 +4,7 @@ import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
 import javax.annotation.CheckReturnValue;
@@ -58,6 +59,12 @@ public final class SingleEventCategoryEventReader implements EventReader {
     @Override
     public Optional<ResolvedEvent> readLastEvent() {
         return underlying.readLastEventInCategory(this.category);
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec positionCodec() {
+        return underlying.categoryPositionCodec();
     }
 
     @Override

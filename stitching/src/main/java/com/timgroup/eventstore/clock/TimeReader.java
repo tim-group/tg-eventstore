@@ -63,6 +63,12 @@ public final class TimeReader implements EventReader {
         return new TimePosition(start.toEpochMilli());
     }
 
+    @Nonnull
+    @Override
+    public PositionCodec positionCodec() {
+        return TimePosition.CODEC;
+    }
+
     @Override
     public String toString() {
         return "TimeReader{" +

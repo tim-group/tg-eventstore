@@ -7,6 +7,7 @@ import com.timgroup.eventstore.api.EventStream;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.LegacyPositionAdapter;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 
@@ -14,6 +15,7 @@ import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -26,6 +28,11 @@ import static scala.collection.JavaConverters.asJavaIteratorConverter;
 
 @ParametersAreNonnullByDefault
 public class LegacyEventStoreEventReaderAdapter implements EventReader, EventStreamReader {
+    private static final PositionCodec CODEC = PositionCodec.fromComparator(LegacyPositionAdapter.class,
+            str -> new LegacyPositionAdapter(Long.parseLong(str)),
+            pos -> Long.toString(pos.version()),
+            Comparator.comparingLong(LegacyPositionAdapter::version));
+
     private final EventStore eventStore;
     private final StreamId pretendStreamId;
 
@@ -79,6 +86,18 @@ public class LegacyEventStoreEventReaderAdapter implements EventReader, EventStr
     @Override
     public Position emptyStorePosition() {
         return new LegacyPositionAdapter(0);
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec positionCodec() {
+        return CODEC;
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec streamPositionCodec() {
+        return CODEC;
     }
 
     private ResolvedEvent toResolvedEvent(EventInStream eventInStream) {

@@ -4,6 +4,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.NoSuchStreamException;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 
@@ -72,6 +73,12 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
     public ResolvedEvent readLastEventInStream(StreamId streamId) {
         //noinspection ConstantConditions
         return readBackwards(streamId, Long.MAX_VALUE, 1).findFirst().get();
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec streamPositionCodec() {
+        return BasicMysqlEventStorePosition.CODEC;
     }
 
     @Override

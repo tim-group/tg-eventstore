@@ -4,6 +4,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
 import javax.annotation.CheckReturnValue;
@@ -90,6 +91,12 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
     @Override
     public Position emptyCategoryPosition(String category) {
         return EMPTY_STORE_POSITION;
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec categoryPositionCodec() {
+        return BasicMysqlEventStorePosition.CODEC;
     }
 
     @Override

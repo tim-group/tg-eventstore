@@ -4,6 +4,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
 import javax.annotation.CheckReturnValue;
@@ -77,6 +78,12 @@ public class BasicMysqlEventReader implements EventReader {
     @Override
     public Position emptyStorePosition() {
         return EMPTY_STORE_POSITION;
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec positionCodec() {
+        return BasicMysqlEventStorePosition.CODEC;
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.timgroup.eventstore.archiver;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.remotefilestorage.api.RemoteFileDetails;
@@ -116,5 +117,11 @@ public class S3ArchivedEventReader implements EventReader {
     @Override
     public Position emptyStorePosition() {
         return S3ArchivePosition.EMPTY_STORE_POSITION;
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec positionCodec() {
+        return S3ArchivePosition.CODEC;
     }
 }

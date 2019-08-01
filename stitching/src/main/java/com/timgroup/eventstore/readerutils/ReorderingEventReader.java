@@ -4,6 +4,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
 import javax.annotation.CheckReturnValue;
@@ -37,6 +38,12 @@ public final class ReorderingEventReader<T extends Comparable<T>> implements Eve
     @Override
     public Position emptyStorePosition() {
         return underlying.emptyStorePosition();
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec positionCodec() {
+        return underlying.positionCodec();
     }
 
     @CheckReturnValue

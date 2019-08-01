@@ -37,4 +37,7 @@ public interface EventStreamReader {
     default Stream<ResolvedEvent> readStreamBackwards(StreamId streamId, long eventNumber) {
         throw new UnsupportedOperationException("reading backwards is not yet supported");
     }
+
+    @Nonnull
+    PositionCodec streamPositionCodec();
 }

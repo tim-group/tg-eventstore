@@ -92,6 +92,12 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
         return new InMemoryEventStorePosition(0);
     }
 
+    @Nonnull
+    @Override
+    public PositionCodec positionCodec() {
+        return CODEC;
+    }
+
     @Override
     public synchronized void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
         long currentVersion = currentVersionOf(streamId);
@@ -159,10 +165,22 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
                 .filter(evt -> evt.eventRecord().eventNumber() < eventNumberExclusive);
     }
 
+    @Nonnull
+    @Override
+    public PositionCodec streamPositionCodec() {
+        return CODEC;
+    }
+
     @Override
     @Nonnull
     public Position emptyCategoryPosition(String category) {
         return emptyStorePosition();
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec categoryPositionCodec() {
+        return CODEC;
     }
 
     private long currentVersionOf(StreamId streamId) {

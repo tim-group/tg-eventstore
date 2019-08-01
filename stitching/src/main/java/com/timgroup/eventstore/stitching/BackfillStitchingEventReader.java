@@ -4,6 +4,7 @@ import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
 import javax.annotation.CheckReturnValue;
@@ -30,6 +31,18 @@ public final class BackfillStitchingEventReader implements EventReader, EventCat
     @Override
     public Position emptyStorePosition() {
         return emptyStorePosition;
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec positionCodec() {
+        return StitchedPosition.codec(backfill.readAll().positionCodec(), live.readAll().positionCodec());
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec categoryPositionCodec() {
+        return StitchedPosition.codec(backfill.readCategory().categoryPositionCodec(), live.readCategory().categoryPositionCodec());
     }
 
     @Nonnull

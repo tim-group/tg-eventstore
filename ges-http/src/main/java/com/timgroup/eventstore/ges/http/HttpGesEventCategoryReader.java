@@ -3,6 +3,7 @@ package com.timgroup.eventstore.ges.http;
 import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.ges.http.HttpGesEventStreamReader.GesHttpPosition;
 
@@ -30,6 +31,12 @@ public class HttpGesEventCategoryReader implements EventCategoryReader {
     @Override
     public Position emptyCategoryPosition(String category) {
         return new GesHttpPosition(-1L);
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec categoryPositionCodec() {
+        return GesHttpPosition.CODEC;
     }
 
     @Override

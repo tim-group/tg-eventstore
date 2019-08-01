@@ -85,6 +85,12 @@ public class CacheEventReader implements EventReader {
         return underlying.emptyStorePosition();
     }
 
+    @Nonnull
+    @Override
+    public PositionCodec positionCodec() {
+        return positionCodec;
+    }
+
     @Override
     public String toString() {
         return "CacheEventReader{" +

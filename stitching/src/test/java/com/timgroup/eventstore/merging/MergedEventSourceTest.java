@@ -7,6 +7,7 @@ import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
@@ -96,14 +97,20 @@ public final class MergedEventSourceTest {
             @CheckReturnValue
             @Override
             public Stream<ResolvedEvent> readAllForwards(@Nonnull Position positionExclusive) {
-                return ImmutableList.of(
+                return Stream.of(
                         new ResolvedEvent(new Position() { }, eventRecord(event1Instant, streamId("a", "1"), 1L, "X", new byte[0], new byte[0])),
                         new ResolvedEvent(new Position() { }, eventRecord(event2Instant, streamId("b", "1"), 1L, "X", new byte[0], new byte[0]))
-                ).stream();
+                );
             }
 
             @Nonnull
             @Override public Position emptyStorePosition() { return new Position() { }; }
+
+            @Nonnull
+            @Override
+            public PositionCodec positionCodec() {
+                throw new UnsupportedOperationException();
+            }
         };
 
         EventReader outputReader = MergedEventSource.streamOrderMergedEventSource(clock, ofSeconds(1L), new NamedReaderWithCodec("a", input, JavaInMemoryEventStore.CODEC)).readAll();

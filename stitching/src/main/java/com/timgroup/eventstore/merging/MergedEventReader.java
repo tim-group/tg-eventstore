@@ -4,6 +4,7 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
 import javax.annotation.CheckReturnValue;
@@ -28,11 +29,13 @@ final class MergedEventReader implements EventReader {
     private final Clock clock;
     private final MergingStrategy<?> mergingStrategy;
     private final List<NamedReaderWithCodec> readers;
+    private final PositionCodec positionCodec;
 
     public MergedEventReader(Clock clock, MergingStrategy<?> mergingStrategy, NamedReaderWithCodec... readers) {
         this.clock = requireNonNull(clock);
         this.mergingStrategy = requireNonNull(mergingStrategy);
         this.readers = ImmutableList.copyOf(readers);
+        this.positionCodec = MergedEventReaderPosition.codecFor(readers);
     }
 
     @CheckReturnValue
@@ -77,6 +80,12 @@ final class MergedEventReader implements EventReader {
         String[] names = readers.stream().map(r -> r.name).toArray(String[]::new);
         Position[] positions = readers.stream().map(r -> r.startingPosition).toArray(Position[]::new);
         return new MergedEventReaderPosition(names, positions);
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec positionCodec() {
+        return positionCodec;
     }
 
     @Override

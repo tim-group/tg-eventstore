@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.NoSuchStreamException;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import org.apache.http.HttpHost;
@@ -19,6 +20,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
@@ -71,6 +73,12 @@ public class HttpGesEventStreamReader implements EventStreamReader {
         }
     }
 
+    @Nonnull
+    @Override
+    public PositionCodec streamPositionCodec() {
+        return GesHttpPosition.CODEC;
+    }
+
     @Override
     public String toString() {
         return "HttpGesEventStreamReader{" +
@@ -78,11 +86,41 @@ public class HttpGesEventStreamReader implements EventStreamReader {
                 '}';
     }
 
-    static class GesHttpPosition implements Position {
+    static class GesHttpPosition implements Position, Comparable<GesHttpPosition> {
+        static final PositionCodec CODEC = PositionCodec.ofComparable(GesHttpPosition.class,
+                str -> new GesHttpPosition(Long.parseLong(str)),
+                pos -> Long.toString(pos.value)
+        );
+
         final long value;
 
         GesHttpPosition(long value) {
             this.value = value;
+        }
+
+        @Override
+        public int compareTo(GesHttpPosition o) {
+            return Long.compare(value, o.value);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            GesHttpPosition that = (GesHttpPosition) o;
+            return value == that.value;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(value);
+        }
+
+        @Override
+        public String toString() {
+            return "GesHttpPosition{" +
+                    "value=" + value +
+                    '}';
         }
     }
 

@@ -3,6 +3,7 @@ package com.timgroup.eventstore.filesystem;
 import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
 import javax.annotation.CheckReturnValue;
@@ -50,6 +51,12 @@ final class FilteringCategoryReader implements EventCategoryReader {
     @Override
     public Position emptyCategoryPosition(String category) {
         return underlying.emptyStorePosition();
+    }
+
+    @Nonnull
+    @Override
+    public PositionCodec categoryPositionCodec() {
+        return underlying.positionCodec();
     }
 
     @Override

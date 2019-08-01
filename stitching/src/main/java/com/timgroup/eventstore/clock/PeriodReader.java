@@ -24,7 +24,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-public class PeriodReader implements EventReader {
+public final class PeriodReader implements EventReader {
     private final String eventType;
     private final StreamId streamId;
     private final Period period;
@@ -49,9 +49,11 @@ public class PeriodReader implements EventReader {
         return new PeriodReader("MonthPassed", streamId, Period.ofMonths(1), startDate, clock);
     }
 
-    public static final PositionCodec CODEC = PositionCodec.ofComparable(PeriodicEventStorePosition.class,
-        str -> new PeriodicEventStorePosition(Long.parseLong(str)),
-        pos -> Long.toString(pos.eventNumber));
+    @Nonnull
+    @Override
+    public PositionCodec positionCodec() {
+        return PeriodicEventStorePosition.CODEC;
+    }
 
     @CheckReturnValue
     @Nonnull
@@ -109,6 +111,10 @@ public class PeriodReader implements EventReader {
     }
 
     private static final class PeriodicEventStorePosition implements Position, Comparable<PeriodicEventStorePosition> {
+        private static final PositionCodec CODEC = PositionCodec.ofComparable(PeriodicEventStorePosition.class,
+                str -> new PeriodicEventStorePosition(Long.parseLong(str)),
+                pos -> Long.toString(pos.eventNumber));
+
         private final long eventNumber;
 
         private PeriodicEventStorePosition(long eventNumber) {
