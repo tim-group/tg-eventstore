@@ -82,7 +82,7 @@ public class HttpGesEventReader implements EventReader {
 
     @Nonnull
     @Override
-    public PositionCodec positionCodec() {
+    public PositionCodec storePositionCodec() {
         return HttpGesEventStreamReader.GesHttpPosition.CODEC;
     }
 

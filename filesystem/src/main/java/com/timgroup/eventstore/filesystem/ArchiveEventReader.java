@@ -51,7 +51,7 @@ public class ArchiveEventReader implements EventReader {
 
     @Nonnull
     @Override
-    public PositionCodec positionCodec() {
+    public PositionCodec storePositionCodec() {
         return ArchivePosition.CODEC;
     }
 

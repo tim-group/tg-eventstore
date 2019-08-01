@@ -39,11 +39,11 @@ public class ArchiveEventSourceTest {
 
         assertThat(events, contains(
                 eventRecord(Instant.EPOCH, streamId("testCategory", "testId"), 0, "EventType", "xyzzy".getBytes(), "".getBytes())
-                        .toResolvedEvent(eventSource.readAll().positionCodec().deserializePosition("00000000.testCategory.testId.0.EventType")),
+                        .toResolvedEvent(eventSource.readAll().storePositionCodec().deserializePosition("00000000.testCategory.testId.0.EventType")),
                 eventRecord(Instant.EPOCH, streamId("testCategory", "testId"), 1, "EventType", "abcde".getBytes(), "12345".getBytes())
-                        .toResolvedEvent(eventSource.readAll().positionCodec().deserializePosition("00000001.testCategory.testId.1.EventType")),
+                        .toResolvedEvent(eventSource.readAll().storePositionCodec().deserializePosition("00000001.testCategory.testId.1.EventType")),
                 eventRecord(Instant.EPOCH, streamId("testCategory", "testId"), 2, "EventType", "nnnnn".getBytes(), "".getBytes())
-                        .toResolvedEvent(eventSource.readAll().positionCodec().deserializePosition("00000002.testCategory.testId.2.EventType"))
+                        .toResolvedEvent(eventSource.readAll().storePositionCodec().deserializePosition("00000002.testCategory.testId.2.EventType"))
         ));
     }
 
@@ -59,11 +59,11 @@ public class ArchiveEventSourceTest {
         ArchiveEventSource eventSource = new ArchiveEventSource(tempFile);
         EventReader archiveReader = eventSource.readAll();
 
-        List<ResolvedEvent> events = archiveReader.readAllForwards(archiveReader.positionCodec().deserializePosition("00000001.testCategory.testId.1.EventType")).collect(toList());
+        List<ResolvedEvent> events = archiveReader.readAllForwards(archiveReader.storePositionCodec().deserializePosition("00000001.testCategory.testId.1.EventType")).collect(toList());
 
         assertThat(events, contains(
                 eventRecord(Instant.EPOCH, streamId("testCategory", "testId"), 2, "EventType", "nnnnn".getBytes(), "".getBytes())
-                        .toResolvedEvent(archiveReader.positionCodec().deserializePosition("00000002.testCategory.testId.2.EventType"))
+                        .toResolvedEvent(archiveReader.storePositionCodec().deserializePosition("00000002.testCategory.testId.2.EventType"))
         ));
     }
 

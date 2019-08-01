@@ -107,7 +107,7 @@ public class ReadableLegacyStoreTest {
 
         @Nonnull
         @Override
-        public PositionCodec positionCodec() {
+        public PositionCodec storePositionCodec() {
             throw new UnsupportedOperationException();
         }
 

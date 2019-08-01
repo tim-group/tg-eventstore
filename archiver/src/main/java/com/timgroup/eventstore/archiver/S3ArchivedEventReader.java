@@ -121,7 +121,7 @@ public class S3ArchivedEventReader implements EventReader {
 
     @Nonnull
     @Override
-    public PositionCodec positionCodec() {
+    public PositionCodec storePositionCodec() {
         return S3ArchivePosition.CODEC;
     }
 }

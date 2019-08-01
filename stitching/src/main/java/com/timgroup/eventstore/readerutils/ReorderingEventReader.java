@@ -42,8 +42,8 @@ public final class ReorderingEventReader<T extends Comparable<T>> implements Eve
 
     @Nonnull
     @Override
-    public PositionCodec positionCodec() {
-        return underlying.positionCodec();
+    public PositionCodec storePositionCodec() {
+        return underlying.storePositionCodec();
     }
 
     @CheckReturnValue

@@ -54,7 +54,7 @@ public final class RekeyingEventReader implements EventReader {
         return new RekeyedStreamPosition(underlying.emptyStorePosition(), -1L);
     }
 
-    public PositionCodec positionCodec() {
+    public PositionCodec storePositionCodec() {
         return RekeyedStreamPosition.codec(underlyingPositionCodec);
     }
 

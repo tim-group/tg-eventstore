@@ -94,7 +94,7 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
 
     @Nonnull
     @Override
-    public PositionCodec positionCodec() {
+    public PositionCodec storePositionCodec() {
         return CODEC;
     }
 

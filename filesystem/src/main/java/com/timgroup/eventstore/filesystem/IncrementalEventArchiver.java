@@ -50,7 +50,7 @@ public final class IncrementalEventArchiver {
             Files.delete(tempFile);
         } else {
             String basename = ArchivePosition.CODEC.serializePosition(archivedTo.get().getArchivePosition());
-            String serialisedPosition = storeReader.positionCodec().serializePosition(archivedTo.get().getInputPosition());
+            String serialisedPosition = storeReader.storePositionCodec().serializePosition(archivedTo.get().getInputPosition());
             Files.write(tempFile.resolveSibling(basename + ".position.txt"), serialisedPosition.getBytes(UTF_8));
             Path archivePath = tempFile.resolveSibling(basename + ".cpio");
             Files.move(tempFile, archivePath);
@@ -63,7 +63,7 @@ public final class IncrementalEventArchiver {
         if (positionFiles.isEmpty())
             return Optional.empty();
         Path file = positionFiles.get(positionFiles.size() - 1);
-        Position inputPosition = storeReader.positionCodec().deserializePosition(Files.readAllLines(file).get(0));
+        Position inputPosition = storeReader.storePositionCodec().deserializePosition(Files.readAllLines(file).get(0));
         Position archivePosition = ArchivePosition.CODEC.deserializePosition(file.getFileName().toString().replaceFirst("\\.position\\.txt$", ""));
         return Optional.of(new ArchiveBoundary(inputPosition, archivePosition, 0L));
     }

@@ -53,7 +53,7 @@ final class FilteringStreamReader implements EventStreamReader {
     @Nonnull
     @Override
     public PositionCodec streamPositionCodec() {
-        return underlying.positionCodec();
+        return underlying.storePositionCodec();
     }
 
     @Override

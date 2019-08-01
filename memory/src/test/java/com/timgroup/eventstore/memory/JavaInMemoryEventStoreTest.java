@@ -26,7 +26,7 @@ public class JavaInMemoryEventStoreTest extends JavaEventStoreTest {
     }
 
     private PositionCodec positionCodec() {
-        return eventSource().readAll().positionCodec();
+        return eventSource().readAll().storePositionCodec();
     }
 
     @Test

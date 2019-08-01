@@ -51,7 +51,7 @@ public final class PeriodReader implements EventReader {
 
     @Nonnull
     @Override
-    public PositionCodec positionCodec() {
+    public PositionCodec storePositionCodec() {
         return PeriodicEventStorePosition.CODEC;
     }
 

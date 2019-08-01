@@ -97,7 +97,7 @@ public final class ArchiveAndLiveEventSource implements EventSource, EventReader
             private void openLiveStream() {
                 if (liveSpliterator == null) {
                     String sourcePositionString = archiveEventSource.readSourcePosition(lastArchivePosition);
-                    Position cutoverSourcePosition = liveEventSource.readAll().positionCodec().deserializePosition(sourcePositionString);
+                    Position cutoverSourcePosition = liveEventSource.readAll().storePositionCodec().deserializePosition(sourcePositionString);
                     Stream<ResolvedEvent> liveStream = liveEventSource.readAll().readAllForwards(cutoverSourcePosition); // TODO store close action
                     liveSpliterator = liveStream.spliterator();
                 }
@@ -120,6 +120,13 @@ public final class ArchiveAndLiveEventSource implements EventSource, EventReader
         };
 
         return StreamSupport.stream(combinedSpliterator, false).onClose(archiveStream::close);
+    }
+
+    @Nonnull
+    @Override
+    @Deprecated
+    public PositionCodec positionCodec() {
+        return storePositionCodec();
     }
 
     @Nonnull
@@ -148,12 +155,12 @@ public final class ArchiveAndLiveEventSource implements EventSource, EventReader
 
     @Nonnull
     @Override
-    public PositionCodec positionCodec() {
+    public PositionCodec storePositionCodec() {
         return PositionCodec.fromComparator(ArchiveAndLivePosition.class,
-                str -> ArchiveAndLivePosition.deserialise(str, liveEventSource.readAll().positionCodec()),
-                pos -> ArchiveAndLivePosition.serialise(pos, liveEventSource.readAll().positionCodec()),
+                str -> ArchiveAndLivePosition.deserialise(str, liveEventSource.readAll().storePositionCodec()),
+                pos -> ArchiveAndLivePosition.serialise(pos, liveEventSource.readAll().storePositionCodec()),
                 comparing(ArchiveAndLivePosition::getArchiveDirectoryPosition)
-                        .thenComparing(nullsFirst(comparing(ArchiveAndLivePosition::getLivePosition, liveEventSource.readAll().positionCodec()::comparePositions))));
+                        .thenComparing(nullsFirst(comparing(ArchiveAndLivePosition::getLivePosition, liveEventSource.readAll().storePositionCodec()::comparePositions))));
     }
 
     @Nonnull

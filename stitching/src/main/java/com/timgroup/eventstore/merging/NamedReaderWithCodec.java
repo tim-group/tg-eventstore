@@ -20,7 +20,7 @@ public final class NamedReaderWithCodec {
     final Position startingPosition;
 
     public NamedReaderWithCodec(String name, EventReader reader) {
-        this(name, reader, reader.positionCodec(), reader.emptyStorePosition());
+        this(name, reader, reader.storePositionCodec(), reader.emptyStorePosition());
     }
 
     public NamedReaderWithCodec(String name, EventReader reader, PositionCodec codec) {
@@ -28,7 +28,7 @@ public final class NamedReaderWithCodec {
     }
 
     public NamedReaderWithCodec(String name, EventReader reader, Position startingPosition) {
-        this(name, reader::readAllForwards, reader.positionCodec(), startingPosition);
+        this(name, reader::readAllForwards, reader.storePositionCodec(), startingPosition);
     }
 
     public NamedReaderWithCodec(String name, EventReader reader, PositionCodec codec, Position startingPosition) {
@@ -56,7 +56,7 @@ public final class NamedReaderWithCodec {
     }
 
     public static NamedReaderWithCodec fromEventReader(String name, EventReader eventReader) {
-        return new NamedReaderWithCodec(name, eventReader, eventReader.positionCodec());
+        return new NamedReaderWithCodec(name, eventReader, eventReader.storePositionCodec());
     }
 
     public static NamedReaderWithCodec fromEventCategoryReader(String name, EventCategoryReader eventCategoryReader, String category) {

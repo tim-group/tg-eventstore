@@ -125,7 +125,7 @@ final class FlatFilesystemEventReader implements EventReader {
 
     @Nonnull
     @Override
-    public PositionCodec positionCodec() {
+    public PositionCodec storePositionCodec() {
         return FlatFilesystemPosition.CODEC;
     }
 

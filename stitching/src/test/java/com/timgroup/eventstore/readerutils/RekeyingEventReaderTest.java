@@ -1,10 +1,5 @@
 package com.timgroup.eventstore.readerutils;
 
-import java.time.Instant;
-import java.time.ZoneId;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.EventStreamWriter;
@@ -14,6 +9,11 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import org.junit.Test;
+
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.timgroup.eventstore.api.EventRecordMatcher.anEventRecord;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
@@ -95,10 +95,10 @@ public final class RekeyingEventReaderTest {
         @SuppressWarnings("OptionalGetWithoutIsPresent")
         Position position = reader.readAllForwards().skip(1).findFirst().get().position();
 
-        String serializedPosition = reader.positionCodec().serializePosition(position);
+        String serializedPosition = reader.storePositionCodec().serializePosition(position);
         assertThat(serializedPosition, is(equalTo("1:2")));
 
-        Position deserializedPosition = reader.positionCodec().deserializePosition(serializedPosition);
+        Position deserializedPosition = reader.storePositionCodec().deserializePosition(serializedPosition);
         assertThat(deserializedPosition, is(equalTo(position)));
 
         List<EventRecord> mergedEvents = reader.readAllForwards(deserializedPosition).map(ResolvedEvent::eventRecord).collect(Collectors.toList());

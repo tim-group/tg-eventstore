@@ -176,7 +176,7 @@ public final class LegacyMysqlEventReader implements EventReader, EventStreamRea
 
     @Nonnull
     @Override
-    public PositionCodec positionCodec() {
+    public PositionCodec storePositionCodec() {
         return LegacyMysqlEventPosition.CODEC;
     }
 

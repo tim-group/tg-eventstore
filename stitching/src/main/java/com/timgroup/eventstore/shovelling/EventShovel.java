@@ -80,7 +80,7 @@ public final class EventShovel {
     }
 
     public EventShovel(int maxBatchSize, EventReader reader, EventSource output) {
-        this(maxBatchSize, reader, reader.positionCodec(), output, null);
+        this(maxBatchSize, reader, reader.storePositionCodec(), output, null);
     }
 
     public EventShovel(int maxBatchSize, EventReader reader, PositionCodec readerPositionCodec, EventSource output) {
@@ -88,7 +88,7 @@ public final class EventShovel {
     }
 
     public EventShovel(EventReader reader, EventSource output) {
-        this(reader, reader.positionCodec(), output, null);
+        this(reader, reader.storePositionCodec(), output, null);
     }
 
     public EventShovel(EventReader reader, PositionCodec readerPositionCodec, EventSource output) {
@@ -96,7 +96,7 @@ public final class EventShovel {
     }
 
     public EventShovel(EventReader reader, EventSource output, @Nullable String outputCategory) {
-        this(reader, reader.positionCodec(), output, outputCategory);
+        this(reader, reader.storePositionCodec(), output, outputCategory);
     }
 
     public EventShovel(EventReader reader, PositionCodec readerPositionCodec, EventSource output, @Nullable String outputCategory) {

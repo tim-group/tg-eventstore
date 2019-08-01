@@ -45,7 +45,7 @@ public final class BackfillStitchingEventSourceTest  {
         liveWriter.write(StreamId.streamId("category_1", "stream2"), Collections.singleton(event("L3")));
 
 
-        Position stitchPosition = live.readAll().positionCodec().deserializePosition("4");
+        Position stitchPosition = live.readAll().storePositionCodec().deserializePosition("4");
         eventSource = new BackfillStitchingEventSource(backfill, live, stitchPosition);
     }
 
@@ -70,7 +70,7 @@ public final class BackfillStitchingEventSourceTest  {
     generates_stitched_positions() {
         List<String> readEvents = eventSource.readAll().readAllForwards()
                 .map(ResolvedEvent::position)
-                .map(p -> eventSource.readAll().positionCodec().serializePosition(p))
+                .map(p -> eventSource.readAll().storePositionCodec().serializePosition(p))
                 .collect(toList());
 
         assertThat(readEvents, contains(

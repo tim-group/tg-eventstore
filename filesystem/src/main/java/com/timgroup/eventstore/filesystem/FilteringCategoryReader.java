@@ -56,7 +56,7 @@ final class FilteringCategoryReader implements EventCategoryReader {
     @Nonnull
     @Override
     public PositionCodec categoryPositionCodec() {
-        return underlying.positionCodec();
+        return underlying.storePositionCodec();
     }
 
     @Override

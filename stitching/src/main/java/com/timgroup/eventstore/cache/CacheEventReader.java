@@ -87,7 +87,7 @@ public class CacheEventReader implements EventReader {
 
     @Nonnull
     @Override
-    public PositionCodec positionCodec() {
+    public PositionCodec storePositionCodec() {
         return positionCodec;
     }
 

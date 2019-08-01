@@ -59,8 +59,8 @@ public final class FilteringEventReader implements EventReader {
 
     @Nonnull
     @Override
-    public PositionCodec positionCodec() {
-        return underlying.positionCodec();
+    public PositionCodec storePositionCodec() {
+        return underlying.storePositionCodec();
     }
 
     @Override

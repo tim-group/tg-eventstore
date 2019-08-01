@@ -90,7 +90,7 @@ public class LegacyEventStoreEventReaderAdapter implements EventReader, EventStr
 
     @Nonnull
     @Override
-    public PositionCodec positionCodec() {
+    public PositionCodec storePositionCodec() {
         return CODEC;
     }
 

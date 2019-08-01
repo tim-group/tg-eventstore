@@ -150,7 +150,7 @@ public class S3Archiver {
 
     private Position convertPosition(Optional<Long> positionInArchive) {
         Long maxPositionInArchive = positionInArchive.orElse(0L);
-        return liveEventSource.readAll().positionCodec().deserializePosition(String.valueOf(maxPositionInArchive));
+        return liveEventSource.readAll().storePositionCodec().deserializePosition(String.valueOf(maxPositionInArchive));
     }
 
     public void start() {
@@ -186,10 +186,10 @@ public class S3Archiver {
             Optional<Long> archivePosition = maxPositionInArchive.map(pos -> pos.value);
             Optional<Long> livePosition = lastEventInLiveEventStore()
                     .map(ResolvedEvent::position)
-                    .map(liveEventSource.readAll().positionCodec()::serializePosition)
+                    .map(liveEventSource.readAll().storePositionCodec()::serializePosition)
                     .map(Long::valueOf);
 
-            boolean isStale = batchingPolicy.isStale(maxPositionInArchive, lastEventInLiveEventStore(), liveEventSource.readAll().positionCodec());
+            boolean isStale = batchingPolicy.isStale(maxPositionInArchive, lastEventInLiveEventStore(), liveEventSource.readAll().storePositionCodec());
 
             String value = format("%s%nmax_position in live=%s%nmax_position in archive=%s",
                     isStale ? "Archive is stale compared to live event store" : "Archive is up to date with live event store",
@@ -354,7 +354,7 @@ public class S3Archiver {
     }
 
     private Long positionFrom(ResolvedEvent eventFromLiveEventSource) {
-        return Long.parseLong(liveEventSource.readAll().positionCodec().serializePosition(eventFromLiveEventSource.position()));
+        return Long.parseLong(liveEventSource.readAll().storePositionCodec().serializePosition(eventFromLiveEventSource.position()));
     }
 
     public static String getStackTraceAsString(Throwable throwable) {

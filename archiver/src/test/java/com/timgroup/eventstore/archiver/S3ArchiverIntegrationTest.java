@@ -226,9 +226,9 @@ public class S3ArchiverIntegrationTest {
 
         assertThat(archiver.lastEventInLiveEventStore(), equalTo(Optional.empty()));
         liveEventSource.writeStream().write(stream_1, asList(event_1, event_2, event_3, event_4));
-        assertThat(archiver.lastEventInLiveEventStore().map(ResolvedEvent::position), equalTo(Optional.of(liveEventSource.readAll().positionCodec().deserializePosition("4"))));
+        assertThat(archiver.lastEventInLiveEventStore().map(ResolvedEvent::position), equalTo(Optional.of(liveEventSource.readAll().storePositionCodec().deserializePosition("4"))));
         liveEventSource.writeStream().write(stream_1, asList(event_5));
-        assertThat(archiver.lastEventInLiveEventStore().map(ResolvedEvent::position), equalTo(Optional.of(liveEventSource.readAll().positionCodec().deserializePosition("5"))));
+        assertThat(archiver.lastEventInLiveEventStore().map(ResolvedEvent::position), equalTo(Optional.of(liveEventSource.readAll().storePositionCodec().deserializePosition("5"))));
     }
 
     @Test public void

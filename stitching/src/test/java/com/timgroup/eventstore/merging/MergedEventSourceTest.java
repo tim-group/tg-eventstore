@@ -108,7 +108,7 @@ public final class MergedEventSourceTest {
 
             @Nonnull
             @Override
-            public PositionCodec positionCodec() {
+            public PositionCodec storePositionCodec() {
                 throw new UnsupportedOperationException();
             }
         };
@@ -165,7 +165,7 @@ public final class MergedEventSourceTest {
 
         clock.advanceTo(instant1.plusSeconds(1));
         @SuppressWarnings("OptionalGetWithoutIsPresent") Position startPosition = outputReader.readAllForwards().skip(1).findFirst().get().position();
-        Position deserialisedStartPosition = outputReader.positionCodec().deserializePosition(outputReader.positionCodec().serializePosition(startPosition));
+        Position deserialisedStartPosition = outputReader.storePositionCodec().deserializePosition(outputReader.storePositionCodec().serializePosition(startPosition));
 
         Instant instant2 = clock.instant();
         inputEventArrived(input1, streamId("all", "all"), "CoolenessDestroyed");
@@ -346,7 +346,7 @@ public final class MergedEventSourceTest {
         );
 
         Position position = eventSource1.readAll().emptyStorePosition();
-        String serialisedPosition = eventSource1.readAll().positionCodec().serializePosition(position);
+        String serialisedPosition = eventSource1.readAll().storePositionCodec().serializePosition(position);
 
         JavaInMemoryEventStore input3 = new JavaInMemoryEventStore(clock);
         MergedEventSource eventSource2 = MergedEventSource.streamOrderMergedEventSource(
@@ -357,7 +357,7 @@ public final class MergedEventSourceTest {
         );
 
         try {
-            eventSource2.readAll().positionCodec().deserializePosition(serialisedPosition);
+            eventSource2.readAll().storePositionCodec().deserializePosition(serialisedPosition);
             Assert.fail("expected IllegalArgumentException");
         } catch (IllegalArgumentException e) {
             assertThat(e.getMessage(), equalTo("Bad position, containing no key for c :{\"a\":\"0\",\"b\":\"0\"}"));
@@ -375,7 +375,7 @@ public final class MergedEventSourceTest {
         );
 
         Position position = eventSource1.readAll().emptyStorePosition();
-        String serialisedPosition = eventSource1.readAll().positionCodec().serializePosition(position);
+        String serialisedPosition = eventSource1.readAll().storePositionCodec().serializePosition(position);
 
         MergedEventSource eventSource2 = MergedEventSource.streamOrderMergedEventSource(
                 clock,
@@ -383,7 +383,7 @@ public final class MergedEventSourceTest {
         );
 
         try {
-            eventSource2.readAll().positionCodec().deserializePosition(serialisedPosition);
+            eventSource2.readAll().storePositionCodec().deserializePosition(serialisedPosition);
             Assert.fail("expected IllegalArgumentException");
         } catch (IllegalArgumentException e) {
             assertThat(e.getMessage(), equalTo("Bad position, containing unexpected keys {\"a\":\"0\",\"b\":\"0\"}"));
@@ -408,11 +408,11 @@ public final class MergedEventSourceTest {
         inputEventArrived(input2, streamId("all", "all"), "MoreCoolenessAdded");
         Position b1 = mergedReader.readAllForwards().map(ResolvedEvent::position).reduce(emptyStorePosition, (cur, next) -> next);
 
-        assertThat(mergedReader.positionCodec().comparePositions(emptyStorePosition, emptyStorePosition), equalTo(0));
-        assertThat(mergedReader.positionCodec().comparePositions(emptyStorePosition, a1), lessThan(0));
-        assertThat(mergedReader.positionCodec().comparePositions(a1, emptyStorePosition), greaterThan(0));
-        assertThat(mergedReader.positionCodec().comparePositions(b1, a1), greaterThan(0));
-        assertThat(mergedReader.positionCodec().comparePositions(b1, emptyStorePosition), greaterThan(0));
+        assertThat(mergedReader.storePositionCodec().comparePositions(emptyStorePosition, emptyStorePosition), equalTo(0));
+        assertThat(mergedReader.storePositionCodec().comparePositions(emptyStorePosition, a1), lessThan(0));
+        assertThat(mergedReader.storePositionCodec().comparePositions(a1, emptyStorePosition), greaterThan(0));
+        assertThat(mergedReader.storePositionCodec().comparePositions(b1, a1), greaterThan(0));
+        assertThat(mergedReader.storePositionCodec().comparePositions(b1, emptyStorePosition), greaterThan(0));
         assertThat(a1.toString(), equalTo("a:1;b:0"));
         assertThat(b1.toString(), equalTo("a:1;b:1"));
     }
@@ -443,7 +443,7 @@ public final class MergedEventSourceTest {
         assertThat(merged.positionCodecComparing("b").comparePositions(originalValidPosition, postDelayPosition), is(-1));
 
         thrown.expectMessage("Not comparable: a:2;b:1 <=> a:1;b:2");
-        mergedReader.positionCodec().comparePositions(originalValidPosition, postDelayPosition);
+        mergedReader.storePositionCodec().comparePositions(originalValidPosition, postDelayPosition);
     }
 
     private static void inputEventArrived(EventStreamWriter input, String eventType) {

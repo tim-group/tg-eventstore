@@ -37,5 +37,5 @@ public interface EventReader {
     Position emptyStorePosition();
 
     @Nonnull
-    PositionCodec positionCodec();
+    PositionCodec storePositionCodec();
 }
