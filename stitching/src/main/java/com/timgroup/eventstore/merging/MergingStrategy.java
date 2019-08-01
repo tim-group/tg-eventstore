@@ -32,17 +32,32 @@ public interface MergingStrategy<T extends Comparable<T>> {
     final class EffectiveTimestampMergingStrategy implements MergingStrategy<Instant> {
         private static final Pattern EFFECTIVE_TIMESTAMP_PATTERN = Pattern.compile("\"effective_timestamp\"\\s*:\\s*\"([^\"]+)\"");
 
+        private final boolean fallBackToTimestamp;
+
+        public EffectiveTimestampMergingStrategy() {
+            this(false);
+        }
+
+        public EffectiveTimestampMergingStrategy(boolean fallBackToTimestamp) {
+            this.fallBackToTimestamp = fallBackToTimestamp;
+        }
+
         @Nonnull
         @Override
         public Instant toComparable(ResolvedEvent event) {
             return effectiveTimestampFrom(event);
         }
 
-        private static Instant effectiveTimestampFrom(ResolvedEvent event) {
+        private Instant effectiveTimestampFrom(ResolvedEvent event) {
             String metadata = new String(event.eventRecord().metadata(), UTF_8);
-            Matcher matcher = EFFECTIVE_TIMESTAMP_PATTERN.matcher(metadata);
-            if (matcher.find()) {
-                return Instant.parse(matcher.group(1));
+            if (!metadata.isEmpty()) {
+                Matcher matcher = EFFECTIVE_TIMESTAMP_PATTERN.matcher(metadata);
+                if (matcher.find()) {
+                    return Instant.parse(matcher.group(1));
+                }
+            }
+            if (fallBackToTimestamp) {
+                return event.eventRecord().timestamp();
             }
             throw new IllegalStateException("no timestamp in metadata of " + event);
         }
