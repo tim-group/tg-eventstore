@@ -41,11 +41,11 @@ public class BackfillParallelChangeCodec implements PositionCodec {
     public Position deserializePosition(String position) {
         String[] positions = StitchedPosition.STITCH_PATTERN.split(position);
         if (isStitchedPosition(positions)) {
-            Position livePosition = livePositionCodec.deserializePosition(positions[1]);
-            requireNotInBackfill(livePosition);
             if (underlyingIsStitched) {
                 return underlying.deserializePosition(position);
             } else {
+                Position livePosition = livePositionCodec.deserializePosition(positions[1]);
+                requireNotInBackfill(livePosition);
                 return livePosition;
             }
         } else {
@@ -66,7 +66,19 @@ public class BackfillParallelChangeCodec implements PositionCodec {
 
     @Override
     public int comparePositions(Position left, Position right) {
-        return livePositionCodec.comparePositions(requireNotInBackfill(getLivePosition(left)), requireNotInBackfill(getLivePosition(right)));
+        if (isInBackfill(left)) {
+            if (isInBackfill(right)) {
+                throw new UnsupportedOperationException("Cannot compare two positions in backfill");
+            } else {
+                return -1;
+            }
+        } else {
+            if (isInBackfill(right)) {
+                return 1;
+            } else {
+                return livePositionCodec.comparePositions(getLivePosition(left), getLivePosition(right));
+            }
+        }
     }
 
     private boolean isStitchedPosition(String[] positions) {
@@ -79,18 +91,21 @@ public class BackfillParallelChangeCodec implements PositionCodec {
         }
     }
 
-    private Position requireNotInBackfill(Position livePosition) {
-        if (livePositionCodec.comparePositions(livePosition, liveCutoffStartPosition) < 1) {
-            throw new IllegalStateException("Cannot handle positions in the backfill");
-        }
-        return livePosition;
-    }
-
     private Position getLivePosition(Position position) {
         if (position instanceof StitchedPosition) {
             return ((StitchedPosition) position).livePosition;
         } else {
             return position;
+        }
+    }
+
+    private boolean isInBackfill(Position position) {
+        return livePositionCodec.comparePositions(getLivePosition(position), liveCutoffStartPosition) == 0;
+    }
+
+    private void requireNotInBackfill(Position position) {
+        if (isInBackfill(position)) {
+            throw new IllegalStateException("Cannot handle positions in the backfill");
         }
     }
 }
