@@ -16,15 +16,15 @@ import java.util.List;
 
 public final class BackfillStitchingEventSource implements EventSource {
 
-    private final EventSource backfill;
-    private final EventSource live;
+    final EventSource backfill;
+    final EventSource live;
     private final PositionCodec positionCodec;
     private final BackfillStitchingEventReader eventReader;
 
     public BackfillStitchingEventSource(EventSource backfill, EventSource live, Position liveCutoffStartPosition) {
         this.backfill = backfill;
         this.live = live;
-        this.positionCodec = StitchedPosition.codec(backfill.positionCodec(), live.positionCodec()); // only for deprecated accessor
+        this.positionCodec = StitchedPosition.codec(backfill.readAll().storePositionCodec(), live.readAll().storePositionCodec()); // only for deprecated accessor
         this.eventReader = new BackfillStitchingEventReader(backfill, live, liveCutoffStartPosition);
     }
 

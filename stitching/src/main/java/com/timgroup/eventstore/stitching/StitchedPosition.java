@@ -21,11 +21,9 @@ final class StitchedPosition implements Position {
                             liveCodec.deserializePosition(positions[1])
                     );
                 },
-                stitchedPosition -> {
-                    return backfillCodec.serializePosition(stitchedPosition.backfillPosition)
-                            + STITCH_SEPARATOR
-                            + liveCodec.serializePosition(stitchedPosition.livePosition);
-                },
+                stitchedPosition -> backfillCodec.serializePosition(stitchedPosition.backfillPosition)
+                        + STITCH_SEPARATOR
+                        + liveCodec.serializePosition(stitchedPosition.livePosition),
                 comparing((StitchedPosition p) -> p.backfillPosition, backfillCodec::comparePositions)
                         .thenComparing(p -> p.livePosition, liveCodec::comparePositions));
     }
