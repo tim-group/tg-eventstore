@@ -10,8 +10,8 @@ import java.util.regex.Pattern;
 import static java.util.Comparator.comparing;
 
 final class StitchedPosition implements Position {
-    private static final String STITCH_SEPARATOR = "~~~";
-    private static final Pattern STITCH_PATTERN = Pattern.compile(Pattern.quote(STITCH_SEPARATOR));
+    static final String STITCH_SEPARATOR = "~~~";
+    static final Pattern STITCH_PATTERN = Pattern.compile(Pattern.quote(STITCH_SEPARATOR));
     static PositionCodec codec(PositionCodec backfillCodec, PositionCodec liveCodec) {
         return PositionCodec.fromComparator(StitchedPosition.class,
                 string -> {
