@@ -43,32 +43,32 @@ public class BackfillParallelChangeCodecTest {
     }
 
     @Test
-    public void compares_stitched_with_unstitched_with_stitched_event_source() {
+    public void compares_stitched_with_unstitched() {
+        BackfillParallelChangeCodec codec = new BackfillParallelChangeCodec(live, backfillEndPosition, liveStartCutoffPosition);
+        int compareStitchedOnLeft = codec.comparePositions(stitchedCodec.deserializePosition("10~~~30"), unstitchedCodec.deserializePosition("30"));
+        assertThat(compareStitchedOnLeft, is(0));
+    }
+
+    @Test
+    public void compares_unstitched_with_stitched() {
+        BackfillParallelChangeCodec codec = new BackfillParallelChangeCodec(live, backfillEndPosition, liveStartCutoffPosition);
+        int compareUnstitchedOnLeft = codec.comparePositions(unstitchedCodec.deserializePosition("30"), stitchedCodec.deserializePosition("10~~~30"));
+        assertThat(compareUnstitchedOnLeft, is(0));
+    }
+
+    @Test
+    public void throws_and_exception_if_attempt_is_made_to_compare_two_backfill_positions() {
         BackfillParallelChangeCodec codec = new BackfillParallelChangeCodec(stitchedEventSource, backfillEndPosition, liveStartCutoffPosition);
-        int compareResult = codec.comparePositions(stitchedCodec.deserializePosition("10~~~30"), unstitchedCodec.deserializePosition("30"));
-        assertThat(compareResult, is(0));
-    }
-
-    @Test
-    public void compares_stitched_with_unstitched_with_unstitched_event_source() {
-        BackfillParallelChangeCodec codec = new BackfillParallelChangeCodec(live, backfillEndPosition, liveStartCutoffPosition);
-        int compareResult = codec.comparePositions(stitchedCodec.deserializePosition("10~~~30"), unstitchedCodec.deserializePosition("30"));
-        assertThat(compareResult, is(0));
-    }
-
-    @Test
-    public void throws_and_exception_if_attempt_is_made_to_compare_backfill_position() {
-        BackfillParallelChangeCodec codec = new BackfillParallelChangeCodec(live, backfillEndPosition, liveStartCutoffPosition);
         try {
-            codec.comparePositions(stitchedCodec.deserializePosition("10~~~20"), unstitchedCodec.deserializePosition("30"));
+            codec.comparePositions(stitchedCodec.deserializePosition("10~~~20"), stitchedCodec.deserializePosition("11~~~20"));
             fail("Expected exception not thrown");
-        } catch (IllegalStateException e ) {
-            assertThat(e.getMessage(), is("Cannot handle positions in the backfill"));
+        } catch (UnsupportedOperationException e ) {
+            assertThat(e.getMessage(), is("Cannot compare two positions in backfill"));
         }
     }
 
     @Test
-    public void throws_and_exception_if_attempt_is_made_to_deserialise_backfill_position() {
+    public void throws_and_exception_if_attempt_is_made_to_deserialise_backfill_position_with_an_unstitched_event_source() {
         BackfillParallelChangeCodec codec = new BackfillParallelChangeCodec(live, backfillEndPosition, liveStartCutoffPosition);
         try {
             codec.deserializePosition("10~~~20");

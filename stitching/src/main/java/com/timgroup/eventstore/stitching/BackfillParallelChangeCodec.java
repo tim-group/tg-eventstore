@@ -50,7 +50,6 @@ public class BackfillParallelChangeCodec implements PositionCodec {
             }
         } else {
             Position livePosition = livePositionCodec.deserializePosition(position);
-            requireNotInBackfill(livePosition);
             if (underlyingIsStitched) {
                 return new StitchedPosition(backfillEndPosition, livePosition);
             } else {
