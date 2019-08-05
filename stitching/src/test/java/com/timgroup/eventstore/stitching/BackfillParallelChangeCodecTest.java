@@ -19,25 +19,39 @@ public class BackfillParallelChangeCodecTest {
 
     @Test
     public void when_expanding_deserializes_stitched_as_stitched() {
-        BackfillParallelChangeCodec codec = new BackfillParallelChangeCodec(stitchedEventSource, defaultLeftPosition);
+        BackfillParallelChangeCodec codec = new BackfillParallelChangeCodec(stitchedEventSource, defaultLeftPosition, unstitchedCodec);
         assertThat(codec.deserializePosition("10~~~30"), is(stitchedCodec.deserializePosition("10~~~30")));
     }
 
     @Test
     public void when_expanding_deserializes_unstitched_as_stitched() {
-        BackfillParallelChangeCodec codec = new BackfillParallelChangeCodec(stitchedEventSource, defaultLeftPosition);
+        BackfillParallelChangeCodec codec = new BackfillParallelChangeCodec(stitchedEventSource, defaultLeftPosition, unstitchedCodec);
         assertThat(codec.deserializePosition("30"), is(stitchedCodec.deserializePosition("10~~~30")));
     }
 
     @Test
     public void when_migrating_deserializes_stitched_as_unstitched() {
-        BackfillParallelChangeCodec codec = new BackfillParallelChangeCodec(live, defaultLeftPosition);
+        BackfillParallelChangeCodec codec = new BackfillParallelChangeCodec(live, defaultLeftPosition, unstitchedCodec);
         assertThat(codec.deserializePosition("10~~~30"), is(unstitchedCodec.deserializePosition("30")));
     }
 
     @Test
     public void when_migrating_deserializes_unstitched_as_unstitched() {
-        BackfillParallelChangeCodec codec = new BackfillParallelChangeCodec(live, defaultLeftPosition);
+        BackfillParallelChangeCodec codec = new BackfillParallelChangeCodec(live, defaultLeftPosition, unstitchedCodec);
         assertThat(codec.deserializePosition("30"), is(unstitchedCodec.deserializePosition("30")));
+    }
+
+    @Test
+    public void compares_stitched_with_unstitched_with_stitched_event_source() {
+        BackfillParallelChangeCodec codec = new BackfillParallelChangeCodec(stitchedEventSource, defaultLeftPosition, unstitchedCodec);
+        int compareResult = codec.comparePositions(stitchedCodec.deserializePosition("10~~~30"), unstitchedCodec.deserializePosition("30"));
+        assertThat(compareResult, is(0));
+    }
+
+    @Test
+    public void compares_stitched_with_unstitched_with_unstitched_event_source() {
+        BackfillParallelChangeCodec codec = new BackfillParallelChangeCodec(live, defaultLeftPosition, unstitchedCodec);
+        int compareResult = codec.comparePositions(stitchedCodec.deserializePosition("10~~~30"), unstitchedCodec.deserializePosition("30"));
+        assertThat(compareResult, is(0));
     }
 }

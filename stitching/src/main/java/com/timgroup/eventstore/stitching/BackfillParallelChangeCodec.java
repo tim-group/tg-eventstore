@@ -8,11 +8,10 @@ import java.util.Objects;
 
 /**
  * Codec for use in three phase Expand, Migrate, Contract changes to replace a {@link com.timgroup.eventstore.stitching.BackfillStitchingEventSource} with a non stitched event source
- *
+ * <p>
  * In the expand phase provide a stitched event source. This will read stiched or unstitched positions and write stitch positions.
  * In the migrate phase provide an unstitched event source. This will read stitched or unstitched positions and write unstitched positions.
  * In the contract phase remove this codec and use the unstitched event sources codec directly.
- *
  */
 public class BackfillParallelChangeCodec implements PositionCodec {
 
@@ -21,11 +20,13 @@ public class BackfillParallelChangeCodec implements PositionCodec {
     private final PositionCodec underlying;
     private final String defaultLeftPosition;
     private final boolean underlyingIsStitched;
+    private final PositionCodec livePositionCodec;
 
-    public BackfillParallelChangeCodec(EventSource eventSource, String defaultLeftPosition) {
+    public BackfillParallelChangeCodec(EventSource eventSource, String defaultLeftPosition, PositionCodec livePositionCodec) {
         this.underlying = eventSource.readAll().storePositionCodec();
         this.defaultLeftPosition = Objects.requireNonNull(defaultLeftPosition);
         underlyingIsStitched = eventSource instanceof BackfillStitchingEventSource;
+        this.livePositionCodec = livePositionCodec;
     }
 
     @Override
@@ -52,5 +53,18 @@ public class BackfillParallelChangeCodec implements PositionCodec {
     @Override
     public String serializePosition(Position position) {
         return underlying.serializePosition(position);
+    }
+
+    @Override
+    public int comparePositions(Position left, Position right) {
+        return livePositionCodec.comparePositions(getLivePosition(left), getLivePosition(right));
+    }
+
+    private Position getLivePosition(Position position) {
+        if (position instanceof StitchedPosition) {
+            return ((StitchedPosition) position).livePosition;
+        } else {
+            return position;
+        }
     }
 }
