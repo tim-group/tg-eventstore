@@ -51,7 +51,7 @@ dependencies {
     testImplementation "com.timgroup:clocks-testing:1.0.1095" // autobump
     testImplementation "net.ttsui.junit.rules.pending:pending:0.0.1055"
     testImplementation "org.mockito:mockito-core:2.26.0"
-    testImplementation "com.youdevise:Matchers:0.0.1288" // autobump
+    testImplementation "com.youdevise:Matchers:0.0.1289" // autobump
 }
 
 tasks.withType(JavaCompile).all {
