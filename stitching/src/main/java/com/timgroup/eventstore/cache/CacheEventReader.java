@@ -30,6 +30,10 @@ public class CacheEventReader implements EventReader {
     private final Path cacheDirectory;
     private final String cacheFileBaseName;
 
+    public CacheEventReader(EventReader underlying, Path cacheDirectory, String cacheFileBaseName) {
+        this(underlying, underlying.storePositionCodec(), cacheDirectory, cacheFileBaseName);
+    }
+
     public CacheEventReader(EventReader underlying, PositionCodec positionCodec, Path cacheDirectory, String cacheFileBaseName) {
         this.underlying = underlying;
         this.positionCodec = positionCodec;
