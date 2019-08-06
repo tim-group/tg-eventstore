@@ -21,7 +21,7 @@ public interface EventSource {
     @Nonnull PositionCodec positionCodec();
     @Nonnull Collection<Component> monitoring();
 
-    default EventSource withMonitoring(Collection<Component> moreMonitoring) {
+    default EventSource withMonitoring(Collection<? extends Component> moreMonitoring) {
         requireNonNull(moreMonitoring);
 
         return new EventSource() {
