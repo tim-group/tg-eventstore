@@ -5,6 +5,8 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import javax.annotation.Nonnull;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,6 +21,14 @@ public interface MergingStrategy<T extends Comparable<T>> {
 
     @Nonnull default MergingStrategy<T> withDelay(Duration delay) {
         return new DelayedMergingStrategy<>(delay, this);
+    }
+
+    default <U extends Comparable<U>> MergingStrategy<U> andThen(Function<? super T, ? extends U> operator) {
+        return re -> operator.apply(toComparable(re));
+    }
+
+    default <U extends Comparable<U>> MergingStrategy<U> andThen(BiFunction<? super ResolvedEvent, ? super T, ? extends U> modifier) {
+        return re -> modifier.apply(re, toComparable(re));
     }
 
     final class StreamIndexMergingStrategy implements MergingStrategy<Integer> {
