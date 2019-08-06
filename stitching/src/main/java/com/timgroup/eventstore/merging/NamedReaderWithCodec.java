@@ -56,11 +56,27 @@ public final class NamedReaderWithCodec {
     }
 
     public static NamedReaderWithCodec fromEventReader(String name, EventReader eventReader) {
-        return new NamedReaderWithCodec(name, eventReader, eventReader.storePositionCodec());
+        return fromEventReader(name, eventReader, eventReader.emptyStorePosition());
+    }
+
+    public static NamedReaderWithCodec fromEventReader(String name, EventReader eventReader, String startingPosition) {
+        return fromEventReader(name, eventReader, eventReader.storePositionCodec().deserializePosition(startingPosition));
+    }
+
+    public static NamedReaderWithCodec fromEventReader(String name, EventReader eventReader, Position startingPosition) {
+        return new NamedReaderWithCodec(name, eventReader, eventReader.storePositionCodec(), startingPosition);
     }
 
     public static NamedReaderWithCodec fromEventCategoryReader(String name, EventCategoryReader eventCategoryReader, String category) {
-        return new NamedReaderWithCodec(name, pos -> eventCategoryReader.readCategoryForwards(category, pos), eventCategoryReader.categoryPositionCodec(category), eventCategoryReader.emptyCategoryPosition(category));
+        return fromEventCategoryReader(name, eventCategoryReader, category, eventCategoryReader.emptyCategoryPosition(category));
+    }
+
+    public static NamedReaderWithCodec fromEventCategoryReader(String name, EventCategoryReader eventCategoryReader, String category, String startingPosition) {
+        return fromEventCategoryReader(name, eventCategoryReader, category, eventCategoryReader.categoryPositionCodec(category).deserializePosition(startingPosition));
+    }
+
+    public static NamedReaderWithCodec fromEventCategoryReader(String name, EventCategoryReader eventCategoryReader, String category, Position startingPosition) {
+        return new NamedReaderWithCodec(name, pos -> eventCategoryReader.readCategoryForwards(category, pos), eventCategoryReader.categoryPositionCodec(category), startingPosition);
     }
 
     @Override
