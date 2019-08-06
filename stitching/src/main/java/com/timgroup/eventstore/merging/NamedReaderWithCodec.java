@@ -7,6 +7,9 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -77,6 +80,19 @@ public final class NamedReaderWithCodec {
 
     public static NamedReaderWithCodec fromEventCategoryReader(String name, EventCategoryReader eventCategoryReader, String category, Position startingPosition) {
         return new NamedReaderWithCodec(name, pos -> eventCategoryReader.readCategoryForwards(category, pos), eventCategoryReader.categoryPositionCodec(category), startingPosition);
+    }
+
+    public static NamedReaderWithCodec selectedCategories(String name, EventReader reader, EventCategoryReader categoryReader, Collection<String> categories) {
+        return selectedCategories(name, reader, categoryReader, categories, reader.emptyStorePosition());
+    }
+
+    public static NamedReaderWithCodec selectedCategories(String name, EventReader reader, EventCategoryReader categoryReader, Collection<String> categories, String startingPosition) {
+        return selectedCategories(name, reader, categoryReader, categories, reader.storePositionCodec().deserializePosition(startingPosition));
+    }
+
+    public static NamedReaderWithCodec selectedCategories(String name, EventReader reader, EventCategoryReader categoryReader, Collection<String> categories, Position startingPosition) {
+        List<String> categoryList = new ArrayList<>(categories);
+        return new NamedReaderWithCodec(name, pos -> categoryReader.readCategoriesForwards(categoryList, pos), reader.storePositionCodec(), startingPosition);
     }
 
     @Override
