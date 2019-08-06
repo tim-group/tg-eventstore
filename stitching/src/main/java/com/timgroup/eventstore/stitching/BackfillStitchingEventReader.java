@@ -16,9 +16,9 @@ import static java.util.Objects.requireNonNull;
 @ParametersAreNonnullByDefault
 public final class BackfillStitchingEventReader implements EventReader {
 
-    private final StitchedPosition emptyStorePosition;
     private final EventReader backfill;
     private final EventReader live;
+    private final Position liveCutoffStartPosition;
 
     public BackfillStitchingEventReader(EventSource backfill, EventSource live, Position liveCutoffStartPosition) {
         this(backfill.readAll(), live.readAll(), liveCutoffStartPosition);
@@ -27,13 +27,13 @@ public final class BackfillStitchingEventReader implements EventReader {
     public BackfillStitchingEventReader(EventReader backfill, EventReader live, Position liveCutoffStartPosition) {
         this.backfill = backfill;
         this.live = requireNonNull(live);
-        this.emptyStorePosition = new StitchedPosition(backfill.emptyStorePosition(), liveCutoffStartPosition);
+        this.liveCutoffStartPosition = liveCutoffStartPosition;
     }
 
     @Nonnull
     @Override
-    public Position emptyStorePosition() {
-        return emptyStorePosition;
+    public StitchedPosition emptyStorePosition() {
+        return new StitchedPosition(backfill.emptyStorePosition(), liveCutoffStartPosition);
     }
 
     @Nonnull
@@ -47,7 +47,7 @@ public final class BackfillStitchingEventReader implements EventReader {
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
         StitchedPosition stitchedPosition = (StitchedPosition) positionExclusive;
-        if (stitchedPosition.isInBackfill(emptyStorePosition)) {
+        if (stitchedPosition.isInBackfill(liveCutoffStartPosition)) {
             return BackfillStitchingEventForwardsSpliterator.stitchedStreamFrom(
                     backfill.readAllForwards(stitchedPosition.backfillPosition),
                     live.readAllForwards(stitchedPosition.livePosition),
@@ -65,7 +65,7 @@ public final class BackfillStitchingEventReader implements EventReader {
     @Override
     public String toString() {
         return "BackfillStitchingEventReader{" +
-                "emptyStorePosition=" + emptyStorePosition +
+                "liveCutoffStartPosition=" + liveCutoffStartPosition +
                 ", backfill=" + backfill +
                 ", live=" + live +
                 '}';
