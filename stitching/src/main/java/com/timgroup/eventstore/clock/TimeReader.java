@@ -33,7 +33,7 @@ public final class TimeReader implements EventReader {
     @Nonnull
     public static NamedReaderWithCodec timePassedEventStream(Instant start, Duration accuracy, Clock clock) {
         TimeReader timeReader = new TimeReader(start, accuracy, clock);
-        return new NamedReaderWithCodec("Clock", timeReader, TimePosition.CODEC);
+        return NamedReaderWithCodec.fromEventReader("Clock", timeReader);
     }
 
     @CheckReturnValue
