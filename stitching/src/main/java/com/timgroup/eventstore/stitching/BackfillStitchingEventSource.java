@@ -20,12 +20,14 @@ public final class BackfillStitchingEventSource implements EventSource {
     final EventSource live;
     private final PositionCodec positionCodec;
     private final BackfillStitchingEventReader eventReader;
+    private final BackfillStitchingEventCategoryReader eventCategoryReader;
 
     public BackfillStitchingEventSource(EventSource backfill, EventSource live, Position liveCutoffStartPosition) {
         this.backfill = backfill;
         this.live = live;
         this.positionCodec = StitchedPosition.codec(backfill.readAll().storePositionCodec(), live.readAll().storePositionCodec()); // only for deprecated accessor
         this.eventReader = new BackfillStitchingEventReader(backfill, live, liveCutoffStartPosition);
+        this.eventCategoryReader = new BackfillStitchingEventCategoryReader(backfill, live, liveCutoffStartPosition);
     }
 
     @Nonnull
@@ -37,7 +39,7 @@ public final class BackfillStitchingEventSource implements EventSource {
     @Nonnull
     @Override
     public EventCategoryReader readCategory() {
-        return this.eventReader;
+        return this.eventCategoryReader;
     }
 
     @Nonnull

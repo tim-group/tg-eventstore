@@ -40,6 +40,10 @@ final class StitchedPosition implements Position {
         return this.livePosition.equals(emptyStorePosition.livePosition);
     }
 
+    boolean isInBackfill(Position liveCutoffStartPosition) {
+        return this.livePosition.equals(liveCutoffStartPosition);
+    }
+
     @Override
     public boolean equals(@Nullable Object o) {
         if (this == o) return true;

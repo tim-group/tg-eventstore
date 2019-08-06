@@ -1,6 +1,5 @@
 package com.timgroup.eventstore.stitching;
 
-import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.Position;
@@ -15,16 +14,20 @@ import java.util.stream.Stream;
 import static java.util.Objects.requireNonNull;
 
 @ParametersAreNonnullByDefault
-public final class BackfillStitchingEventReader implements EventReader, EventCategoryReader {
+public final class BackfillStitchingEventReader implements EventReader {
 
     private final StitchedPosition emptyStorePosition;
-    private final EventSource backfill;
-    private final EventSource live;
+    private final EventReader backfill;
+    private final EventReader live;
 
     public BackfillStitchingEventReader(EventSource backfill, EventSource live, Position liveCutoffStartPosition) {
+        this(backfill.readAll(), live.readAll(), liveCutoffStartPosition);
+    }
+
+    public BackfillStitchingEventReader(EventReader backfill, EventReader live, Position liveCutoffStartPosition) {
         this.backfill = backfill;
         this.live = requireNonNull(live);
-        this.emptyStorePosition = new StitchedPosition(backfill.readAll().emptyStorePosition(), liveCutoffStartPosition);
+        this.emptyStorePosition = new StitchedPosition(backfill.emptyStorePosition(), liveCutoffStartPosition);
     }
 
     @Nonnull
@@ -36,13 +39,7 @@ public final class BackfillStitchingEventReader implements EventReader, EventCat
     @Nonnull
     @Override
     public PositionCodec storePositionCodec() {
-        return StitchedPosition.codec(backfill.readAll().storePositionCodec(), live.readAll().storePositionCodec());
-    }
-
-    @Nonnull
-    @Override
-    public PositionCodec categoryPositionCodec(String category) {
-        return StitchedPosition.codec(backfill.readCategory().categoryPositionCodec(category), live.readCategory().categoryPositionCodec(category));
+        return StitchedPosition.codec(backfill.storePositionCodec(), live.storePositionCodec());
     }
 
     @Nonnull
@@ -52,43 +49,17 @@ public final class BackfillStitchingEventReader implements EventReader, EventCat
         StitchedPosition stitchedPosition = (StitchedPosition) positionExclusive;
         if (stitchedPosition.isInBackfill(emptyStorePosition)) {
             return BackfillStitchingEventForwardsSpliterator.stitchedStreamFrom(
-                    backfill.readAll().readAllForwards(stitchedPosition.backfillPosition),
-                    live.readAll().readAllForwards(stitchedPosition.livePosition),
+                    backfill.readAllForwards(stitchedPosition.backfillPosition),
+                    live.readAllForwards(stitchedPosition.livePosition),
                     stitchedPosition
             );
         } else {
             return BackfillStitchingEventForwardsSpliterator.stitchedStreamFrom(
                     Stream.empty(),
-                    live.readAll().readAllForwards(stitchedPosition.livePosition),
+                    live.readAllForwards(stitchedPosition.livePosition),
                     stitchedPosition
             );
         }
-    }
-
-    @Nonnull
-    @CheckReturnValue
-    @Override
-    public Stream<ResolvedEvent> readCategoryForwards(String category, Position positionExclusive) {
-        StitchedPosition stitchedPosition = (StitchedPosition) positionExclusive;
-        if (stitchedPosition.isInBackfill(emptyStorePosition)) {
-            return BackfillStitchingEventForwardsSpliterator.stitchedStreamFrom(
-                    backfill.readCategory().readCategoryForwards(category, stitchedPosition.backfillPosition),
-                    live.readCategory().readCategoryForwards(category, stitchedPosition.livePosition),
-                    stitchedPosition
-            );
-        } else {
-            return BackfillStitchingEventForwardsSpliterator.stitchedStreamFrom(
-                    Stream.empty(),
-                    live.readCategory().readCategoryForwards(category, stitchedPosition.livePosition),
-                    stitchedPosition
-            );
-        }
-    }
-
-    @Nonnull
-    @Override
-    public Position emptyCategoryPosition(String category) {
-        return emptyStorePosition;
     }
 
     @Override
