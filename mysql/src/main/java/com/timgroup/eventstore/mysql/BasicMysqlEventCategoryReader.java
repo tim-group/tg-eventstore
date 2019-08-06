@@ -95,7 +95,7 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
 
     @Nonnull
     @Override
-    public PositionCodec categoryPositionCodec() {
+    public PositionCodec categoryPositionCodec(String category) {
         return BasicMysqlEventStorePosition.CODEC;
     }
 

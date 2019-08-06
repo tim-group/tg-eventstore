@@ -179,7 +179,7 @@ public class JavaInMemoryEventStore implements EventStreamWriter, EventStreamRea
 
     @Nonnull
     @Override
-    public PositionCodec categoryPositionCodec() {
+    public PositionCodec categoryPositionCodec(String category) {
         return CODEC;
     }
 

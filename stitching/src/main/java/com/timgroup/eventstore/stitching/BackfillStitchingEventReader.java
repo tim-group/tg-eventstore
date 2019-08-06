@@ -41,8 +41,8 @@ public final class BackfillStitchingEventReader implements EventReader, EventCat
 
     @Nonnull
     @Override
-    public PositionCodec categoryPositionCodec() {
-        return StitchedPosition.codec(backfill.readCategory().categoryPositionCodec(), live.readCategory().categoryPositionCodec());
+    public PositionCodec categoryPositionCodec(String category) {
+        return StitchedPosition.codec(backfill.readCategory().categoryPositionCodec(category), live.readCategory().categoryPositionCodec(category));
     }
 
     @Nonnull

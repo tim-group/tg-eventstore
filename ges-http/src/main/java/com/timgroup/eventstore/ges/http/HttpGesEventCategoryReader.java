@@ -35,7 +35,7 @@ public class HttpGesEventCategoryReader implements EventCategoryReader {
 
     @Nonnull
     @Override
-    public PositionCodec categoryPositionCodec() {
+    public PositionCodec categoryPositionCodec(String category) {
         return GesHttpPosition.CODEC;
     }
 

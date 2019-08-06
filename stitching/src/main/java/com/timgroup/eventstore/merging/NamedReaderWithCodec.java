@@ -60,7 +60,7 @@ public final class NamedReaderWithCodec {
     }
 
     public static NamedReaderWithCodec fromEventCategoryReader(String name, EventCategoryReader eventCategoryReader, String category) {
-        return new NamedReaderWithCodec(name, pos -> eventCategoryReader.readCategoryForwards(category, pos), eventCategoryReader.categoryPositionCodec(), eventCategoryReader.emptyCategoryPosition(category));
+        return new NamedReaderWithCodec(name, pos -> eventCategoryReader.readCategoryForwards(category, pos), eventCategoryReader.categoryPositionCodec(category), eventCategoryReader.emptyCategoryPosition(category));
     }
 
     @Override

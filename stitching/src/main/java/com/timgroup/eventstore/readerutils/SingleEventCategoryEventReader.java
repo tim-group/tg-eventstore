@@ -64,7 +64,7 @@ public final class SingleEventCategoryEventReader implements EventReader {
     @Nonnull
     @Override
     public PositionCodec storePositionCodec() {
-        return underlying.categoryPositionCodec();
+        return underlying.categoryPositionCodec(this.category);
     }
 
     @Override

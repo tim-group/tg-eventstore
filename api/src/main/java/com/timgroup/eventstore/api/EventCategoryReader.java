@@ -45,5 +45,5 @@ public interface EventCategoryReader {
     Position emptyCategoryPosition(String category);
 
     @Nonnull
-    PositionCodec categoryPositionCodec();
+    PositionCodec categoryPositionCodec(String category);
 }
