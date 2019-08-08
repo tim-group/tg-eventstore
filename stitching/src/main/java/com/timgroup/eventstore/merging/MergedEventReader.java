@@ -29,14 +29,14 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.range;
 
-final class MergedEventReader implements EventReader {
+public final class MergedEventReader implements EventReader {
 
     private final Clock clock;
     private final MergingStrategy<?> mergingStrategy;
     private final List<NamedReaderWithCodec> readers;
     private final PositionCodec positionCodec;
 
-    MergedEventReader(Clock clock, MergingStrategy<?> mergingStrategy, NamedReaderWithCodec... readers) {
+    public MergedEventReader(Clock clock, MergingStrategy<?> mergingStrategy, NamedReaderWithCodec... readers) {
         checkArgument(
                 Arrays.stream(readers).map(nr -> nr.name).distinct().count() == readers.length,
                 "reader names must be unique"
