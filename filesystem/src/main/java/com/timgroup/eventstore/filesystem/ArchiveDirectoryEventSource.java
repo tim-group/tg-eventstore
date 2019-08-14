@@ -100,13 +100,6 @@ public final class ArchiveDirectoryEventSource implements EventSource, EventRead
 
     @Nonnull
     @Override
-    @Deprecated
-    public PositionCodec positionCodec() {
-        return ArchiveDirectoryPosition.CODEC;
-    }
-
-    @Nonnull
-    @Override
     public Position emptyStorePosition() {
         return ArchiveDirectoryPosition.EMPTY;
     }

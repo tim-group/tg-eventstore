@@ -5,7 +5,6 @@ import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.EventStreamWriter;
-import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.tucker.info.Component;
 
 import javax.annotation.Nonnull;
@@ -45,13 +44,6 @@ public final class ArchiveEventSource implements EventSource {
     @Override
     public EventStreamWriter writeStream() {
         throw new UnsupportedOperationException();
-    }
-
-    @Nonnull
-    @Override
-    @Deprecated
-    public PositionCodec positionCodec() {
-        return ArchivePosition.CODEC;
     }
 
     @Nonnull

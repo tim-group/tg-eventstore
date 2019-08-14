@@ -64,13 +64,6 @@ public final class MergedEventSource implements EventSource {
     }
 
     @Nonnull
-    @Override
-    @Deprecated
-    public PositionCodec positionCodec() {
-        return eventReader.storePositionCodec();
-    }
-
-    @Nonnull
     public PositionCodec positionCodecComparing(String eventSourceName) {
         return eventReader.positionCodecComparing(eventSourceName);
     }

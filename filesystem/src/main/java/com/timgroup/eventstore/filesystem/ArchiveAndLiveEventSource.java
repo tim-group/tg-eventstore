@@ -124,13 +124,6 @@ public final class ArchiveAndLiveEventSource implements EventSource, EventReader
 
     @Nonnull
     @Override
-    @Deprecated
-    public PositionCodec positionCodec() {
-        return storePositionCodec();
-    }
-
-    @Nonnull
-    @Override
     public EventReader readAll() {
         return this;
     }

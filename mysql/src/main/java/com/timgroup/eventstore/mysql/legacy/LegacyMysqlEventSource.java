@@ -7,7 +7,6 @@ import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.EventStreamWriter;
-import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
 import com.timgroup.eventstore.mysql.StacksConfiguredDataSource;
@@ -75,13 +74,6 @@ public class LegacyMysqlEventSource implements EventSource {
     @Override
     public EventStreamWriter writeStream() {
         return eventStreamWriter;
-    }
-
-    @Nonnull
-    @Override
-    @Deprecated
-    public PositionCodec positionCodec() {
-        return LegacyMysqlEventPosition.CODEC;
     }
 
     @Nonnull

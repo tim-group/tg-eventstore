@@ -23,7 +23,7 @@ import java.util.zip.GZIPInputStream;
 
 import static java.util.stream.Collectors.toList;
 
-public class S3ArchivedEventReader implements EventReader {
+public final class S3ArchivedEventReader implements EventReader {
     private final S3ListableStorage s3ListableStorage;
     private final S3DownloadableStorageWithoutDestinationFile s3DownloadableStorage;
     private final String eventStoreId;

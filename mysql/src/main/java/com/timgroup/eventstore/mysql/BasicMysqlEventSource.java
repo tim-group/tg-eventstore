@@ -7,7 +7,6 @@ import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.EventStreamWriter;
-import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.tucker.info.Component;
 import com.typesafe.config.Config;
 import org.slf4j.LoggerFactory;
@@ -19,7 +18,6 @@ import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Properties;
-import java.util.function.Supplier;
 
 import static java.util.Collections.singletonList;
 
@@ -72,13 +70,6 @@ public class BasicMysqlEventSource implements EventSource {
     @Override
     public EventStreamWriter writeStream() {
         return new BasicMysqlEventStreamWriter(connectionProvider, databaseName, tableName, metricRegistry);
-    }
-
-    @Nonnull
-    @Override
-    @Deprecated
-    public PositionCodec positionCodec() {
-        return BasicMysqlEventStorePosition.CODEC;
     }
 
     @Nonnull

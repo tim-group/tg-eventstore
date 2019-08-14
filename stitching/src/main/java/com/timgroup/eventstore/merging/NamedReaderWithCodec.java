@@ -2,7 +2,6 @@ package com.timgroup.eventstore.merging;
 
 import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventReader;
-import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
@@ -48,14 +47,6 @@ public final class NamedReaderWithCodec {
         this.reader = reader;
         this.codec = codec;
         this.startingPosition = startingPosition;
-    }
-
-    /**
-     * @deprecated use {@link #fromEventReader(String, EventReader)}
-     */
-    @Deprecated
-    public static NamedReaderWithCodec fromEventSource(String name, EventSource source) {
-        return new NamedReaderWithCodec(name, source.readAll(), source.positionCodec());
     }
 
     public static NamedReaderWithCodec fromEventReader(String name, EventReader eventReader) {

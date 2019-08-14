@@ -14,11 +14,6 @@ public interface EventSource {
     @Nonnull EventCategoryReader readCategory();
     @Nonnull EventStreamReader readStream();
     @Nonnull EventStreamWriter writeStream();
-    /**
-     * @deprecated use positionCodec() lower down on EventReader et al
-     */
-    @Deprecated
-    @Nonnull PositionCodec positionCodec();
     @Nonnull Collection<Component> monitoring();
 
     default EventSource withMonitoring(Collection<? extends Component> moreMonitoring) {
@@ -47,12 +42,6 @@ public interface EventSource {
             @Override
             public EventStreamWriter writeStream() {
                 return EventSource.this.writeStream();
-            }
-
-            @Nonnull
-            @Override
-            public PositionCodec positionCodec() {
-                return EventSource.this.positionCodec();
             }
 
             @Nonnull

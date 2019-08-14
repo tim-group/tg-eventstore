@@ -5,7 +5,6 @@ import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.EventStreamWriter;
-import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.remotefilestorage.s3.S3DownloadableStorageWithoutDestinationFile;
 import com.timgroup.remotefilestorage.s3.S3ListableStorage;
 import com.timgroup.tucker.info.Component;
@@ -15,7 +14,7 @@ import java.util.Collection;
 
 import static java.util.Collections.emptyList;
 
-public class S3ArchivedEventSource implements EventSource {
+public final class S3ArchivedEventSource implements EventSource {
     private final S3ListableStorage s3ListableStorage;
     private final S3DownloadableStorageWithoutDestinationFile s3DownloadableStorage;
     private final String eventStoreId;
@@ -49,13 +48,6 @@ public class S3ArchivedEventSource implements EventSource {
     @Override
     public EventStreamWriter writeStream() {
         throw new UnsupportedOperationException("readCategory not supported. Only readAll is supported.");
-    }
-
-    @Nonnull
-    @Override
-    @Deprecated
-    public PositionCodec positionCodec() {
-        return S3ArchivePosition.CODEC;
     }
 
     @Nonnull

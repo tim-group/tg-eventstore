@@ -5,7 +5,6 @@ import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.EventStreamWriter;
-import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.tucker.info.Component;
 
 import javax.annotation.Nonnull;
@@ -48,13 +47,6 @@ public final class FlatFilesystemEventSource implements EventSource {
     @Override
     public EventStreamWriter writeStream() {
         return new FlatFilesystemEventStreamWriter(directory, clock, filenameSuffix);
-    }
-
-    @Nonnull
-    @Override
-    @Deprecated
-    public PositionCodec positionCodec() {
-        return FlatFilesystemPosition.CODEC;
     }
 
     @Nonnull

@@ -6,7 +6,6 @@ import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.Position;
-import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.tucker.info.Component;
 
 import javax.annotation.Nonnull;
@@ -19,13 +18,11 @@ public final class BackfillStitchingEventSource implements EventSource {
     final EventSource backfill;
     final EventSource live;
     private final Position liveCutoffStartPosition;
-    private final PositionCodec positionCodec;
 
     public BackfillStitchingEventSource(EventSource backfill, EventSource live, Position liveCutoffStartPosition) {
         this.backfill = backfill;
         this.live = live;
         this.liveCutoffStartPosition = liveCutoffStartPosition;
-        this.positionCodec = StitchedPosition.codec(backfill.readAll().storePositionCodec(), live.readAll().storePositionCodec()); // only for deprecated accessor
     }
 
     @Nonnull
@@ -54,13 +51,6 @@ public final class BackfillStitchingEventSource implements EventSource {
 
     @Nonnull
     @Override
-    @Deprecated
-    public PositionCodec positionCodec() {
-        return positionCodec;
-    }
-
-    @Nonnull
-    @Override
     public Collection<Component> monitoring() {
         List<Component> result = new ArrayList<>();
         result.addAll(backfill.monitoring());
@@ -74,7 +64,6 @@ public final class BackfillStitchingEventSource implements EventSource {
                 "backfill=" + backfill +
                 ", live=" + live +
                 ", liveCutoffStartPosition=" + liveCutoffStartPosition +
-                ", positionCodec=" + positionCodec +
                 '}';
     }
 }
