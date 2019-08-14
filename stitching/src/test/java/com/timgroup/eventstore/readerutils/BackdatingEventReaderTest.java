@@ -27,8 +27,8 @@ public final class BackdatingEventReaderTest {
     private final StreamId aStream = StreamId.streamId("all", "all");
     private final byte[] data = "data".getBytes();
     private final byte[] data2 = "data2".getBytes();
-    private final byte[] metadata = "{\"effective_timestamp\":\"2017-01-01T09:00:00Z\"}".getBytes();
-    private final byte[] backdatedMetadata = "{\"effective_timestamp\":\"1970-01-01T00:00:00Z\"}".getBytes();
+    private final byte[] metadata = "{\"effective_timestamp\":\"2017-01-01T09:00:00Z\",\"dummy\":[true,false]}".getBytes();
+    private final byte[] backdatedMetadata = "{\"effective_timestamp\":\"1970-01-01T00:00:00Z\",\"dummy\":[true,false]}".getBytes();
 
     @Test
     public void it_backdates_events_with_time_before_the_live_cutoff() throws Exception {
@@ -178,7 +178,7 @@ public final class BackdatingEventReaderTest {
                         0,
                         "anEvent",
                         data,
-                        "{\"effective_timestamp\":\"2012-06-22T15:14:13Z\"}".getBytes()
+                        "{\"effective_timestamp\":\"2012-06-22T15:14:13Z\",\"dummy\":[true,false]}".getBytes()
                 ))));
     }
 
