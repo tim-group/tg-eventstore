@@ -31,7 +31,7 @@ public interface EventReaderOp {
     static EventReaderOp backdate(Instant cutover, Instant destination) {
         requireNonNull(cutover);
         requireNonNull(destination);
-        return r -> new BackdatingEventReader(r, cutover, destination);
+        return transformEventRecords(new BackdatingEventReader.BackdatingTransformer(cutover, destination));
     }
 
     static EventReaderOp rekey(StreamId streamId) {

@@ -25,7 +25,7 @@ public final class BackdatingEventReader extends TransformingEventReader {
         super(underlying, toResolvedEventTransformer(new BackdatingTransformer(liveCutoverInclusive, destination)));
     }
 
-    private static final class BackdatingTransformer implements UnaryOperator<EventRecord> {
+    static final class BackdatingTransformer implements UnaryOperator<EventRecord> {
         private static final JsonFactory JSON = new JsonFactory();
 
         private final Instant liveCutoverInclusive;
