@@ -1,11 +1,14 @@
 package com.timgroup.eventstore.api;
 
+import javax.annotation.Nonnull;
 import java.util.Comparator;
 import java.util.function.Function;
 
 public interface PositionCodec {
+    @Nonnull
     Position deserializePosition(String string);
 
+    @Nonnull
     String serializePosition(Position position);
 
     default int comparePositions(Position left, Position right) {
@@ -18,11 +21,13 @@ public interface PositionCodec {
             Function<? super T, String> serialize,
             Comparator<? super T> comparator) {
         return new PositionCodec() {
+            @Nonnull
             @Override
             public Position deserializePosition(String string) {
                 return deserialize.apply(string);
             }
 
+            @Nonnull
             @Override
             public String serializePosition(Position position) {
                 return serialize.apply(clazz.cast(position));
@@ -45,11 +50,13 @@ public interface PositionCodec {
             Function<? super String, ? extends T> deserialize,
             Function<? super T, String> serialize) {
         return new PositionCodec() {
+            @Nonnull
             @Override
             public Position deserializePosition(String string) {
                 return deserialize.apply(string);
             }
 
+            @Nonnull
             @Override
             public String serializePosition(Position position) {
                 return serialize.apply(clazz.cast(position));

@@ -4,6 +4,8 @@ import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 
+import javax.annotation.Nonnull;
+
 import static com.timgroup.eventstore.stitching.StitchedPosition.STITCH_SEPARATOR;
 
 /**
@@ -37,6 +39,7 @@ public class BackfillParallelChangeCodec implements PositionCodec {
         this.liveCutoffStartPosition = livePositionCodec.deserializePosition(liveCutoffStartPosition);
     }
 
+    @Nonnull
     @Override
     public Position deserializePosition(String position) {
         String[] positions = StitchedPosition.STITCH_PATTERN.split(position);
@@ -58,6 +61,7 @@ public class BackfillParallelChangeCodec implements PositionCodec {
         }
     }
 
+    @Nonnull
     @Override
     public String serializePosition(Position position) {
         return underlying.serializePosition(position);
