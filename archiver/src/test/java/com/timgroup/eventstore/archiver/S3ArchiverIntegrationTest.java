@@ -100,7 +100,6 @@ public class S3ArchiverIntegrationTest {
 
     @Rule public PendingRule pendingRule = new PendingRule();
     @Rule public TestName testNameRule = new TestName();
-    private int uncompressed_batch_size_limit_bytes = 10_000;
 
 
     @BeforeClass
@@ -196,15 +195,15 @@ public class S3ArchiverIntegrationTest {
 
         assertThat(s3EventSource.readAll().readLastEvent().get().eventRecord(),
                 is(objectWith(EventRecord::streamId, stream_1)
-                .and(EventRecord::eventNumber, 3L) // event is zero indexed
-                .and(EventRecord::eventType, event_4.type())
-                .and(EventRecord::data, event_4.data())
-                .and(EventRecord::metadata, event_4.metadata())
-                .and(EventRecord::timestamp, fixedEventTimestamp)));
+                        .and(EventRecord::eventNumber, 3L) // event is zero indexed
+                        .and(EventRecord::eventType, event_4.type())
+                        .and(EventRecord::data, event_4.data())
+                        .and(EventRecord::metadata, event_4.metadata())
+                        .and(EventRecord::timestamp, fixedEventTimestamp)));
     }
 
     @Test public void
-    archiver_can_provide_max_position_stored_in_archive() throws Exception {
+    archiver_can_provide_max_position_stored_in_archive() {
         EventSource liveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
 
         liveEventSource.writeStream().write(stream_1, asList(event_1, event_2, event_3, event_4, event_5));
@@ -227,7 +226,7 @@ public class S3ArchiverIntegrationTest {
         assertThat(archiver.lastEventInLiveEventStore(), equalTo(Optional.empty()));
         liveEventSource.writeStream().write(stream_1, asList(event_1, event_2, event_3, event_4));
         assertThat(archiver.lastEventInLiveEventStore().map(ResolvedEvent::position), equalTo(Optional.of(liveEventSource.readAll().storePositionCodec().deserializePosition("4"))));
-        liveEventSource.writeStream().write(stream_1, asList(event_5));
+        liveEventSource.writeStream().write(stream_1, Collections.singleton(event_5));
         assertThat(archiver.lastEventInLiveEventStore().map(ResolvedEvent::position), equalTo(Optional.of(liveEventSource.readAll().storePositionCodec().deserializePosition("5"))));
     }
 
@@ -260,7 +259,7 @@ public class S3ArchiverIntegrationTest {
     }
 
     @Test public void
-    archiver_resumes_subscription_from_last_archived_position() throws Exception {
+    archiver_resumes_subscription_from_last_archived_position() {
         EventSource liveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
 
         liveEventSource.writeStream().write(stream_1, asList(event_1, event_2, event_3, event_4, event_5));
@@ -303,7 +302,7 @@ public class S3ArchiverIntegrationTest {
     }
 
     @Test public void
-    can_fetch_max_position_over_multiple_pages_of_objects() throws Exception {
+    can_fetch_max_position_over_multiple_pages_of_objects() {
         EventSource liveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
 
         liveEventSource.writeStream().write(stream_1, asList(event_1, event_2, event_3, event_4, event_5));
@@ -317,7 +316,7 @@ public class S3ArchiverIntegrationTest {
 
     @SuppressWarnings("unchecked")
     @Test public void
-    uploaded_objects_have_useful_metadata() throws Exception {
+    uploaded_objects_have_useful_metadata() {
         EventSource liveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
 
         liveEventSource.writeStream().write(stream_1, asList(event_1, event_2, event_3, event_4, event_5));
@@ -345,7 +344,7 @@ public class S3ArchiverIntegrationTest {
 
     @SuppressWarnings("unchecked")
     @Test public void
-    warns_when_archive_is_too_far_behind_live_event_store() throws Exception {
+    warns_when_archive_is_too_far_behind_live_event_store() {
         EventSource liveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
         S3Archiver archiver = createUnstartedArchiver(liveEventSource);
 
@@ -384,7 +383,7 @@ public class S3ArchiverIntegrationTest {
                         containsString("up to date"),
                         containsString("max_position in live=8"),
                         containsString("max_position in archive=2")
-            )))));
+                )))));
 
         liveEventSource.writeStream().write(stream_1, Collections.nCopies(1, event_1));
 
@@ -404,7 +403,7 @@ public class S3ArchiverIntegrationTest {
                 new FeatureMatcher<Component, String>(valueMatcher, "value", "value") {
                     @Override protected String featureValueOf(Component actual) { return actual.getReport().getValue().toString(); }
                 }
-            );
+        );
     }
 
     // TODO:
@@ -425,8 +424,8 @@ public class S3ArchiverIntegrationTest {
 
     private S3DownloadableStorageWithoutDestinationFile createDownloadableStorage() throws IOException {
         return new S3DownloadableStorageWithoutDestinationFile(
-                    new S3DownloadableStorage(amazonS3, Files.createTempDirectory(testName), bucketName),
-                    amazonS3, bucketName);
+                new S3DownloadableStorage(amazonS3, Files.createTempDirectory(testName), bucketName),
+                amazonS3, bucketName);
     }
 
     private S3ListableStorage createListableStorage() {
@@ -445,15 +444,14 @@ public class S3ArchiverIntegrationTest {
                 testName,
                 metricRegistry,
                 fixedClock,
-                Collections.emptyList(),
-                uncompressed_batch_size_limit_bytes);
+                Collections.emptyList());
     }
 
-    private S3Archiver successfullyArchiveUntilCaughtUp(EventSource liveEventSource) throws InterruptedException {
+    private S3Archiver successfullyArchiveUntilCaughtUp(EventSource liveEventSource) {
         return successfullyArchiveUntilCaughtUp(fixedClock, liveEventSource);
     }
 
-    private S3Archiver successfullyArchiveUntilCaughtUp(Clock clock, EventSource liveEventSource) throws InterruptedException {
+    private S3Archiver successfullyArchiveUntilCaughtUp(Clock clock, EventSource liveEventSource) {
         InitialCatchupFuture catchupFuture = new InitialCatchupFuture();
         SubscriptionBuilder subscription = SubscriptionBuilder.eventSubscription("test")
                 .withRunFrequency(Duration.of(1, ChronoUnit.MILLIS))
@@ -462,7 +460,7 @@ public class S3ArchiverIntegrationTest {
         S3ListableStorage listableStorage = createListableStorage();
         S3Archiver archiver = S3Archiver.newS3Archiver(liveEventSource, createUploadableStorage(), eventStoreId, subscription,
                 twoEventsPerBatch, new S3ArchiveMaxPositionFetcher(listableStorage, eventStoreId),
-                testName, metricRegistry, clock, Collections.emptyList(), uncompressed_batch_size_limit_bytes);
+                testName, metricRegistry, clock, Collections.emptyList());
 
         archiver.start();
 

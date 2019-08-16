@@ -22,20 +22,20 @@ import com.timgroup.tucker.info.Report;
 import com.timgroup.tucker.info.Status;
 import com.timgroup.tucker.info.component.SimpleValueComponent;
 
+import javax.annotation.Nonnull;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.InetAddress;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +45,7 @@ import java.util.zip.GZIPOutputStream;
 
 import static com.timgroup.tucker.info.Status.INFO;
 import static java.lang.String.format;
+import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.util.stream.Collectors.toList;
 
 public class S3Archiver {
@@ -69,7 +70,6 @@ public class S3Archiver {
     private final Timer s3UploadTimer;
     private final Histogram uncompressedSizeMetrics;
     private final Histogram compressedSizeMetrics;
-    private final int uncompressedBatchBufferLimitBytes;
 
     private S3Archiver(EventSource liveEventSource,
                        S3UploadableStorageForInputStream output,
@@ -81,8 +81,7 @@ public class S3Archiver {
                        String applicationName,
                        MetricRegistry metricRegistry,
                        Clock clock,
-                       Collection<Component> extraMonitoring,
-                       int uncompressedBatchBufferLimitBytes)
+                       Collection<Component> extraMonitoring)
     {
         this.liveEventSource = liveEventSource;
         this.batchingPolicy = batchingPolicy;
@@ -91,7 +90,6 @@ public class S3Archiver {
         this.maxPositionFetcher = maxPositionFetcher;
         this.clock = clock;
         this.extraMonitoring = extraMonitoring;
-        this.uncompressedBatchBufferLimitBytes = uncompressedBatchBufferLimitBytes;
 
         this.checkpointPositionComponent.updateValue(INFO, maxPositionInArchiveOnStartup);
 
@@ -113,17 +111,16 @@ public class S3Archiver {
     }
 
     public static S3Archiver newS3Archiver(
-                      EventSource liveEventSource,
-                      S3UploadableStorageForInputStream output,
-                      String eventStoreId,
-                      SubscriptionBuilder subscriptionBuilder,
-                      BatchingPolicy batchingPolicy,
-                      S3ArchiveMaxPositionFetcher maxPositionFetcher,
-                      String applicationName,
-                      MetricRegistry metricRegistry,
-                      Clock clock,
-                      List<Component> extraMonitoring,
-                      int uncompressedBatchBufferLimitBytes)
+            EventSource liveEventSource,
+            S3UploadableStorageForInputStream output,
+            String eventStoreId,
+            SubscriptionBuilder subscriptionBuilder,
+            BatchingPolicy batchingPolicy,
+            S3ArchiveMaxPositionFetcher maxPositionFetcher,
+            String applicationName,
+            MetricRegistry metricRegistry,
+            Clock clock,
+            List<Component> extraMonitoring)
     {
         return new S3Archiver(
                 liveEventSource,
@@ -136,8 +133,7 @@ public class S3Archiver {
                 applicationName,
                 metricRegistry,
                 clock,
-                extraMonitoring,
-                uncompressedBatchBufferLimitBytes);
+                extraMonitoring);
     }
 
     private static String hostname() {
@@ -161,7 +157,6 @@ public class S3Archiver {
         this.eventSubscription.stop();
     }
 
-    @SuppressWarnings("unchecked")
     public Collection<Component> monitoring() {
         List<Component> components = new ArrayList<>();
         components.addAll(liveEventSource.monitoring());
@@ -176,7 +171,7 @@ public class S3Archiver {
 
     private final class ArchiveStalenessComponent extends Component {
 
-        public ArchiveStalenessComponent() {
+        ArchiveStalenessComponent() {
             super(PREFIX + "-staleness", "Is archive up to date?");
         }
 
@@ -216,6 +211,7 @@ public class S3Archiver {
     }
 
     public static final class EventRecordHolder implements Event {
+        @SuppressWarnings("WeakerAccess")
         public final EventRecord record;
 
         private EventRecordHolder(EventRecord record) {
@@ -240,7 +236,7 @@ public class S3Archiver {
         }
 
         @Override
-        public void apply(Position position, Event deserializedEvent) {
+        public void apply(@Nonnull Position position, @Nonnull Event deserializedEvent) {
             if (deserializedEvent instanceof  EventRecordHolder) {
                 batch.add(new ResolvedEvent(position, ((EventRecordHolder) deserializedEvent).record));
 
@@ -295,14 +291,22 @@ public class S3Archiver {
         }
 
         private byte[] content(List<ResolvedEvent> batch) {
-            ByteBuffer buffer = ByteBuffer.allocate(uncompressedBatchBufferLimitBytes);
-            ProtobufsEventWriter writer = new ProtobufsEventWriter(buffer);
-            batch.stream().map(this::toProtobufsMessage).forEach(writer::write);
-
-            ((Buffer)buffer).flip();
-            byte[] batchAsProtobufBytes = new byte[buffer.remaining()];
-            buffer.get(batchAsProtobufBytes);
-            return batchAsProtobufBytes;
+            return batch
+                    .stream()
+                    .map(this::toProtobufsMessage)
+                    .map(this::toBytesPrefixedWithLength)
+                    .collect(
+                            ByteArrayOutputStream::new,
+                            (outputStream, bytes) -> {
+                                try {
+                                    outputStream.write(bytes);
+                                } catch (IOException e1) {
+                                    throw new RuntimeException(e1);
+                                }
+                            },
+                            (a, b) -> { }
+                    )
+                    .toByteArray();
         }
 
         private byte[] applyGzippingToBytes(byte[] batchAsProtobufBytes) throws IOException {
@@ -314,6 +318,16 @@ public class S3Archiver {
 
                 return gzippedByteArray.toByteArray();
             }
+        }
+
+        private byte[] toBytesPrefixedWithLength(Message message) {
+            byte[] srcArray = message.toByteArray();
+            ByteBuffer buffer= ByteBuffer.allocate(srcArray.length +4).order(LITTLE_ENDIAN);
+
+            buffer.putInt(srcArray.length);
+            buffer.put(srcArray);
+
+            return buffer.array();
         }
 
         private Message toProtobufsMessage(ResolvedEvent resolvedEvent) {
@@ -347,8 +361,9 @@ public class S3Archiver {
             return batch.get(batch.size() - 1);
         }
 
+        @SuppressWarnings("WeakerAccess")
         public Collection<Component> monitoring() {
-            return Arrays.asList(eventsAwaitingUploadComponent);
+            return Collections.singleton(eventsAwaitingUploadComponent);
         }
 
     }

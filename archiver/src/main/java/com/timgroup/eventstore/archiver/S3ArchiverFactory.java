@@ -33,7 +33,6 @@ public class S3ArchiverFactory {
     private Properties config;
 
     private static final int MAX_KEYS_PER_S3_LISTING = 1_000;
-    private static final int UNCOMPRESSED_BATCH_BUFFER_LIMIT_BYTES = 500_000_000;
 
 
     public S3ArchiverFactory(Properties config, MetricRegistry metricRegistry, Clock clock) {
@@ -58,8 +57,7 @@ public class S3ArchiverFactory {
                 appName,
                 metricRegistry,
                 clock,
-                monitoring,
-                UNCOMPRESSED_BATCH_BUFFER_LIMIT_BYTES);
+                monitoring);
     }
 
     public EventSource createS3ArchivedEventSource() {

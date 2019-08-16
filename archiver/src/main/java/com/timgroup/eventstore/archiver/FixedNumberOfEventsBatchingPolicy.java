@@ -27,7 +27,7 @@ public final class FixedNumberOfEventsBatchingPolicy implements BatchingPolicy {
                 .map(ResolvedEvent::position)
                 .map(liveEventSourceCodec::serializePosition)
                 .map(Long::valueOf);
-
+        //noinspection OptionalGetWithoutIsPresent
         return enoughEventsInLiveToBeStale(livePosition)
                && archiveIsNotCloseEnoughToLive(livePosition.get(), archivePosition)  ;
     }
