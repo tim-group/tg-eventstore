@@ -1,9 +1,5 @@
 package com.timgroup.eventstore.api.legacy;
 
-import java.util.List;
-import java.util.function.LongFunction;
-import java.util.function.ToLongFunction;
-
 import com.timgroup.eventstore.api.EventData;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventStreamWriter;
@@ -13,6 +9,10 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.api.WrongExpectedVersionException;
 import scala.Option;
+
+import java.util.List;
+import java.util.function.LongFunction;
+import java.util.function.ToLongFunction;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
@@ -43,7 +43,7 @@ public class LegacyStore extends ReadableLegacyStore {
     }
 
     private List<NewEvent> newEvents(scala.collection.Seq<EventData> newEvents) {
-        return scala.collection.JavaConversions.seqAsJavaList(newEvents).stream().map(LegacyStore::toNewEvent).collect(toList());
+        return scala.collection.JavaConverters.seqAsJavaList(newEvents).stream().map(LegacyStore::toNewEvent).collect(toList());
     }
 
     @Override
