@@ -27,7 +27,7 @@ trait EventStream extends Iterator[EventInStream]
 case class Body(data: Array[Byte]) {
   override def equals(obj: scala.Any): Boolean = {
     if (obj != null && obj.getClass == getClass) {
-      data.deep == obj.asInstanceOf[Body].data.deep
+      data.sameElements(obj.asInstanceOf[Body].data)
     } else {
       false
     }
