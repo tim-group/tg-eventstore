@@ -30,7 +30,7 @@ object JsonEventCompatibility extends CompatibilityPredicate {
       case(currentObject : ObjectNode, newObject : ObjectNode) => compareObjects(currentObject, newObject, ctx)
       case(currentArray : ArrayNode, newArray : ArrayNode) => compareArrays(currentArray, newArray, ctx)
       case(_, _) if currentNode != newNode => throw ctx.idempotentWriteFailure("Event documents do not match")
-      case _ => Unit
+      case _ => ()
     }
   }
 
@@ -39,7 +39,7 @@ object JsonEventCompatibility extends CompatibilityPredicate {
       case Both(fieldName, currentNode, newNode) => compareNodes(currentNode, newNode, ctx.appendField(fieldName))
       case Left(fieldName, currentNode) =>
         if (!currentNode.isNull) throw ctx.appendField(fieldName).idempotentWriteFailure("Element in current version, but not new version")
-      case Right(_, _) => Unit
+      case Right(_, _) => ()
     }
 
   class MergeTraversable[K : Ordering, V](val left: Seq[(K, V)], val right: Seq[(K, V)]) extends Traversable[Merged[K, V]] {
