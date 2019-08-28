@@ -45,6 +45,8 @@ object JsonEventCompatibility extends CompatibilityPredicate {
   class MergeTraversable[K : Ordering, V](val left: Seq[(K, V)], val right: Seq[(K, V)]) extends Traversable[Merged[K, V]] {
     private val ordering = implicitly[Ordering[K]]
 
+    def iterator: Iterator[Merged[K, V]] = throw new UnsupportedOperationException()
+
     override def foreach[U](f: Merged[K, V] => U): Unit = {
       var leftPtr = left
       var rightPtr = right
