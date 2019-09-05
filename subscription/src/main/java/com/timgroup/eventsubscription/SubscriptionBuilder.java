@@ -1,5 +1,6 @@
 package com.timgroup.eventsubscription;
 
+import com.codahale.metrics.MetricRegistry;
 import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
@@ -14,6 +15,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -34,6 +36,7 @@ public class SubscriptionBuilder {
     private Deserializer<? extends Event> deserializer = null;
     private EventSink eventSink = new Slf4jEventSink();
     private String readerDescription = null;
+    private MetricRegistry metricRegistry = null;
 
     private SubscriptionBuilder(String name) {
         this.name = name;
@@ -60,6 +63,11 @@ public class SubscriptionBuilder {
 
     public SubscriptionBuilder withRunFrequency(Duration runFrequency) {
         this.runFrequency = requireNonNull(runFrequency);
+        return this;
+    }
+
+    public SubscriptionBuilder withMetrics(MetricRegistry metricRegistry) {
+        this.metricRegistry = requireNonNull(metricRegistry);
         return this;
     }
 
@@ -157,7 +165,8 @@ public class SubscriptionBuilder {
                 startingPosition,
                 initialReplay,
                 staleness,
-                eventSink
+                eventSink,
+                Optional.ofNullable(metricRegistry)
         );
     }
 

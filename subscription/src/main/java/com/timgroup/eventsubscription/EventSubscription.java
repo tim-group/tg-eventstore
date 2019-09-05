@@ -1,5 +1,6 @@
 package com.timgroup.eventsubscription;
 
+import com.codahale.metrics.MetricRegistry;
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.ExceptionHandler;
 import com.lmax.disruptor.dsl.Disruptor;
@@ -21,6 +22,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -29,6 +31,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static com.lmax.disruptor.dsl.ProducerType.SINGLE;
+import static java.lang.String.format;
 import static java.util.Collections.unmodifiableCollection;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -55,7 +58,8 @@ public class EventSubscription {
                 Position startingPosition,
                 DurationThreshold initialReplay,
                 DurationThreshold staleness,
-                EventSink eventSink
+                EventSink eventSink,
+                Optional<MetricRegistry> metricRegistry
     ) {
         this.runFrequency = runFrequency;
         ChaserHealth chaserHealth = new ChaserHealth(name, clock, runFrequency);
@@ -88,7 +92,6 @@ public class EventSubscription {
                 LOG.error("Error shutting down disruptor", ex);
             }
         });
-
         disruptor.handleEventsWithWorkerPool(
                 new DisruptorDeserializationAdapter(deserializer),
                 new DisruptorDeserializationAdapter(deserializer)
@@ -101,14 +104,19 @@ public class EventSubscription {
                     subscriptionStatus.apply(position, deserialized);
                 }
             }
-        }));
+        }, metricRegistry.map(r -> r.counter(String.format("eventsubscription.%s.missedCatchup", name)))));
 
-        chaser = new EventStoreChaser(eventSource, startingPosition, disruptor, chaserHealth, clock);
+        chaser = new EventStoreChaser(eventSource, startingPosition, disruptor, chaserHealth, clock, metricRegistry.map(r -> r.counter(format("eventsubscription.%s.chaserRun", name))));
 
         statusComponents = new ArrayList<>();
         statusComponents.add(Component.supplyInfo("event-subscription-description", "Subscription source (" + name + ")", () -> description));
         statusComponents.add(subscriptionStatus);
         statusComponents.add(chaserHealth);
+
+        metricRegistry.ifPresent(registry -> {
+            registry.gauge(String.format("eventsubscription.%s.bufferSize", name), () -> () -> bufferSize);
+            registry.gauge(String.format("eventsubscription.%s.bufferFree", name), () -> () -> disruptor.getRingBuffer().remainingCapacity());
+        });
     }
 
     public Health health() {

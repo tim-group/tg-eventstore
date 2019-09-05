@@ -1,5 +1,6 @@
 package com.timgroup.eventsubscription;
 
+import com.codahale.metrics.Counter;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
@@ -7,6 +8,7 @@ import com.timgroup.eventsubscription.lifecycleevents.CaughtUp;
 import com.timgroup.eventsubscription.lifecycleevents.InitialCatchupCompleted;
 
 import java.time.Clock;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -20,6 +22,7 @@ public class EventStoreChaser implements Runnable {
 
     private Position lastPosition;
     private final Clock clock;
+    private final Optional<Counter> counter;
     private boolean initialCatchupCompleted;
 
     public EventStoreChaser(
@@ -27,12 +30,14 @@ public class EventStoreChaser implements Runnable {
             Position startingPosition,
             Disruptor<EventContainer> disruptor,
             ChaserListener listener,
-            Clock clock) {
+            Clock clock,
+            Optional<Counter> counter) {
         this.eventSource = requireNonNull(eventSource);
         this.disruptor = disruptor;
         this.listener = requireNonNull(listener);
         this.lastPosition = requireNonNull(startingPosition);
         this.clock = clock;
+        this.counter = counter;
     }
 
     @Override
@@ -59,6 +64,7 @@ public class EventStoreChaser implements Runnable {
                 });
             }
             listener.chaserUpToDate(lastPosition);
+            counter.ifPresent(Counter::inc);
         } catch (Exception e) {
             listener.transientFailure(e);
         }

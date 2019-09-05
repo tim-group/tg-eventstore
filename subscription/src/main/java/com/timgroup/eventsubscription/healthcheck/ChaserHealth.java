@@ -1,5 +1,7 @@
 package com.timgroup.eventsubscription.healthcheck;
 
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.MetricRegistry;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventsubscription.ChaserListener;
 import com.timgroup.tucker.info.Component;
@@ -10,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 
 import static com.timgroup.tucker.info.Status.CRITICAL;
 import static com.timgroup.tucker.info.Status.INFO;
