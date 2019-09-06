@@ -30,7 +30,7 @@ dependencies {
     api "com.timgroup:tim-structured-events:0.4.1267" // autobump
 
     implementation "com.google.code.findbugs:jsr305:3.0.2"
-    implementation "com.timgroup:tim-logger:1.5.1096" // autobump
+    implementation "com.timgroup:tim-logger:1.5.1097" // autobump
     implementation "com.timgroup:tim-remote-file-storage-s3:0.0.1178" // autobump
 
     runtimeOnly "javax.xml.bind:jaxb-api:2.3.0"
