@@ -7,6 +7,7 @@ import com.timgroup.eventsubscription.lifecycleevents.CaughtUp;
 import com.timgroup.eventsubscription.lifecycleevents.InitialCatchupCompleted;
 import com.timgroup.eventsubscription.lifecycleevents.SubscriptionTerminated;
 import com.timgroup.structuredevents.EventSink;
+import com.timgroup.structuredevents.RetentionPeriod;
 import com.timgroup.structuredevents.SimpleEvent;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Health;
@@ -85,7 +86,7 @@ public final class EventSubscriptionStatus extends Component implements Health, 
         currentPosition = position;
         if (event instanceof InitialCatchupCompleted) {
             initialReplayDuration = Duration.between(startTime, Instant.now(clock));
-            eventSink.sendEvent(SimpleEvent.ofType("InitialReplayCompleted").withField("name", name).withField("time_ms", initialReplayDuration.toMillis()));
+            eventSink.sendEvent(SimpleEvent.ofType("InitialReplayCompleted").withRetention(RetentionPeriod.LONG).withField("name", name).withField("time_ms", initialReplayDuration.toMillis()));
             lastCaughtUpAt = ((InitialCatchupCompleted) event).timestamp();
         } else if (event instanceof CaughtUp) {
             lastCaughtUpAt = ((CaughtUp) event).timestamp();
