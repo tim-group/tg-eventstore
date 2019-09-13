@@ -4,6 +4,8 @@ import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.api.WrongExpectedVersionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.time.Duration;
@@ -15,6 +17,8 @@ import static java.util.Objects.requireNonNull;
 
 @ParametersAreNonnullByDefault
 public class RetryingEventStreamWriter implements EventStreamWriter {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RetryingEventStreamWriter.class);
+
     private final EventStreamWriter underlying;
     private final int count;
     private final Duration interval;
@@ -62,6 +66,12 @@ public class RetryingEventStreamWriter implements EventStreamWriter {
                 if (retriesRemaining-- == 0) {
                     throw e;
                 }
+
+                LOGGER.warn(
+                        String.format("Failure writing to Eventstore. Going to retry after sleeping for %s ms. Retries remaining: %s", interval.toMillis(), retriesRemaining),
+                        e
+                );
+
                 try {
                     sleep(interval.toMillis());
                 } catch (InterruptedException e1) { }
