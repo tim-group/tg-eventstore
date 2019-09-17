@@ -261,6 +261,8 @@ public class S3Archiver {
         private Map<String, String> buildObjectMetadata(int uncompressedContentSize, int compressedContentSize) {
             Map<String, String> metadata = new HashMap<>();
 
+            metadata.put("event_source", liveEventSource.toString());
+
             metadata.put("app_name", applicationName);
             metadata.put("app_version", System.getProperty("timgroup.app.version"));
             metadata.put("hostname", hostname());

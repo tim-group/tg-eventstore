@@ -30,6 +30,7 @@ import net.ttsui.junit.rules.pending.PendingRule;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.hamcrest.FeatureMatcher;
 import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -329,6 +330,7 @@ public class S3ArchiverIntegrationTest {
         S3Object s3Object = amazonS3.getObject(new GetObjectRequest(bucketName, lastestBatchKey));
 
         assertThat(s3Object.getObjectMetadata().getUserMetadata(), allOf(
+                hasEntry(equalTo("event_source"), containsString(liveEventSource.toString())),
                 hasEntry(equalTo("hostname"), anything()),
                 hasEntry("app_version", "1.0.12345"),
                 hasEntry("app_name", testName),
