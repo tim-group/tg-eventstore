@@ -80,7 +80,7 @@ public class S3ArchiverFactory {
                 eventStoreId,
                 SubscriptionBuilder.eventSubscription(subscriptionName),
                 batchingPolicy,
-                newS3ArchiveMaxPositionFetcher(),
+                newS3ArchiveMaxPositionFetcher(eventStoreId),
                 appName,
                 metricRegistry,
                 monitoringPrefix,
@@ -92,7 +92,7 @@ public class S3ArchiverFactory {
         return monitoring;
     }
 
-    public EventSource createS3ArchivedEventSource() {
+    public EventSource createS3ArchivedEventSource(String eventStoreId) {
         return new S3ArchivedEventSource(createS3ListableStorage(amazonS3), createDownloadableStorage(amazonS3), eventStoreId);
     }
 
@@ -106,7 +106,7 @@ public class S3ArchiverFactory {
         }
     }
 
-    public S3ArchiveMaxPositionFetcher newS3ArchiveMaxPositionFetcher() {
+    public S3ArchiveMaxPositionFetcher newS3ArchiveMaxPositionFetcher(String eventStoreId) {
         final S3ListableStorage s3ListableStorage = createS3ListableStorage(amazonS3);
         return new S3ArchiveMaxPositionFetcher(s3ListableStorage, eventStoreId);
     }
