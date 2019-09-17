@@ -16,7 +16,6 @@ import com.timgroup.tucker.info.Component;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Clock;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
@@ -27,11 +26,11 @@ public class S3ArchiverFactory {
     public static final String CONFIG_EVENTSTORE_S3_ARCHIVE_OBJECT_PREFIX = "tg.eventstore.archive.object.prefix";
     public static final String S3_ARCHIVER_TMP_DIR_PREFIX = "s3archiver-tmp";
 
-    private String eventStoreId;
-    private String bucketName;
-    private MetricRegistry metricRegistry;
-    private Clock clock;
-    private Properties config;
+    private final String eventStoreId;
+    private final String bucketName;
+    private final MetricRegistry metricRegistry;
+    private final Clock clock;
+    private final Properties config;
 
     private static final int MAX_KEYS_PER_S3_LISTING = 1_000;
 
@@ -57,14 +56,14 @@ public class S3ArchiverFactory {
     }
 
     public S3Archiver newS3Archiver(EventSource liveEventSource, int batchsize,  String appName) {
-        return build(liveEventSource, new FixedNumberOfEventsBatchingPolicy(batchsize), appName, "Event");
+        return build(liveEventSource, new FixedNumberOfEventsBatchingPolicy(batchsize), appName, "Event", S3Archiver.DEFAULT_MONITORING_PREFIX);
     }
 
     public S3Archiver newS3Archiver(EventSource liveEventSource, BatchingPolicy batchingPolicy, String appName) {
-        return build(liveEventSource, batchingPolicy, appName, eventStoreId + "-Archiver");
+        return build(liveEventSource, batchingPolicy, appName, eventStoreId + "-Archiver", S3Archiver.DEFAULT_MONITORING_PREFIX + "." + eventStoreId);
     }
 
-    private S3Archiver build(EventSource liveEventSource, BatchingPolicy batchingPolicy, String appName, String subscriptionName) {
+    private S3Archiver build(EventSource liveEventSource, BatchingPolicy batchingPolicy, String appName, String subscriptionName, String monitoringPrefix) {
         AmazonS3 amazonS3 = amazonS3();
         List<Component> monitoring = Collections.singletonList(new S3ArchiveBucketConfigurationComponent(amazonS3, bucketName));
         S3UploadableStorageForInputStream s3UploadableStorage = createUploadableStorage(amazonS3, bucketName);
@@ -78,6 +77,7 @@ public class S3ArchiverFactory {
                 newS3ArchiveMaxPositionFetcher(amazonS3),
                 appName,
                 metricRegistry,
+                monitoringPrefix,
                 clock,
                 monitoring);
     }

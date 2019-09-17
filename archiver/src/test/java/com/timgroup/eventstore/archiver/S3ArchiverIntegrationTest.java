@@ -443,6 +443,7 @@ public class S3ArchiverIntegrationTest {
                 maxPositionFetcher,
                 testName,
                 metricRegistry,
+                S3Archiver.DEFAULT_MONITORING_PREFIX,
                 fixedClock,
                 Collections.emptyList());
     }
@@ -460,7 +461,7 @@ public class S3ArchiverIntegrationTest {
         S3ListableStorage listableStorage = createListableStorage();
         S3Archiver archiver = S3Archiver.newS3Archiver(liveEventSource, createUploadableStorage(), eventStoreId, subscription,
                 twoEventsPerBatch, new S3ArchiveMaxPositionFetcher(listableStorage, eventStoreId),
-                testName, metricRegistry, clock, Collections.emptyList());
+                testName, metricRegistry, S3Archiver.DEFAULT_MONITORING_PREFIX, clock, Collections.emptyList());
 
         archiver.start();
 

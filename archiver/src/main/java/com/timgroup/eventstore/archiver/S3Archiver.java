@@ -50,7 +50,7 @@ import static java.util.stream.Collectors.toList;
 
 public class S3Archiver {
 
-    private static final String PREFIX = "tg-eventstore-s3-archiver";
+    public static final String DEFAULT_MONITORING_PREFIX = "tg-eventstore-s3-archiver";
 
     private final EventSource liveEventSource;
     private final EventSubscription eventSubscription;
@@ -65,12 +65,13 @@ public class S3Archiver {
     private final Collection<Component> extraMonitoring;
 
     private final String applicationName;
-    private final SimpleValueComponent checkpointPositionComponent = new SimpleValueComponent(PREFIX + "-checkpoint-position", "Checkpoint position that archiver resumed from on startup");
+    private final SimpleValueComponent checkpointPositionComponent;
     private final AtomicLong maxPositionInArchive = new AtomicLong();
     private final Timer s3ListingTimer;
     private final Timer s3UploadTimer;
     private final Histogram uncompressedSizeMetrics;
     private final Histogram compressedSizeMetrics;
+    private final String monitoringPrefix;
 
     private S3Archiver(EventSource liveEventSource,
                        S3UploadableStorageForInputStream output,
@@ -81,11 +82,13 @@ public class S3Archiver {
                        S3ArchiveMaxPositionFetcher maxPositionFetcher,
                        String applicationName,
                        MetricRegistry metricRegistry,
+                       String monitoringPrefix,
                        Clock clock,
                        Collection<Component> extraMonitoring)
     {
         this.liveEventSource = liveEventSource;
         this.eventStoreId = eventStoreId;
+        this.monitoringPrefix = monitoringPrefix;
         this.batchingPolicy = batchingPolicy;
         this.applicationName = applicationName;
         this.batchS3ObjectKeyFormat = new S3ArchiveKeyFormat(eventStoreId);
@@ -93,6 +96,8 @@ public class S3Archiver {
         this.clock = clock;
         this.extraMonitoring = extraMonitoring;
 
+        this.checkpointPositionComponent =  new SimpleValueComponent(this.monitoringPrefix + "-checkpoint-position",
+                "Checkpoint position that archiver resumed from on startup");
         this.checkpointPositionComponent.updateValue(INFO, maxPositionInArchiveOnStartup);
 
         this.batchingUploadHandler = new BatchingUploadHandler(batchingPolicy, output);
@@ -104,38 +109,20 @@ public class S3Archiver {
                 .build();
 
         this.maxPositionInArchive.set(maxPositionInArchiveOnStartup.orElse(0L));
-        metricRegistry.gauge(PREFIX + ".archive.max_position", () -> maxPositionInArchive::get);
-        metricRegistry.gauge(PREFIX + ".archive.events_awaiting_upload", () -> batchingUploadHandler.batch::size);
-        this.s3ListingTimer = metricRegistry.timer(PREFIX + ".archive.list");
-        this.s3UploadTimer = metricRegistry.timer(PREFIX + ".archive.upload");
-        this.uncompressedSizeMetrics = metricRegistry.histogram(PREFIX + ".archive.batch.uncompressed_size_bytes");
-        this.compressedSizeMetrics   = metricRegistry.histogram(PREFIX + ".archive.batch.compressed_size_bytes");
+        metricRegistry.gauge(this.monitoringPrefix + ".archive.max_position", () -> maxPositionInArchive::get);
+        metricRegistry.gauge(this.monitoringPrefix + ".archive.events_awaiting_upload", () -> batchingUploadHandler.batch::size);
+        this.s3ListingTimer = metricRegistry.timer(this.monitoringPrefix + ".archive.list");
+        this.s3UploadTimer = metricRegistry.timer(this.monitoringPrefix + ".archive.upload");
+        this.uncompressedSizeMetrics = metricRegistry.histogram(this.monitoringPrefix + ".archive.batch.uncompressed_size_bytes");
+        this.compressedSizeMetrics   = metricRegistry.histogram(this.monitoringPrefix + ".archive.batch.compressed_size_bytes");
     }
 
-    public static S3Archiver newS3Archiver(
-            EventSource liveEventSource,
-            S3UploadableStorageForInputStream output,
-            String eventStoreId,
-            SubscriptionBuilder subscriptionBuilder,
-            BatchingPolicy batchingPolicy,
-            S3ArchiveMaxPositionFetcher maxPositionFetcher,
-            String applicationName,
-            MetricRegistry metricRegistry,
-            Clock clock,
-            List<Component> extraMonitoring)
-    {
-        return new S3Archiver(
-                liveEventSource,
-                output,
-                eventStoreId,
-                subscriptionBuilder,
-                batchingPolicy,
-                maxPositionFetcher.maxPosition(),
-                maxPositionFetcher,
-                applicationName,
-                metricRegistry,
-                clock,
-                extraMonitoring);
+    public static S3Archiver newS3Archiver(EventSource liveEventSource, S3UploadableStorageForInputStream output,
+            String eventStoreId, SubscriptionBuilder subscriptionBuilder, BatchingPolicy batchingPolicy,
+            S3ArchiveMaxPositionFetcher maxPositionFetcher, String applicationName, MetricRegistry metricRegistry,
+            String monitoringPrefix, Clock clock, List<Component> extraMonitoring) {
+        return new S3Archiver(liveEventSource, output, eventStoreId, subscriptionBuilder, batchingPolicy, maxPositionFetcher.maxPosition(),
+                maxPositionFetcher, applicationName, metricRegistry, monitoringPrefix, clock, extraMonitoring);
     }
 
     private static String hostname() {
@@ -178,7 +165,7 @@ public class S3Archiver {
     private final class ArchiveStalenessComponent extends Component {
 
         ArchiveStalenessComponent() {
-            super(PREFIX + "-staleness", "Is archive up to date?");
+            super(monitoringPrefix + "-staleness", "Is archive up to date?");
         }
 
         @Override
@@ -197,9 +184,7 @@ public class S3Archiver {
                     livePosition.map(Object::toString).orElse("[none]"),
                     archivePosition.map(Object::toString).orElse("[none]")
             );
-            return isStale
-                    ? new Report(Status.WARNING, value)
-                    : new Report(Status.OK, value);
+            return isStale ? new Report(Status.WARNING, value) : new Report(Status.OK, value);
         }
     }
 
@@ -231,8 +216,8 @@ public class S3Archiver {
         private final S3UploadableStorageForInputStream output;
 
         private final List<ResolvedEvent> batch = new ArrayList<>();
-        private final SimpleValueComponent eventsAwaitingUploadComponent = new SimpleValueComponent(PREFIX + "-events-awaiting-upload", "Number of events awaiting upload to archive");
-        private final SimpleValueComponent lastUploadState = new SimpleValueComponent(PREFIX + "-last-upload-state", "Last upload to S3 Archive");
+        private final SimpleValueComponent eventsAwaitingUploadComponent = new SimpleValueComponent(monitoringPrefix + "-events-awaiting-upload", "Number of events awaiting upload to archive");
+        private final SimpleValueComponent lastUploadState = new SimpleValueComponent(monitoringPrefix + "-last-upload-state", "Last upload to S3 Archive");
 
         BatchingUploadHandler(BatchingPolicy batchingPolicy, S3UploadableStorageForInputStream output) {
             this.batchingPolicy = batchingPolicy;
