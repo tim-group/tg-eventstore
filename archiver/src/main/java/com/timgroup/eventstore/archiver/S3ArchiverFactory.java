@@ -27,40 +27,20 @@ public class S3ArchiverFactory {
     public static final String CONFIG_EVENTSTORE_S3_ARCHIVE_OBJECT_PREFIX = "tg.eventstore.archive.object.prefix";
     public static final String S3_ARCHIVER_TMP_DIR_PREFIX = "s3archiver-tmp";
 
-    private final String eventStoreId;
     private final String bucketName;
     private final MetricRegistry metricRegistry;
     private final Clock clock;
-    private final Properties config;
 
     private static final int MAX_KEYS_PER_S3_LISTING = 1_000;
     private final AmazonS3 amazonS3;
     private List<Component> monitoring;
 
-    @Deprecated
-    public S3ArchiverFactory(Properties config, MetricRegistry metricRegistry, Clock clock) {
-        this.config = config;
-        this.eventStoreId = config.getProperty(CONFIG_EVENTSTORE_S3_ARCHIVE_OBJECT_PREFIX);
-        this.bucketName = config.getProperty(CONFIG_EVENTSTORE_S3_ARCHIVE_BUCKETNAME);
-        this.metricRegistry = metricRegistry;
-        this.clock = clock;
-        this.amazonS3 = new S3ClientFactory().fromProperties(config);
-        this.monitoring = Collections.singletonList(new S3ArchiveBucketConfigurationComponent(amazonS3, bucketName));
-    }
-
     public S3ArchiverFactory(String bucketName, Properties config, MetricRegistry metricRegistry, Clock clock) {
-        this.config = config;
-        this.eventStoreId = null;
         this.bucketName = bucketName;
         this.metricRegistry = metricRegistry;
         this.clock = clock;
         this.amazonS3 = new S3ClientFactory().fromProperties(config);
         this.monitoring = Collections.singletonList(new S3ArchiveBucketConfigurationComponent(amazonS3, bucketName));
-    }
-
-    @Deprecated
-    public S3Archiver newS3Archiver(EventSource liveEventSource, int batchsize,  String appName) {
-        return build(liveEventSource, new FixedNumberOfEventsBatchingPolicy(batchsize), this.eventStoreId, appName, "Event", S3Archiver.DEFAULT_MONITORING_PREFIX);
     }
 
     public S3Archiver newS3Archiver(String eventStoreId, EventSource liveEventSource, int batchsize,  String appName) {
