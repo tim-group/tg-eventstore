@@ -64,8 +64,7 @@ public class S3ArchiverFactory {
                 appName,
                 metricRegistry,
                 monitoringPrefix,
-                clock,
-                monitoring);
+                clock);
     }
 
     public Collection<Component> monitoring() {

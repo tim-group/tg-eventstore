@@ -62,7 +62,6 @@ public class S3Archiver {
     private final BatchingUploadHandler batchingUploadHandler;
 
     private final Clock clock;
-    private final Collection<Component> extraMonitoring;
 
     private final String applicationName;
     private final SimpleValueComponent checkpointPositionComponent;
@@ -83,8 +82,7 @@ public class S3Archiver {
                        String applicationName,
                        MetricRegistry metricRegistry,
                        String monitoringPrefix,
-                       Clock clock,
-                       Collection<Component> extraMonitoring)
+                       Clock clock)
     {
         this.liveEventSource = liveEventSource;
         this.eventStoreId = eventStoreId;
@@ -94,7 +92,6 @@ public class S3Archiver {
         this.batchS3ObjectKeyFormat = new S3ArchiveKeyFormat(eventStoreId);
         this.maxPositionFetcher = maxPositionFetcher;
         this.clock = clock;
-        this.extraMonitoring = extraMonitoring;
 
         this.checkpointPositionComponent =  new SimpleValueComponent(this.monitoringPrefix + "-checkpoint-position",
                 "Checkpoint position that archiver resumed from on startup");
@@ -120,9 +117,9 @@ public class S3Archiver {
     public static S3Archiver newS3Archiver(EventSource liveEventSource, S3UploadableStorageForInputStream output,
             String eventStoreId, SubscriptionBuilder subscriptionBuilder, BatchingPolicy batchingPolicy,
             S3ArchiveMaxPositionFetcher maxPositionFetcher, String applicationName, MetricRegistry metricRegistry,
-            String monitoringPrefix, Clock clock, List<Component> extraMonitoring) {
+            String monitoringPrefix, Clock clock) {
         return new S3Archiver(liveEventSource, output, eventStoreId, subscriptionBuilder, batchingPolicy, maxPositionFetcher.maxPosition(),
-                maxPositionFetcher, applicationName, metricRegistry, monitoringPrefix, clock, extraMonitoring);
+                maxPositionFetcher, applicationName, metricRegistry, monitoringPrefix, clock);
     }
 
     private static String hostname() {
@@ -153,7 +150,6 @@ public class S3Archiver {
         components.add(new ArchiveStalenessComponent());
         components.add(checkpointPositionComponent);
         components.addAll(batchingUploadHandler.monitoring());
-        components.addAll(extraMonitoring);
 
         return components.stream().map(c -> c.withStatusNoWorseThan(Status.WARNING)).collect(toList());
     }
