@@ -37,13 +37,6 @@ public class S3ArchiverFactory {
     private final AmazonS3 amazonS3;
     private List<Component> monitoring;
 
-    /**
-     Configures eventStoreId and bucketName from properties set in config.
-     @see #CONFIG_EVENTSTORE_S3_ARCHIVE_BUCKETNAME
-     @see #CONFIG_EVENTSTORE_S3_ARCHIVE_OBJECT_PREFIX
-
-     @Deprecated use S3ArchiverFactory constructor that does not assign eventStoreId on construction
-     */
     @Deprecated
     public S3ArchiverFactory(Properties config, MetricRegistry metricRegistry, Clock clock) {
         this.config = config;
