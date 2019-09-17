@@ -33,40 +33,45 @@ public class S3ArchiverFactory {
     private final Properties config;
 
     private static final int MAX_KEYS_PER_S3_LISTING = 1_000;
+    private final AmazonS3 amazonS3;
 
     /**
      Configures eventStoreId and bucketName from properties set in config.
      @see #CONFIG_EVENTSTORE_S3_ARCHIVE_BUCKETNAME
      @see #CONFIG_EVENTSTORE_S3_ARCHIVE_OBJECT_PREFIX
+
+     @Deprecated use S3ArchiverFactory constructor that does not assign eventStoreId on construction
      */
+    @Deprecated
     public S3ArchiverFactory(Properties config, MetricRegistry metricRegistry, Clock clock) {
         this.config = config;
         this.eventStoreId = config.getProperty(CONFIG_EVENTSTORE_S3_ARCHIVE_OBJECT_PREFIX);
         this.bucketName = config.getProperty(CONFIG_EVENTSTORE_S3_ARCHIVE_BUCKETNAME);
         this.metricRegistry = metricRegistry;
         this.clock = clock;
+        this.amazonS3 = new S3ClientFactory().fromProperties(config);
     }
 
-    public S3ArchiverFactory(String eventStoreId, String bucketName, Properties config, MetricRegistry metricRegistry, Clock clock) {
+    public S3ArchiverFactory(String bucketName, Properties config, MetricRegistry metricRegistry, Clock clock) {
         this.config = config;
-        this.eventStoreId = eventStoreId;
+        this.eventStoreId = null;
         this.bucketName = bucketName;
         this.metricRegistry = metricRegistry;
         this.clock = clock;
+        this.amazonS3 = new S3ClientFactory().fromProperties(config);
     }
 
     public S3Archiver newS3Archiver(EventSource liveEventSource, int batchsize,  String appName) {
-        return build(liveEventSource, new FixedNumberOfEventsBatchingPolicy(batchsize), appName, "Event", S3Archiver.DEFAULT_MONITORING_PREFIX);
+        return build(liveEventSource, new FixedNumberOfEventsBatchingPolicy(batchsize), this.eventStoreId, appName, "Event", S3Archiver.DEFAULT_MONITORING_PREFIX);
     }
 
-    public S3Archiver newS3Archiver(EventSource liveEventSource, BatchingPolicy batchingPolicy, String appName) {
-        return build(liveEventSource, batchingPolicy, appName, eventStoreId + "-Archiver", S3Archiver.DEFAULT_MONITORING_PREFIX + "." + eventStoreId);
+    public S3Archiver newS3Archiver(String eventStoreId, EventSource liveEventSource, BatchingPolicy batchingPolicy, String appName) {
+        return build(liveEventSource, batchingPolicy, eventStoreId, appName, eventStoreId + "-Archiver", S3Archiver.DEFAULT_MONITORING_PREFIX + "." + eventStoreId);
     }
 
-    private S3Archiver build(EventSource liveEventSource, BatchingPolicy batchingPolicy, String appName, String subscriptionName, String monitoringPrefix) {
-        AmazonS3 amazonS3 = amazonS3();
+    private S3Archiver build(EventSource liveEventSource, BatchingPolicy batchingPolicy, String eventStoreId, String appName, String subscriptionName, String monitoringPrefix) {
         List<Component> monitoring = Collections.singletonList(new S3ArchiveBucketConfigurationComponent(amazonS3, bucketName));
-        S3UploadableStorageForInputStream s3UploadableStorage = createUploadableStorage(amazonS3, bucketName);
+        S3UploadableStorageForInputStream s3UploadableStorage = createUploadableStorage();
 
         return S3Archiver.newS3Archiver(
                 liveEventSource,
@@ -74,7 +79,7 @@ public class S3ArchiverFactory {
                 eventStoreId,
                 SubscriptionBuilder.eventSubscription(subscriptionName),
                 batchingPolicy,
-                newS3ArchiveMaxPositionFetcher(amazonS3),
+                newS3ArchiveMaxPositionFetcher(),
                 appName,
                 metricRegistry,
                 monitoringPrefix,
@@ -83,7 +88,6 @@ public class S3ArchiverFactory {
     }
 
     public EventSource createS3ArchivedEventSource() {
-        AmazonS3 amazonS3 = amazonS3();
         return new S3ArchivedEventSource(createS3ListableStorage(amazonS3), createDownloadableStorage(amazonS3), eventStoreId);
     }
 
@@ -97,11 +101,7 @@ public class S3ArchiverFactory {
         }
     }
 
-    public  S3ArchiveMaxPositionFetcher newS3ArchiveMaxPositionFetcher() {
-        return newS3ArchiveMaxPositionFetcher(amazonS3());
-    }
-
-    public  S3ArchiveMaxPositionFetcher newS3ArchiveMaxPositionFetcher(AmazonS3 amazonS3) {
+    public S3ArchiveMaxPositionFetcher newS3ArchiveMaxPositionFetcher() {
         final S3ListableStorage s3ListableStorage = createS3ListableStorage(amazonS3);
         return new S3ArchiveMaxPositionFetcher(s3ListableStorage, eventStoreId);
     }
@@ -110,11 +110,7 @@ public class S3ArchiverFactory {
         return new S3ListableStorage(amazonS3, bucketName, MAX_KEYS_PER_S3_LISTING);
     }
 
-    private  AmazonS3 amazonS3() {
-        return new S3ClientFactory().fromProperties(config);
-    }
-
-    private S3UploadableStorageForInputStream createUploadableStorage(AmazonS3 amazonS3, String bucketName) {
+    private S3UploadableStorageForInputStream createUploadableStorage() {
         return new S3UploadableStorageForInputStream(new S3UploadableStorage(amazonS3, bucketName), amazonS3, bucketName);
     }
 }
