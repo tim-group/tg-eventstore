@@ -16,6 +16,7 @@ import com.timgroup.tucker.info.Component;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Clock;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
@@ -34,6 +35,7 @@ public class S3ArchiverFactory {
 
     private static final int MAX_KEYS_PER_S3_LISTING = 1_000;
     private final AmazonS3 amazonS3;
+    private List<Component> monitoring;
 
     /**
      Configures eventStoreId and bucketName from properties set in config.
@@ -50,6 +52,7 @@ public class S3ArchiverFactory {
         this.metricRegistry = metricRegistry;
         this.clock = clock;
         this.amazonS3 = new S3ClientFactory().fromProperties(config);
+        this.monitoring = Collections.singletonList(new S3ArchiveBucketConfigurationComponent(amazonS3, bucketName));
     }
 
     public S3ArchiverFactory(String bucketName, Properties config, MetricRegistry metricRegistry, Clock clock) {
@@ -59,6 +62,7 @@ public class S3ArchiverFactory {
         this.metricRegistry = metricRegistry;
         this.clock = clock;
         this.amazonS3 = new S3ClientFactory().fromProperties(config);
+        this.monitoring = Collections.singletonList(new S3ArchiveBucketConfigurationComponent(amazonS3, bucketName));
     }
 
     public S3Archiver newS3Archiver(EventSource liveEventSource, int batchsize,  String appName) {
@@ -70,7 +74,6 @@ public class S3ArchiverFactory {
     }
 
     private S3Archiver build(EventSource liveEventSource, BatchingPolicy batchingPolicy, String eventStoreId, String appName, String subscriptionName, String monitoringPrefix) {
-        List<Component> monitoring = Collections.singletonList(new S3ArchiveBucketConfigurationComponent(amazonS3, bucketName));
         S3UploadableStorageForInputStream s3UploadableStorage = createUploadableStorage();
 
         return S3Archiver.newS3Archiver(
@@ -85,6 +88,10 @@ public class S3ArchiverFactory {
                 monitoringPrefix,
                 clock,
                 monitoring);
+    }
+
+    public Collection<Component> monitoring() {
+        return monitoring;
     }
 
     public EventSource createS3ArchivedEventSource() {
