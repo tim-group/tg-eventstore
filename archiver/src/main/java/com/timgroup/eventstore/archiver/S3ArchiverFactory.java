@@ -58,8 +58,13 @@ public class S3ArchiverFactory {
         this.monitoring = Collections.singletonList(new S3ArchiveBucketConfigurationComponent(amazonS3, bucketName));
     }
 
+    @Deprecated
     public S3Archiver newS3Archiver(EventSource liveEventSource, int batchsize,  String appName) {
         return build(liveEventSource, new FixedNumberOfEventsBatchingPolicy(batchsize), this.eventStoreId, appName, "Event", S3Archiver.DEFAULT_MONITORING_PREFIX);
+    }
+
+    public S3Archiver newS3Archiver(String eventStoreId, EventSource liveEventSource, int batchsize,  String appName) {
+        return build(liveEventSource, new FixedNumberOfEventsBatchingPolicy(batchsize), eventStoreId, appName, "Event", S3Archiver.DEFAULT_MONITORING_PREFIX);
     }
 
     public S3Archiver newS3Archiver(String eventStoreId, EventSource liveEventSource, BatchingPolicy batchingPolicy, String appName) {
