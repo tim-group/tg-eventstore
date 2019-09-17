@@ -94,7 +94,8 @@ public class BasicMysqlEventSource implements EventSource {
     @Override
     public String toString() {
         return "BasicMysqlEventSource{" +
-                "tableName='" + tableName + '\'' +
+                "databaseName='" + databaseName + '\'' +
+                ", tableName='" + tableName + '\'' +
                 ", batchSize=" + batchSize +
                 ", name='" + name + '\'' +
                 '}';
