@@ -207,7 +207,7 @@ public class S3Archiver {
     }
 
     public Optional<ResolvedEvent> lastEventInLiveEventStore() {
-        return liveEventSource.readAll().readAllBackwards().findFirst();
+        return liveEventSource.readAll().readLastEvent();
     }
 
     public static final class EventRecordHolder implements Event {
