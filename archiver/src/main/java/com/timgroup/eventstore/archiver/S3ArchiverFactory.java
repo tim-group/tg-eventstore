@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Clock;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
@@ -34,25 +35,46 @@ public class S3ArchiverFactory {
 
     private static final int MAX_KEYS_PER_S3_LISTING = 1_000;
 
-
+    /**
+     Configures eventStoreId and bucketName from properties set in config.
+     @see #CONFIG_EVENTSTORE_S3_ARCHIVE_BUCKETNAME
+     @see #CONFIG_EVENTSTORE_S3_ARCHIVE_OBJECT_PREFIX
+     */
     public S3ArchiverFactory(Properties config, MetricRegistry metricRegistry, Clock clock) {
         this.config = config;
-        this.eventStoreId = eventStoreId(config);
-        this.bucketName = bucketName(config);
+        this.eventStoreId = config.getProperty(CONFIG_EVENTSTORE_S3_ARCHIVE_OBJECT_PREFIX);
+        this.bucketName = config.getProperty(CONFIG_EVENTSTORE_S3_ARCHIVE_BUCKETNAME);
+        this.metricRegistry = metricRegistry;
+        this.clock = clock;
+    }
+
+    public S3ArchiverFactory(String eventStoreId, String bucketName, Properties config, MetricRegistry metricRegistry, Clock clock) {
+        this.config = config;
+        this.eventStoreId = eventStoreId;
+        this.bucketName = bucketName;
         this.metricRegistry = metricRegistry;
         this.clock = clock;
     }
 
     public S3Archiver newS3Archiver(EventSource liveEventSource, int batchsize,  String appName) {
+        return build(liveEventSource, new FixedNumberOfEventsBatchingPolicy(batchsize), appName, "Event");
+    }
+
+    public S3Archiver newS3Archiver(EventSource liveEventSource, BatchingPolicy batchingPolicy, String appName) {
+        return build(liveEventSource, batchingPolicy, appName, eventStoreId + "-Archiver");
+    }
+
+    private S3Archiver build(EventSource liveEventSource, BatchingPolicy batchingPolicy, String appName, String subscriptionName) {
         AmazonS3 amazonS3 = amazonS3();
-        List<Component> monitoring = Arrays.asList(new S3ArchiveBucketConfigurationComponent(amazonS3, bucketName));
+        List<Component> monitoring = Collections.singletonList(new S3ArchiveBucketConfigurationComponent(amazonS3, bucketName));
+        S3UploadableStorageForInputStream s3UploadableStorage = createUploadableStorage(amazonS3, bucketName);
 
         return S3Archiver.newS3Archiver(
                 liveEventSource,
-                createUploadableStorage(amazonS3, bucketName),
+                s3UploadableStorage,
                 eventStoreId,
-                SubscriptionBuilder.eventSubscription("Event"),
-                new FixedNumberOfEventsBatchingPolicy(batchsize),
+                SubscriptionBuilder.eventSubscription(subscriptionName),
+                batchingPolicy,
                 newS3ArchiveMaxPositionFetcher(amazonS3),
                 appName,
                 metricRegistry,
@@ -94,13 +116,5 @@ public class S3ArchiverFactory {
 
     private S3UploadableStorageForInputStream createUploadableStorage(AmazonS3 amazonS3, String bucketName) {
         return new S3UploadableStorageForInputStream(new S3UploadableStorage(amazonS3, bucketName), amazonS3, bucketName);
-    }
-
-    private static String eventStoreId(Properties config) {
-        return config.getProperty(CONFIG_EVENTSTORE_S3_ARCHIVE_OBJECT_PREFIX);
-    }
-
-    private static String bucketName(Properties config) {
-        return config.getProperty(CONFIG_EVENTSTORE_S3_ARCHIVE_BUCKETNAME);
     }
 }
