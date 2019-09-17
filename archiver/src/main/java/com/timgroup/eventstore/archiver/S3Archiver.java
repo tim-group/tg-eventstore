@@ -55,6 +55,7 @@ public class S3Archiver {
     private final EventSource liveEventSource;
     private final EventSubscription eventSubscription;
 
+    private final String eventStoreId;
     private final BatchingPolicy batchingPolicy;
     private final S3ArchiveMaxPositionFetcher maxPositionFetcher;
     private final S3ArchiveKeyFormat batchS3ObjectKeyFormat;
@@ -84,6 +85,7 @@ public class S3Archiver {
                        Collection<Component> extraMonitoring)
     {
         this.liveEventSource = liveEventSource;
+        this.eventStoreId = eventStoreId;
         this.batchingPolicy = batchingPolicy;
         this.applicationName = applicationName;
         this.batchS3ObjectKeyFormat = new S3ArchiveKeyFormat(eventStoreId);
@@ -167,6 +169,10 @@ public class S3Archiver {
         components.addAll(extraMonitoring);
 
         return components.stream().map(c -> c.withStatusNoWorseThan(Status.WARNING)).collect(toList());
+    }
+
+    public String getEventStoreId() {
+        return eventStoreId;
     }
 
     private final class ArchiveStalenessComponent extends Component {
