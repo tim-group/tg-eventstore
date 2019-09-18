@@ -66,6 +66,7 @@ public class S3Archiver {
     private final String applicationName;
     private final SimpleValueComponent checkpointPositionComponent;
     private final AtomicLong maxPositionInArchive = new AtomicLong();
+    private final AtomicLong maxPositionInEventSource = new AtomicLong();
     private final Timer s3ListingTimer;
     private final Timer s3UploadTimer;
     private final Histogram uncompressedSizeMetrics;
@@ -107,6 +108,7 @@ public class S3Archiver {
 
         this.maxPositionInArchive.set(maxPositionInArchiveOnStartup.orElse(0L));
         metricRegistry.gauge(this.monitoringPrefix + ".archive.max_position", () -> maxPositionInArchive::get);
+        metricRegistry.gauge(this.monitoringPrefix + ".event_source.max_position", () -> maxPositionInEventSource::get);
         metricRegistry.gauge(this.monitoringPrefix + ".archive.events_awaiting_upload", () -> batchingUploadHandler.batch::size);
         this.s3ListingTimer = metricRegistry.timer(this.monitoringPrefix + ".archive.list");
         this.s3UploadTimer = metricRegistry.timer(this.monitoringPrefix + ".archive.upload");
@@ -172,6 +174,8 @@ public class S3Archiver {
                     .map(ResolvedEvent::position)
                     .map(liveEventSource.readAll().storePositionCodec()::serializePosition)
                     .map(Long::valueOf);
+
+            livePosition.ifPresent(maxPositionInEventSource::set);
 
             boolean isStale = batchingPolicy.isStale(maxPositionInArchive, lastEventInLiveEventStore(), liveEventSource.readAll().storePositionCodec());
 
