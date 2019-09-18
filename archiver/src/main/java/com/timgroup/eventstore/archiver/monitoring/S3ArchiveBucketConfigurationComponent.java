@@ -20,7 +20,7 @@ public class S3ArchiveBucketConfigurationComponent extends Component {
     private final AmazonS3 s3Client;
 
     public S3ArchiveBucketConfigurationComponent(AmazonS3 s3Client, String bucketName) {
-        super("tg-eventstore-s3-archiver-bucket-configuration", "tg-eventstore-s3-archive Bucket Configuration");
+        super("tg-eventstore-s3-archiver-bucket-configuration", "tg-eventstore-s3-archive Bucket Configuration (bucket=[" + bucketName + "])");
         this.bucketName = bucketName;
         this.s3Client = s3Client;
     }

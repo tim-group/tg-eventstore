@@ -51,4 +51,14 @@ public class S3ArchiveBucketConfigurationComponentTest {
         assertThat(unencryptedBucketReport.getStatus(), equalTo(Status.WARNING));
         assertThat(unencryptedBucketReport.getValue().toString(), containsString("Could not verify default server-side encryption algorithm AES256"));
     }
+
+    @Test public void
+    includes_bucket_name_in_output() {
+        AmazonS3 amazonS3 = mock(AmazonS3.class);
+        when(amazonS3.getBucketEncryption("My Lovely Bucket")).thenThrow(new AmazonS3Exception("No encryption"));
+
+        Component component = new S3ArchiveBucketConfigurationComponent(amazonS3, "My Lovely Bucket");
+
+        assertThat(component.getLabel(), containsString("My Lovely Bucket"));
+    }
 }
