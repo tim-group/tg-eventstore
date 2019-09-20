@@ -27,8 +27,6 @@ import javax.annotation.Nonnull;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.time.Clock;
@@ -65,6 +63,9 @@ public class S3Archiver {
     private final Clock clock;
 
     private final String applicationName;
+    private final String applicationHostname;
+    private final String applicationVersion;
+
     private final SimpleValueComponent checkpointPositionComponent;
     private final AtomicLong maxPositionInArchive = new AtomicLong();
     private final AtomicLong maxPositionInEventSource = new AtomicLong();
@@ -91,6 +92,8 @@ public class S3Archiver {
         this.monitoringPrefix = monitoringPrefix;
         this.batchingPolicy = batchingPolicy;
         this.applicationName = applicationName;
+        this.applicationHostname = hostname();
+        this.applicationVersion = System.getProperty("timgroup.app.version");
         this.batchS3ObjectKeyFormat = new S3ArchiveKeyFormat(eventStoreId);
         this.maxPositionFetcher = maxPositionFetcher;
         this.clock = clock;
@@ -117,14 +120,6 @@ public class S3Archiver {
         this.compressedSizeMetrics   = metricRegistry.histogram(this.monitoringPrefix + ".archive.batch.compressed_size_bytes");
     }
 
-    public static S3Archiver newS3Archiver(EventSource liveEventSource, S3UploadableStorageForInputStream output,
-            String eventStoreId, SubscriptionBuilder subscriptionBuilder, BatchingPolicy batchingPolicy,
-            S3ArchiveMaxPositionFetcher maxPositionFetcher, String applicationName, MetricRegistry metricRegistry,
-            String monitoringPrefix, Clock clock) {
-        return new S3Archiver(liveEventSource, output, eventStoreId, subscriptionBuilder, batchingPolicy, maxPositionFetcher.maxPosition(),
-                maxPositionFetcher, applicationName, metricRegistry, monitoringPrefix, clock);
-    }
-
     private static String hostname() {
         try {
             return InetAddress.getLocalHost().getHostName();
@@ -138,12 +133,24 @@ public class S3Archiver {
         return liveEventSource.readAll().storePositionCodec().deserializePosition(String.valueOf(maxPositionInArchive));
     }
 
+    public static S3Archiver newS3Archiver(EventSource liveEventSource, S3UploadableStorageForInputStream output,
+            String eventStoreId, SubscriptionBuilder subscriptionBuilder, BatchingPolicy batchingPolicy,
+            S3ArchiveMaxPositionFetcher maxPositionFetcher, String applicationName, MetricRegistry metricRegistry,
+            String monitoringPrefix, Clock clock) {
+        return new S3Archiver(liveEventSource, output, eventStoreId, subscriptionBuilder, batchingPolicy, maxPositionFetcher.maxPosition(),
+                maxPositionFetcher, applicationName, metricRegistry, monitoringPrefix, clock);
+    }
+
     public void start() {
         this.eventSubscription.start();
     }
 
     public void stop() {
         this.eventSubscription.stop();
+    }
+
+    public Optional<ResolvedEvent> lastEventInLiveEventStore() {
+        return liveEventSource.readAll().readLastEvent();
     }
 
     public Collection<Component> monitoring() {
@@ -159,6 +166,24 @@ public class S3Archiver {
 
     public String getEventStoreId() {
         return eventStoreId;
+    }
+
+    public Optional<S3ArchivePosition> maxPositionInArchive() {
+        try (Timer.Context ignored = this.s3ListingTimer.time()) {
+            Optional<Long> maxPosition = this.maxPositionFetcher.maxPosition();
+            this.maxPositionInArchive.set(maxPosition.orElse(0L));
+
+            return maxPosition.map(S3ArchivePosition::new);
+        }
+    }
+
+    public static final class EventRecordHolder implements Event {
+        @SuppressWarnings("WeakerAccess")
+        public final EventRecord record;
+
+        private EventRecordHolder(EventRecord record) {
+            this.record = record;
+        }
     }
 
     private final class ArchiveStalenessComponent extends Component {
@@ -189,29 +214,6 @@ public class S3Archiver {
         }
     }
 
-    public Optional<S3ArchivePosition> maxPositionInArchive() {
-        try (Timer.Context ignored = this.s3ListingTimer.time()) {
-            Optional<Long> maxPosition = this.maxPositionFetcher.maxPosition();
-            this.maxPositionInArchive.set(maxPosition.orElse(0L));
-
-            return maxPosition.map(S3ArchivePosition::new);
-        }
-    }
-
-    public Optional<ResolvedEvent> lastEventInLiveEventStore() {
-        return liveEventSource.readAll().readLastEvent();
-    }
-
-    public static final class EventRecordHolder implements Event {
-        @SuppressWarnings("WeakerAccess")
-        public final EventRecord record;
-
-        private EventRecordHolder(EventRecord record) {
-            this.record = record;
-        }
-    }
-
-
     private final class BatchingUploadHandler implements EventHandler {
         private final BatchingPolicy batchingPolicy;
         private final S3UploadableStorageForInputStream output;
@@ -219,6 +221,7 @@ public class S3Archiver {
         private final List<ResolvedEvent> batch = new ArrayList<>();
         private final SimpleValueComponent eventsAwaitingUploadComponent = new SimpleValueComponent(monitoringPrefix + "-events-awaiting-upload", "Number of events awaiting upload to archive");
         private final SimpleValueComponent lastUploadState = new SimpleValueComponent(monitoringPrefix + "-last-upload-state", "Last upload to S3 Archive");
+
 
         BatchingUploadHandler(BatchingPolicy batchingPolicy, S3UploadableStorageForInputStream output) {
             this.batchingPolicy = batchingPolicy;
@@ -265,8 +268,8 @@ public class S3Archiver {
             metadata.put("event_source", liveEventSource.toString());
 
             metadata.put("app_name", applicationName);
-            metadata.put("app_version", System.getProperty("timgroup.app.version"));
-            metadata.put("hostname", hostname());
+            metadata.put("app_version", applicationVersion);
+            metadata.put("hostname", applicationHostname);
 
             ResolvedEvent maxEvent = lastEventInNonEmptyBatch(batch);
             metadata.put("max_position", String.valueOf(positionFrom(maxEvent)));
@@ -360,9 +363,9 @@ public class S3Archiver {
             return Collections.singleton(eventsAwaitingUploadComponent);
         }
 
+        private Long positionFrom(ResolvedEvent eventFromLiveEventSource) {
+            return Long.parseLong(liveEventSource.readAll().storePositionCodec().serializePosition(eventFromLiveEventSource.position()));
+        }
     }
 
-    private Long positionFrom(ResolvedEvent eventFromLiveEventSource) {
-        return Long.parseLong(liveEventSource.readAll().storePositionCodec().serializePosition(eventFromLiveEventSource.position()));
-    }
 }
