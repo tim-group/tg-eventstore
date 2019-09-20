@@ -11,6 +11,7 @@ import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
+import com.timgroup.eventstore.archiver.monitoring.ComponentUtils;
 import com.timgroup.eventsubscription.Deserializer;
 import com.timgroup.eventsubscription.Event;
 import com.timgroup.eventsubscription.EventHandler;
@@ -246,7 +247,7 @@ public class S3Archiver {
                         lastUploadState.updateValue(INFO, format("Successfully uploaded object=[%s] at [%s]", key, clock.instant()));
                         batch.clear();
                     } catch (IOException e) {
-                        lastUploadState.updateValue(INFO, format("Failed to upload object=[%s] at [%s]%n%s", key, clock.instant(), getStackTraceAsString(e)));
+                        lastUploadState.updateValue(INFO, format("Failed to upload object=[%s] at [%s]%n%s", key, clock.instant(), ComponentUtils.getStackTraceAsString(e)));
 
                         throw new RuntimeException(
                                 format("Error uploading object with key=[%s]%nThrowing exception to halt subscription, and dropping current batch.", key),
@@ -363,11 +364,5 @@ public class S3Archiver {
 
     private Long positionFrom(ResolvedEvent eventFromLiveEventSource) {
         return Long.parseLong(liveEventSource.readAll().storePositionCodec().serializePosition(eventFromLiveEventSource.position()));
-    }
-
-    public static String getStackTraceAsString(Throwable throwable) {
-        StringWriter stringWriter = new StringWriter();
-        throwable.printStackTrace(new PrintWriter(stringWriter));
-        return stringWriter.toString();
     }
 }

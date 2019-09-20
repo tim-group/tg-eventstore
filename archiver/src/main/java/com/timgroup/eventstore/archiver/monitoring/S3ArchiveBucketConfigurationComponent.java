@@ -41,7 +41,7 @@ public class S3ArchiveBucketConfigurationComponent extends Component {
             }
         } catch (AmazonS3Exception e) {
             return new Report(Status.WARNING, "Could not verify default server-side encryption algorithm AES256 due to exception:\n"
-                    + S3Archiver.getStackTraceAsString(e));
+                    + ComponentUtils.getStackTraceAsString(e));
         }
 
     }
