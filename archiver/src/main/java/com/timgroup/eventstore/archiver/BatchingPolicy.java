@@ -1,6 +1,7 @@
 package com.timgroup.eventstore.archiver;
 
 import com.timgroup.eventstore.api.EventRecord;
+import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
 import java.util.List;
@@ -12,6 +13,17 @@ public interface BatchingPolicy {
 
     static BatchingPolicy fixedNumberOfEvents(int eventsPerBatch) {
         return new FixedNumberOfEventsBatchingPolicy(eventsPerBatch);
+    }
+
+    /**
+     * BatchingPolicy that is only suitable for "dead" event stores, where the final event has been written.
+     *
+     * The policy will behave like BatchingPolicy#fixedNumberOfEvents, up until it reads to the end of the event store,
+     * at which point it will write a batch with size = (maxPosition % batchSize).
+     *
+     */
+    static BatchingPolicy deadStore(int eventsPerBatch, Position lastEventPosition) {
+        return new DeadStoreBatchingPolicy(eventsPerBatch, lastEventPosition);
     }
 
 }
