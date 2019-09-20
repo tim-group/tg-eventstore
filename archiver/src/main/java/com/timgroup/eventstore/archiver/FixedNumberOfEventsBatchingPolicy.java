@@ -1,6 +1,6 @@
 package com.timgroup.eventstore.archiver;
 
-import com.timgroup.eventstore.api.PositionCodec;
+import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
 import java.util.List;
@@ -21,15 +21,8 @@ public final class FixedNumberOfEventsBatchingPolicy implements BatchingPolicy {
     }
 
     @Override
-    public boolean isStale(Optional<S3ArchivePosition> maxPositionInArchive, Optional<ResolvedEvent> lastEventInLiveEventStore, PositionCodec liveEventSourceCodec) {
-        Optional<Long> archivePosition = maxPositionInArchive.map(pos -> pos.value);
-        Optional<Long> livePosition = lastEventInLiveEventStore
-                .map(ResolvedEvent::position)
-                .map(liveEventSourceCodec::serializePosition)
-                .map(Long::valueOf);
-        //noinspection OptionalGetWithoutIsPresent
-        return enoughEventsInLiveToBeStale(livePosition)
-               && archiveIsNotCloseEnoughToLive(livePosition.get(), archivePosition)  ;
+    public boolean isStale(Optional<Long> maxPositionInArchive, Optional<Long> maxPositionInLive, Optional<EventRecord> lastEventInLive) {
+        return enoughEventsInLiveToBeStale(maxPositionInLive) && archiveIsNotCloseEnoughToLive(maxPositionInLive.get(), maxPositionInArchive);
     }
 
     private boolean archiveIsNotCloseEnoughToLive(Long livePosition, Optional<Long> archivePosition) {

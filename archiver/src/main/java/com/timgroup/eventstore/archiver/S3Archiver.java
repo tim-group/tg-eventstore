@@ -38,6 +38,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.GZIPOutputStream;
@@ -74,6 +75,8 @@ public class S3Archiver {
     private final Histogram uncompressedSizeMetrics;
     private final Histogram compressedSizeMetrics;
     private final String monitoringPrefix;
+
+    private RunState runState = RunState.UNSTARTED;
 
     private S3Archiver(EventSource liveEventSource,
                        S3UploadableStorageForInputStream output,
@@ -133,6 +136,10 @@ public class S3Archiver {
         return liveEventSource.readAll().storePositionCodec().deserializePosition(String.valueOf(maxPositionInArchive));
     }
 
+    private Long positionFrom(ResolvedEvent eventFromLiveEventSource) {
+        return Long.parseLong(liveEventSource.readAll().storePositionCodec().serializePosition(eventFromLiveEventSource.position()));
+    }
+
     public static S3Archiver newS3Archiver(EventSource liveEventSource, S3UploadableStorageForInputStream output,
             String eventStoreId, SubscriptionBuilder subscriptionBuilder, BatchingPolicy batchingPolicy,
             S3ArchiveMaxPositionFetcher maxPositionFetcher, String applicationName, MetricRegistry metricRegistry,
@@ -143,10 +150,12 @@ public class S3Archiver {
 
     public void start() {
         this.eventSubscription.start();
+        this.runState = RunState.RUNNING;
     }
 
     public void stop() {
         this.eventSubscription.stop();
+        this.runState = RunState.STOPPED;
     }
 
     public Optional<ResolvedEvent> lastEventInLiveEventStore() {
@@ -168,12 +177,59 @@ public class S3Archiver {
         return eventStoreId;
     }
 
-    public Optional<S3ArchivePosition> maxPositionInArchive() {
+    public Optional<Long> maxPositionInArchive() {
         try (Timer.Context ignored = this.s3ListingTimer.time()) {
             Optional<Long> maxPosition = this.maxPositionFetcher.maxPosition();
             this.maxPositionInArchive.set(maxPosition.orElse(0L));
 
-            return maxPosition.map(S3ArchivePosition::new);
+            return maxPosition;
+        }
+    }
+
+    private Optional<Long> maxPositionInLive() {
+        Optional<Long> maxPositionInLive = lastEventInLiveEventStore().map(this::positionFrom);
+        maxPositionInLive.ifPresent(maxPositionInEventSource::set);
+        return maxPositionInLive;
+    }
+
+    public ArchiverState state() {
+        return new ArchiverState(this.runState, maxPositionInLive(), maxPositionInArchive());
+    }
+    public enum RunState { UNSTARTED, RUNNING, STOPPED; }
+
+    public static final class ArchiverState {
+        public final RunState runState;
+        public final Optional<Long> maxPositionInLive;
+        public final Optional<Long> maxPositionInArchive;
+
+        ArchiverState(RunState runState, Optional<Long> maxPositionInLive, Optional<Long> maxPositionInArchive) {
+            this.runState = runState;
+            this.maxPositionInLive = maxPositionInLive;
+            this.maxPositionInArchive = maxPositionInArchive;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            ArchiverState that = (ArchiverState) o;
+            return runState == that.runState &&
+                    maxPositionInLive.equals(that.maxPositionInLive) &&
+                    maxPositionInArchive.equals(that.maxPositionInArchive);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(runState, maxPositionInLive, maxPositionInArchive);
+        }
+
+        @Override
+        public String toString() {
+            return "ArchiverState{" +
+                    "runState=" + runState +
+                    ", maxPositionInLive=" + maxPositionInLive +
+                    ", maxPositionInArchive=" + maxPositionInArchive +
+                    '}';
         }
     }
 
@@ -194,21 +250,16 @@ public class S3Archiver {
 
         @Override
         public Report getReport() {
-            Optional<S3ArchivePosition> maxPositionInArchive = maxPositionInArchive();
-            Optional<Long> archivePosition = maxPositionInArchive.map(pos -> pos.value);
-            Optional<Long> livePosition = lastEventInLiveEventStore()
-                    .map(ResolvedEvent::position)
-                    .map(liveEventSource.readAll().storePositionCodec()::serializePosition)
-                    .map(Long::valueOf);
+            Optional<ResolvedEvent> lastEventInLive = lastEventInLiveEventStore();
+            Optional<Long> livePosition = lastEventInLive.map(S3Archiver.this::positionFrom);
 
-            livePosition.ifPresent(maxPositionInEventSource::set);
-
-            boolean isStale = batchingPolicy.isStale(maxPositionInArchive, lastEventInLiveEventStore(), liveEventSource.readAll().storePositionCodec());
+            Optional<Long> maxPositionInArchive = maxPositionInArchive();
+            boolean isStale = batchingPolicy.isStale(maxPositionInArchive, livePosition, lastEventInLive.map(ResolvedEvent::eventRecord));
 
             String value = format("%s%nmax_position in live=%s%nmax_position in archive=%s",
                     isStale ? "Archive is stale compared to live event store" : "Archive is up to date with live event store",
                     livePosition.map(Object::toString).orElse("[none]"),
-                    archivePosition.map(Object::toString).orElse("[none]")
+                    maxPositionInArchive.map(Object::toString).orElse("[none]")
             );
             return isStale ? new Report(Status.WARNING, value) : new Report(Status.OK, value);
         }
@@ -222,7 +273,6 @@ public class S3Archiver {
         private final SimpleValueComponent eventsAwaitingUploadComponent = new SimpleValueComponent(monitoringPrefix + "-events-awaiting-upload", "Number of events awaiting upload to archive");
         private final SimpleValueComponent lastUploadState = new SimpleValueComponent(monitoringPrefix + "-last-upload-state", "Last upload to S3 Archive");
 
-
         BatchingUploadHandler(BatchingPolicy batchingPolicy, S3UploadableStorageForInputStream output) {
             this.batchingPolicy = batchingPolicy;
             this.output = output;
@@ -232,7 +282,7 @@ public class S3Archiver {
 
         @Override
         public void apply(@Nonnull Position position, @Nonnull Event deserializedEvent) {
-            if (deserializedEvent instanceof  EventRecordHolder) {
+            if (deserializedEvent instanceof EventRecordHolder) {
                 batch.add(new ResolvedEvent(position, ((EventRecordHolder) deserializedEvent).record));
 
                 if (batchingPolicy.ready(batch)) {
@@ -363,9 +413,6 @@ public class S3Archiver {
             return Collections.singleton(eventsAwaitingUploadComponent);
         }
 
-        private Long positionFrom(ResolvedEvent eventFromLiveEventSource) {
-            return Long.parseLong(liveEventSource.readAll().storePositionCodec().serializePosition(eventFromLiveEventSource.position()));
-        }
     }
 
 }

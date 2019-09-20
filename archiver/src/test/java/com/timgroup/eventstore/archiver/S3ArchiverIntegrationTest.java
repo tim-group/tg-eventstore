@@ -12,6 +12,7 @@ import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
+import com.timgroup.eventstore.archiver.S3Archiver.ArchiverState;
 import com.timgroup.eventstore.memory.InMemoryEventSource;
 import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import com.timgroup.eventsubscription.SubscriptionBuilder;
@@ -61,6 +62,9 @@ import java.util.zip.GZIPInputStream;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.eventstore.api.ObjectPropertiesMatcher.objectWith;
 import static com.timgroup.eventstore.api.StreamId.streamId;
+import static com.timgroup.eventstore.archiver.S3Archiver.RunState.RUNNING;
+import static com.timgroup.eventstore.archiver.S3Archiver.RunState.STOPPED;
+import static com.timgroup.eventstore.archiver.S3Archiver.RunState.UNSTARTED;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
@@ -215,7 +219,7 @@ public class S3ArchiverIntegrationTest {
 
         S3Archiver archiver = successfullyArchiveUntilCaughtUp(liveEventSource);
 
-        assertThat(archiver.maxPositionInArchive(), equalTo(Optional.of(new S3ArchivePosition(4))));
+        assertThat(archiver.maxPositionInArchive(), equalTo(Optional.of(4L)));
     }
 
     @Test public void
@@ -267,7 +271,7 @@ public class S3ArchiverIntegrationTest {
 
         S3Archiver previousRunOfArchiver = successfullyArchiveUntilCaughtUp(liveEventSource);
 
-        assertThat(previousRunOfArchiver.maxPositionInArchive(), equalTo(Optional.of(new S3ArchivePosition(4L))));
+        assertThat(previousRunOfArchiver.maxPositionInArchive(), equalTo(Optional.of(4L)));
 
         EventSource spiedOnEventSource = Mockito.spy(liveEventSource);
         EventReader spiedOnEventReader = Mockito.spy(liveEventSource.readAll());
@@ -293,6 +297,26 @@ public class S3ArchiverIntegrationTest {
                 hasItem(tuckerComponent(equalTo(Status.INFO), containsString("Awaiting initial catchup")))));
     }
 
+    @Test public void
+    archiver_provides_current_state() {
+        EventSource liveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
+        S3Archiver archiver = createUnstartedArchiver(liveEventSource);
+
+        assertThat(archiver.state(), equalTo(new ArchiverState(UNSTARTED, Optional.empty(), Optional.empty())));
+
+        liveEventSource.writeStream().write(stream_1, asList(event_1, event_1, event_1));
+
+        assertThat(archiver.state(), equalTo(new ArchiverState(UNSTARTED, Optional.of(3L), Optional.empty())));
+
+        archiver.start();
+        liveEventSource.writeStream().write(stream_1, asList(event_1, event_1, event_1));
+
+        successfullyArchiveUntilCaughtUp(liveEventSource);
+        assertThat(archiver.state(), equalTo(new ArchiverState(RUNNING, Optional.of(6L), Optional.of(6L))));
+
+        archiver.stop();
+        assertThat(archiver.state(), equalTo(new ArchiverState(STOPPED, Optional.of(6L), Optional.of(6L))));
+    }
 
     @Test public void
     max_position_from_archive_is_absent_when_there_is_no_events() {
