@@ -429,18 +429,6 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
         );
     }
 
-    // TODO:
-    //  x gzip the content
-    //  x resume archiving from last archived position
-    //  x monitoring for bucket configuration (e.g. that it requires encryption)
-    //  x monitoring that archiver is up to date enough (max position in archive > max position in event store - 2x batch size)
-    //  x add metadata to S3 objects (similar to metadata we use in eventstores: application; version; as well as other potentially useful info like: batch size; min position (some of which may be redundant)
-    //  x add metrics (max position in archive, s3 bucket size if possible, events awaiting upload)
-    //  x expose useful information via Tucker (subscription components; last upload state; etc)
-    // Optimisations:
-    // - search for max position starts from max position of original event store and looks backward
-    // - max position is cached in memory if reused anywhere (e.g. tucker components; metrics)
-
     private EventSource createS3ArchivedEventSource() throws IOException {
         return new S3ArchivedEventSource(createListableStorage(), createDownloadableStorage(), bucketName, eventStoreId);
     }
