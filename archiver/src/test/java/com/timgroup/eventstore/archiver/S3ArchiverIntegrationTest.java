@@ -31,7 +31,6 @@ import net.ttsui.junit.rules.pending.PendingRule;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.hamcrest.FeatureMatcher;
 import org.hamcrest.Matcher;
-import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -319,6 +318,23 @@ public class S3ArchiverIntegrationTest {
     }
 
     @Test public void
+    stopping_archiver_stops_subscription() throws InterruptedException {
+        EventSource liveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
+        S3Archiver archiver = createUnstartedArchiver(liveEventSource);
+
+        archiver.start();
+        liveEventSource.writeStream().write(stream_1, asList(event_1, event_1, event_1));
+        successfullyArchiveUntilCaughtUp(liveEventSource);
+        assertThat(archiver.state(), equalTo(new ArchiverState(RUNNING, Optional.of(3L), Optional.of(2L))));
+
+        archiver.stop();
+        Thread.sleep(2000L); // Yuk, I know.
+
+        liveEventSource.writeStream().write(stream_1, asList(event_1, event_1, event_1));
+        assertThat(archiver.state(), equalTo(new ArchiverState(STOPPED, Optional.of(6L), Optional.of(2L))));
+    }
+
+    @Test public void
     max_position_from_archive_is_absent_when_there_is_no_events() {
         ListableStorage listableStorage = new S3ListableStorage(amazonS3, bucketName, 1);
         S3ArchiveMaxPositionFetcher fetcher = new S3ArchiveMaxPositionFetcher(listableStorage, eventStoreId);
@@ -490,7 +506,7 @@ public class S3ArchiverIntegrationTest {
 
         archiver.start();
 
-        CompletableFuture.anyOf(catchupFuture, scheduleTimeout(Duration.ofSeconds(5L))).join();
+        CompletableFuture.anyOf(catchupFuture, scheduleTimeout(Duration.ofSeconds(500L))).join();
 
         return archiver;
     }
