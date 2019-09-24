@@ -72,7 +72,7 @@ public class S3ArchiverFactory {
     }
 
     public EventSource createS3ArchivedEventSource(String eventStoreId) {
-        return new S3ArchivedEventSource(createS3ListableStorage(amazonS3), createDownloadableStorage(amazonS3), eventStoreId);
+        return new S3ArchivedEventSource(createS3ListableStorage(amazonS3), createDownloadableStorage(amazonS3), bucketName, eventStoreId);
     }
 
     private S3DownloadableStorageWithoutDestinationFile createDownloadableStorage(AmazonS3 amazonS3)  {

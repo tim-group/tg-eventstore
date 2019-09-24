@@ -27,21 +27,15 @@ import com.timgroup.remotefilestorage.s3.S3UploadableStorageForInputStream;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Status;
 import com.youdevise.testutils.matchers.Contains;
-import net.ttsui.junit.rules.pending.PendingRule;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.hamcrest.FeatureMatcher;
 import org.hamcrest.Matcher;
 import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -75,19 +69,15 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.doReturn;
 
 
 //TO run the test, please follow instructions in README.md in this module.
-public class S3ArchiverIntegrationTest {
-
-    public static final String S3_PROPERTIES_FILE = "s3_do_not_check_in.properties";
+public class S3ArchiverIntegrationTest extends S3IntegrationTest {
     private AmazonS3 amazonS3;
     private String bucketName;
     private String eventStoreId;
-    private String testName = getClass().getSimpleName();
-    private final Long descendingCounter = Long.MAX_VALUE - System.currentTimeMillis();
+    private String testClassName = getClass().getSimpleName();
 
     private final String category_1 = randomCategory();
     private final StreamId stream_1 = streamId(category_1, "1");
@@ -102,21 +92,12 @@ public class S3ArchiverIntegrationTest {
     private final BatchingPolicy twoEventsPerBatch =  BatchingPolicy.fixedNumberOfEvents(2);
     private final MetricRegistry metricRegistry = new MetricRegistry();
 
-    @Rule public PendingRule pendingRule = new PendingRule();
-    @Rule public TestName testNameRule = new TestName();
-
-
-    @BeforeClass
-    public static void verifyS3CredentialsSupplied() {
-        assumeTrue("S3 credentials must be supplied via properties file", Files.exists(Paths.get(S3_PROPERTIES_FILE)));
-    }
-
     @Before public void
     configure() {
         Properties properties = ConfigLoader.loadConfig(S3_PROPERTIES_FILE);
         amazonS3 = new S3ClientFactory().fromProperties(properties);
         bucketName = properties.getProperty("tg.eventstore.archive.bucketName");
-        eventStoreId = "test-eventstore-" + descendingCounter + "-" + testName + "." + testNameRule.getMethodName() + "-" + RandomStringUtils.randomAlphabetic(10);
+        eventStoreId = uniqueEventStoreId(testClassName);
     }
 
     @Test public void
@@ -373,7 +354,7 @@ public class S3ArchiverIntegrationTest {
                 hasEntry(equalTo("event_source"), containsString(liveEventSource.toString())),
                 hasEntry(equalTo("hostname"), anything()),
                 hasEntry("app_version", "1.0.12345"),
-                hasEntry("app_name", testName),
+                hasEntry("app_name", testClassName),
                 hasEntry("min_position", "3"),
                 hasEntry("max_position", "4"),
                 hasEntry("number_of_events_in_batch", "2"),
@@ -461,12 +442,12 @@ public class S3ArchiverIntegrationTest {
     // - max position is cached in memory if reused anywhere (e.g. tucker components; metrics)
 
     private EventSource createS3ArchivedEventSource() throws IOException {
-        return new S3ArchivedEventSource(createListableStorage(), createDownloadableStorage(), eventStoreId);
+        return new S3ArchivedEventSource(createListableStorage(), createDownloadableStorage(), bucketName, eventStoreId);
     }
 
     private S3DownloadableStorageWithoutDestinationFile createDownloadableStorage() throws IOException {
         return new S3DownloadableStorageWithoutDestinationFile(
-                new S3DownloadableStorage(amazonS3, Files.createTempDirectory(testName), bucketName),
+                new S3DownloadableStorage(amazonS3, Files.createTempDirectory(testClassName), bucketName),
                 amazonS3, bucketName);
     }
 
@@ -483,7 +464,7 @@ public class S3ArchiverIntegrationTest {
                 SubscriptionBuilder.eventSubscription("test"),
                 twoEventsPerBatch,
                 maxPositionFetcher,
-                testName,
+                testClassName,
                 metricRegistry,
                 S3Archiver.DEFAULT_MONITORING_PREFIX,
                 fixedClock);
@@ -502,7 +483,7 @@ public class S3ArchiverIntegrationTest {
         S3ListableStorage listableStorage = createListableStorage();
         S3Archiver archiver = S3Archiver.newS3Archiver(liveEventSource, createUploadableStorage(), eventStoreId, subscription,
                 twoEventsPerBatch, new S3ArchiveMaxPositionFetcher(listableStorage, eventStoreId),
-                testName, metricRegistry, S3Archiver.DEFAULT_MONITORING_PREFIX, clock);
+                testClassName, metricRegistry, S3Archiver.DEFAULT_MONITORING_PREFIX, clock);
 
         archiver.start();
 

@@ -5,24 +5,25 @@ import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.EventStreamWriter;
+import com.timgroup.eventstore.archiver.monitoring.S3ArchiveConnectionComponent;
 import com.timgroup.remotefilestorage.s3.S3DownloadableStorageWithoutDestinationFile;
 import com.timgroup.remotefilestorage.s3.S3ListableStorage;
 import com.timgroup.tucker.info.Component;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
-
-import static java.util.Collections.emptyList;
+import java.util.Collections;
 
 public final class S3ArchivedEventSource implements EventSource {
     private final S3ListableStorage s3ListableStorage;
     private final S3DownloadableStorageWithoutDestinationFile s3DownloadableStorage;
+    private final String bucketName;
     private final String eventStoreId;
 
-    public S3ArchivedEventSource(S3ListableStorage s3ListableStorage, S3DownloadableStorageWithoutDestinationFile s3DownloadableStorage, String eventStoreId) {
-
+    public S3ArchivedEventSource(S3ListableStorage s3ListableStorage, S3DownloadableStorageWithoutDestinationFile s3DownloadableStorage, String bucketName, String eventStoreId) {
         this.s3ListableStorage = s3ListableStorage;
         this.s3DownloadableStorage = s3DownloadableStorage;
+        this.bucketName = bucketName;
         this.eventStoreId = eventStoreId;
     }
 
@@ -53,6 +54,8 @@ public final class S3ArchivedEventSource implements EventSource {
     @Nonnull
     @Override
     public Collection<Component> monitoring() {
-        return emptyList();
+        String id = "s3-archive-EventStore-" + this.eventStoreId;
+        String label = "S3 Archive EventStore (bucket=" + bucketName + ", eventStoreId=" + this.eventStoreId + ")";
+        return Collections.singletonList(new S3ArchiveConnectionComponent(id, label, new S3ArchiveMaxPositionFetcher(s3ListableStorage, eventStoreId)));
     }
 }
