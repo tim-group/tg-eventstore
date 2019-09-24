@@ -1,47 +1,58 @@
 package com.timgroup.eventstore.archiver;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.codahale.metrics.MetricRegistry;
 import com.timgroup.config.ConfigLoader;
 import com.timgroup.eventstore.api.EventSource;
+import com.timgroup.eventstore.api.NewEvent;
+import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.archiver.monitoring.S3ArchiveConnectionComponent;
-import com.timgroup.eventsubscription.Event;
+import com.timgroup.eventstore.memory.InMemoryEventSource;
+import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import com.timgroup.eventsubscription.SubscriptionBuilder;
 import com.timgroup.eventsubscription.healthcheck.InitialCatchupFuture;
 import com.timgroup.remotefilestorage.s3.S3ClientFactory;
 import com.timgroup.remotefilestorage.s3.S3DownloadableStorage;
 import com.timgroup.remotefilestorage.s3.S3DownloadableStorageWithoutDestinationFile;
 import com.timgroup.remotefilestorage.s3.S3ListableStorage;
+import com.timgroup.remotefilestorage.s3.S3UploadableStorage;
+import com.timgroup.remotefilestorage.s3.S3UploadableStorageForInputStream;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Report;
 import com.timgroup.tucker.info.Status;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Properties;
-import java.util.concurrent.CompletableFuture;
 
+import static com.timgroup.eventstore.api.NewEvent.newEvent;
+import static com.timgroup.eventstore.api.StreamId.streamId;
+import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assume.assumeTrue;
 
 public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
     private AmazonS3 amazonS3;
     private String bucketName;
     private String eventStoreId;
     private String testClassName = getClass().getSimpleName();
+
+    private final Instant fixedEventTimestamp = Instant.parse("2019-03-19T20:43:00.044Z");
+    private final Clock fixedClock = Clock.fixed(fixedEventTimestamp, ZoneId.systemDefault());
+    private final BatchingPolicy twoEventsPerBatch =  BatchingPolicy.fixedNumberOfEvents(2);
+    private final MetricRegistry metricRegistry = new MetricRegistry();
 
     @Before
     public void
@@ -75,6 +86,41 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
         assertThat(report.getValue().toString(), containsString("AmazonS3Exception"));
     }
 
+    @Test public void
+    monitoring_includes_component_that_is_critical_when_connects_to_s3_archive_but_event_store_does_not_exist() throws IOException {
+        EventSource s3ArchiveEventSource = createS3ArchivedEventSource();
+
+        Component connectionComponent = getConnectionComponent(s3ArchiveEventSource);
+
+        Report report = connectionComponent.getReport();
+
+        assertThat(report.getStatus(), equalTo(Status.CRITICAL));
+        assertThat(report.getValue().toString(), allOf(
+                containsString("Successfully connected to S3 EventStore"),
+                containsString("no EventStore with ID='" + eventStoreId + "' exists")));
+    }
+
+    @Test public void
+    monitoring_includes_component_that_is_okay_and_contains_max_position_when_it_can_connect_to_archive() throws Exception {
+        EventSource liveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
+        StreamId anyStream = streamId(randomCategory(), "1");
+        NewEvent anyEvent = newEvent("type-A", randomData(), randomData());
+        liveEventSource.writeStream().write(anyStream, asList(anyEvent, anyEvent, anyEvent, anyEvent));
+        successfullyArchiveUntilCaughtUp(fixedClock, liveEventSource);
+
+        EventSource s3ArchiveEventSource = createS3ArchivedEventSource();
+
+
+        Component connectionComponent = getConnectionComponent(s3ArchiveEventSource);
+
+        Report report = connectionComponent.getReport();
+
+        assertThat(report.getStatus(), equalTo(Status.OK));
+        assertThat(report.getValue().toString(), allOf(
+                containsString("Successfully connected to S3 EventStore"),
+                containsString("position=4")));
+    }
+
     private S3ArchiveConnectionComponent getConnectionComponent(EventSource s3ArchiveEventSource) {
         Collection<Component> monitoring = s3ArchiveEventSource.monitoring();
         assertThat(monitoring, hasSize(1));
@@ -96,6 +142,28 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
     private S3ListableStorage createListableStorage() {
         int maxKeysInListingToTriggerPagingBehaviour = 1;
         return new S3ListableStorage(amazonS3, bucketName, maxKeysInListingToTriggerPagingBehaviour);
+    }
+
+    private S3Archiver successfullyArchiveUntilCaughtUp(Clock clock, EventSource liveEventSource) {
+        InitialCatchupFuture catchupFuture = new InitialCatchupFuture();
+        SubscriptionBuilder subscription = SubscriptionBuilder.eventSubscription("test")
+                .withRunFrequency(Duration.of(1, ChronoUnit.MILLIS))
+                .publishingTo(catchupFuture);
+
+        S3ListableStorage listableStorage = createListableStorage();
+        S3Archiver archiver = S3Archiver.newS3Archiver(liveEventSource, createUploadableStorage(), eventStoreId, subscription,
+                twoEventsPerBatch, new S3ArchiveMaxPositionFetcher(listableStorage, eventStoreId),
+                testClassName, metricRegistry, S3Archiver.DEFAULT_MONITORING_PREFIX, clock);
+
+        archiver.start();
+
+        completeOrFailAfter(catchupFuture, Duration.ofSeconds(5L));
+
+        return archiver;
+    }
+
+    private S3UploadableStorageForInputStream createUploadableStorage() {
+        return new S3UploadableStorageForInputStream(new S3UploadableStorage(amazonS3, bucketName), amazonS3, bucketName);
     }
 
 }

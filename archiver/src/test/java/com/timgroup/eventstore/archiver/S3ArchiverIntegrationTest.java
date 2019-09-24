@@ -45,11 +45,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeoutException;
 import java.util.zip.GZIPInputStream;
 
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
@@ -58,7 +53,6 @@ import static com.timgroup.eventstore.api.StreamId.streamId;
 import static com.timgroup.eventstore.archiver.S3Archiver.RunState.RUNNING;
 import static com.timgroup.eventstore.archiver.S3Archiver.RunState.STOPPED;
 import static com.timgroup.eventstore.archiver.S3Archiver.RunState.UNSTARTED;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -475,33 +469,12 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
 
         archiver.start();
 
-        CompletableFuture.anyOf(catchupFuture, scheduleTimeout(Duration.ofSeconds(500L))).join();
+        completeOrFailAfter(catchupFuture, Duration.ofSeconds(5L));
 
         return archiver;
     }
 
     private S3UploadableStorageForInputStream createUploadableStorage() {
         return new S3UploadableStorageForInputStream(new S3UploadableStorage(amazonS3, bucketName), amazonS3, bucketName);
-    }
-
-
-    private static String randomCategory() {
-        return "stream_" + UUID.randomUUID().toString().replace("-", "");
-    }
-
-    private static byte[] randomData() {
-        return ("{\n  \"value\": \"" + UUID.randomUUID() + "\"\n}").getBytes(UTF_8);
-    }
-
-    private static CompletableFuture<Void> scheduleTimeout(Duration duration) {
-        CompletableFuture<Void> completion = new CompletableFuture<>();
-        Timer timer = new Timer(true);
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                completion.completeExceptionally(new TimeoutException());
-            }
-        }, duration.toMillis());
-        return completion;
     }
 }

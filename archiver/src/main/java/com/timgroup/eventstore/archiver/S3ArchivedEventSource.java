@@ -54,8 +54,8 @@ public final class S3ArchivedEventSource implements EventSource {
     @Nonnull
     @Override
     public Collection<Component> monitoring() {
-        String id = "s3-archive-EventStore-" + this.eventStoreId;
+        String id = "tg-eventstore-s3-archive-EventSource-connection-" + this.eventStoreId;
         String label = "S3 Archive EventStore (bucket=" + bucketName + ", eventStoreId=" + this.eventStoreId + ")";
-        return Collections.singletonList(new S3ArchiveConnectionComponent(id, label, new S3ArchiveMaxPositionFetcher(s3ListableStorage, eventStoreId)));
+        return Collections.singletonList(new S3ArchiveConnectionComponent(id, label, eventStoreId, new S3ArchiveMaxPositionFetcher(s3ListableStorage, eventStoreId)));
     }
 }
