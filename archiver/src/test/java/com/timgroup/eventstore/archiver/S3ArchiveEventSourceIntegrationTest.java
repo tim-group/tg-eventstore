@@ -20,6 +20,7 @@ import com.timgroup.remotefilestorage.s3.S3UploadableStorageForInputStream;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Report;
 import com.timgroup.tucker.info.Status;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -86,6 +87,11 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
 
         assertThat(report.getStatus(), equalTo(Status.CRITICAL));
         assertThat(report.getValue().toString(), containsString("AmazonS3Exception"));
+    }
+
+    @After
+    public void clearAccessKeyPropertyOnlyUsedForTestingLackOfAccess() {
+        System.clearProperty(ACCESS_KEY_SYSTEM_PROPERTY);
     }
 
     @Test public void
