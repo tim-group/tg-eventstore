@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.archiver;
 
+import com.amazonaws.SDKGlobalConfiguration;
 import com.amazonaws.services.s3.AmazonS3;
 import com.codahale.metrics.MetricRegistry;
 import com.timgroup.config.ConfigLoader;
@@ -76,7 +77,7 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
     @Test public void
     monitoring_includes_component_that_is_critical_when_it_cannot_connect_to_s3_archive() throws IOException {
         Properties properties = ConfigLoader.loadConfig(S3_PROPERTIES_FILE);
-        System.setProperty(ACCESS_KEY_SYSTEM_PROPERTY, "AKAICOMPLETENONSENSE");
+        properties.setProperty("s3.region", "us-gov-east-1");
 
         amazonS3 = new S3ClientFactory().fromProperties(properties);
         EventSource s3ArchiveEventSource = createS3ArchivedEventSource();
