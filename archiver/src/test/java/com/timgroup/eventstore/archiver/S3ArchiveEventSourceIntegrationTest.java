@@ -33,6 +33,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Properties;
 
+import static com.amazonaws.SDKGlobalConfiguration.ACCESS_KEY_SYSTEM_PROPERTY;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.eventstore.api.StreamId.streamId;
 import static java.util.Arrays.asList;
@@ -74,7 +75,8 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
     @Test public void
     monitoring_includes_component_that_is_critical_when_it_cannot_connect_to_s3_archive() throws IOException {
         Properties properties = ConfigLoader.loadConfig(S3_PROPERTIES_FILE);
-        properties.setProperty("s3.accessKey", "AKAICOMPLETENONSENSE");
+        System.setProperty(ACCESS_KEY_SYSTEM_PROPERTY, "AKAICOMPLETENONSENSE");
+
         amazonS3 = new S3ClientFactory().fromProperties(properties);
         EventSource s3ArchiveEventSource = createS3ArchivedEventSource();
 
