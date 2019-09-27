@@ -44,7 +44,7 @@ dependencies {
 
 check.dependsOn("scalatest")
 
-tasks.withType(JavaCompile).all {
+tasks.withType(JavaCompile).configureEach {
     sourceCompatibility = "1.8"
     targetCompatibility = "1.8"
     options.encoding = "UTF-8"
@@ -53,7 +53,7 @@ tasks.withType(JavaCompile).all {
     options.compilerArgs << "-parameters"
 }
 
-tasks.withType(ScalaCompile).all {
+tasks.withType(ScalaCompile).configureEach {
     sourceCompatibility = "1.8"
     targetCompatibility = "1.8"
     options.encoding = "UTF-8"
@@ -63,7 +63,7 @@ tasks.withType(ScalaCompile).all {
     scalaCompileOptions.additionalParameters = ["-target:jvm-1.8"]
 }
 
-tasks.withType(Jar).all {
+tasks.withType(Jar).configureEach {
     manifest {
         attributes(
                 'Implementation-Title': project.name,

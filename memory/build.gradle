@@ -23,7 +23,7 @@ dependencies {
     testImplementation "com.timgroup:clocks-testing:1.0.1098" // autobump
 }
 
-tasks.withType(JavaCompile).all {
+tasks.withType(JavaCompile).configureEach {
     sourceCompatibility = "1.8"
     targetCompatibility = "1.8"
     options.encoding = "UTF-8"
@@ -32,7 +32,7 @@ tasks.withType(JavaCompile).all {
     options.compilerArgs << "-parameters"
 }
 
-tasks.withType(Jar).all {
+tasks.withType(Jar).configureEach {
     manifest {
         attributes(
                 'Implementation-Title': project.name,

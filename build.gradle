@@ -9,7 +9,7 @@ ext {
     mysqlJdbcVersion = "5.1.47"
 }
 
-task createDb {
+tasks.register("createDb") {
     doFirst {
         def mysql_exec = { db, cmd ->
             project.exec {
@@ -28,13 +28,14 @@ task createDb {
     }
 }
 
-task publishScala {
-}
+tasks.register("publishScala")
 
 subprojects {
     afterEvaluate {
         if (project.plugins.hasPlugin("scala")) {
-            rootProject.tasks["publishScala"].dependsOn(tasks["publish"])
+            rootProject.tasks.named("publishScala").configure {
+                it.dependsOn(tasks.named("publish"))
+            }
         }
     }
 }

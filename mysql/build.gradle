@@ -32,7 +32,7 @@ dependencies {
     testRuntimeOnly "org.slf4j:slf4j-simple:1.7.25"
 }
 
-tasks.withType(JavaCompile).all {
+tasks.withType(JavaCompile).configureEach {
     sourceCompatibility = "1.8"
     targetCompatibility = "1.8"
     options.encoding = "UTF-8"
@@ -41,7 +41,7 @@ tasks.withType(JavaCompile).all {
     options.compilerArgs << "-parameters"
 }
 
-tasks.withType(Jar).all {
+tasks.withType(Jar).configureEach {
     manifest {
         attributes(
                 'Implementation-Title': project.name,
