@@ -56,6 +56,6 @@ public class S3IntegrationTest {
 
 
     protected String uniqueEventStoreId(String testClassName) {
-        return "test-eventstore-" + descendingCounter + "-" + testClassName + "." + testNameRule.getMethodName() + "-" + RandomStringUtils.randomAlphabetic(10);
+        return "test-eventstore-" + descendingCounter + "-" + testClassName + "_" + testNameRule.getMethodName() + "-" + RandomStringUtils.randomAlphabetic(10);
     }
 }

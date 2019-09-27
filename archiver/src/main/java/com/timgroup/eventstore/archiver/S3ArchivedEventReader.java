@@ -40,7 +40,7 @@ public final class S3ArchivedEventReader implements EventReader {
     @Nonnull
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-       return s3ListableStorage.list(eventStoreId, null).flatMap(this::getEventsFromMultiTry);
+       return s3ListableStorage.list(eventStoreId + "/", null).flatMap(this::getEventsFromMultiTry);
     }
 
     private Stream<ResolvedEvent> getEventsFromMultiTry(RemoteFileDetails remoteFileDetails) {
@@ -107,7 +107,7 @@ public final class S3ArchivedEventReader implements EventReader {
     @Nonnull
     @Override
     public Optional<ResolvedEvent> readLastEvent() {
-        return s3ListableStorage.list(eventStoreId, null)
+        return s3ListableStorage.list(eventStoreId + "/", null)
                 .reduce((r1, r2) -> r2)
                 .map(this::getEventsFrom)
                 .flatMap(events -> events.reduce((e1, e2) -> e2));

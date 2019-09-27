@@ -17,7 +17,7 @@ public final class S3ArchiveMaxPositionFetcher {
     }
 
     public Optional<Long> maxPosition() {
-        return listableStorage.list(eventStoreId, null)
+        return listableStorage.list(eventStoreId + "/", null)
                 .reduce((r1, r2) -> r2)
                 .map(s3Object -> s3Object.name)
                 .map(s3ArchiveKeyFormat::positionValueFrom);
