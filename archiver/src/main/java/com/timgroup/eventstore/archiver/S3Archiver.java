@@ -38,7 +38,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.GZIPOutputStream;
@@ -196,42 +195,6 @@ public class S3Archiver {
         return new ArchiverState(this.runState, maxPositionInLive(), maxPositionInArchive());
     }
     public enum RunState { UNSTARTED, RUNNING, STOPPED; }
-
-    public static final class ArchiverState {
-        public final RunState runState;
-        public final Optional<Long> maxPositionInLive;
-        public final Optional<Long> maxPositionInArchive;
-
-        ArchiverState(RunState runState, Optional<Long> maxPositionInLive, Optional<Long> maxPositionInArchive) {
-            this.runState = runState;
-            this.maxPositionInLive = maxPositionInLive;
-            this.maxPositionInArchive = maxPositionInArchive;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            ArchiverState that = (ArchiverState) o;
-            return runState == that.runState &&
-                    maxPositionInLive.equals(that.maxPositionInLive) &&
-                    maxPositionInArchive.equals(that.maxPositionInArchive);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(runState, maxPositionInLive, maxPositionInArchive);
-        }
-
-        @Override
-        public String toString() {
-            return "ArchiverState{" +
-                    "runState=" + runState +
-                    ", maxPositionInLive=" + maxPositionInLive +
-                    ", maxPositionInArchive=" + maxPositionInArchive +
-                    '}';
-        }
-    }
 
     public static final class EventRecordHolder implements Event {
         @SuppressWarnings("WeakerAccess")
