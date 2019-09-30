@@ -1,16 +1,12 @@
 package com.timgroup.eventstore.archiver;
 
-import com.amazonaws.util.IOUtils;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Message;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
-import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.archiver.monitoring.ComponentUtils;
 import com.timgroup.eventsubscription.Deserializer;
 import com.timgroup.eventsubscription.Event;
@@ -24,14 +20,10 @@ import com.timgroup.tucker.info.Status;
 import com.timgroup.tucker.info.component.SimpleValueComponent;
 
 import javax.annotation.Nonnull;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -40,11 +32,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.zip.GZIPOutputStream;
 
 import static com.timgroup.tucker.info.Status.INFO;
 import static java.lang.String.format;
-import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.util.stream.Collectors.toList;
 
 public class S3Archiver {
@@ -61,10 +51,6 @@ public class S3Archiver {
     private final BatchingUploadHandler batchingUploadHandler;
 
     private final Clock clock;
-
-    private final String applicationName;
-    private final String applicationHostname;
-    private final String applicationVersion;
 
     private final SimpleValueComponent checkpointPositionComponent;
     private final AtomicLong maxPositionInArchive = new AtomicLong();
@@ -93,9 +79,6 @@ public class S3Archiver {
         this.eventStoreId = eventStoreId;
         this.monitoringPrefix = monitoringPrefix;
         this.batchingPolicy = batchingPolicy;
-        this.applicationName = applicationName;
-        this.applicationHostname = hostname();
-        this.applicationVersion = System.getProperty("timgroup.app.version");
         this.batchS3ObjectKeyFormat = new S3ArchiveKeyFormat(eventStoreId);
         this.maxPositionFetcher = maxPositionFetcher;
         this.clock = clock;
@@ -104,7 +87,15 @@ public class S3Archiver {
                 "Checkpoint position that archiver resumed from on startup");
         this.checkpointPositionComponent.updateValue(INFO, maxPositionInArchiveOnStartup);
 
-        this.batchingUploadHandler = new BatchingUploadHandler(batchingPolicy, output);
+        Map<String, String> appMetadata = new HashMap<>();
+        appMetadata.put("event_source", liveEventSource.toString());
+        appMetadata.put("app_name", applicationName);
+        appMetadata.put("app_version", System.getProperty("timgroup.app.version"));
+        appMetadata.put("hostname", hostname());
+
+        this.uncompressedSizeMetrics = metricRegistry.histogram(this.monitoringPrefix + ".archive.batch.uncompressed_size_bytes");
+        this.compressedSizeMetrics   = metricRegistry.histogram(this.monitoringPrefix + ".archive.batch.compressed_size_bytes");
+        this.batchingUploadHandler = new BatchingUploadHandler(batchingPolicy, output, appMetadata);
         this.eventSubscription = subscriptionBuilder
                 .readingFrom(liveEventSource.readAll(), convertPosition(maxPositionInArchiveOnStartup))
                 .deserializingUsing(Deserializer.applying(EventRecordHolder::new))
@@ -118,8 +109,6 @@ public class S3Archiver {
         metricRegistry.gauge(this.monitoringPrefix + ".archive.events_awaiting_upload", () -> batchingUploadHandler.batch::size);
         this.s3ListingTimer = metricRegistry.timer(this.monitoringPrefix + ".archive.list");
         this.s3UploadTimer = metricRegistry.timer(this.monitoringPrefix + ".archive.upload");
-        this.uncompressedSizeMetrics = metricRegistry.histogram(this.monitoringPrefix + ".archive.batch.uncompressed_size_bytes");
-        this.compressedSizeMetrics   = metricRegistry.histogram(this.monitoringPrefix + ".archive.batch.compressed_size_bytes");
     }
 
     private static String hostname() {
@@ -194,7 +183,7 @@ public class S3Archiver {
     public ArchiverState state() {
         return new ArchiverState(this.runState, maxPositionInLive(), maxPositionInArchive());
     }
-    public enum RunState { UNSTARTED, RUNNING, STOPPED; }
+    public enum RunState { UNSTARTED, RUNNING, STOPPED }
 
     public static final class EventRecordHolder implements Event {
         @SuppressWarnings("WeakerAccess")
@@ -231,16 +220,24 @@ public class S3Archiver {
     private final class BatchingUploadHandler implements EventHandler {
         private final BatchingPolicy batchingPolicy;
         private final S3UploadableStorageForInputStream output;
+        private final Map<String, String> appMetadata;
 
         private final List<ResolvedEvent> batch = new ArrayList<>();
         private final SimpleValueComponent eventsAwaitingUploadComponent = new SimpleValueComponent(monitoringPrefix + "-events-awaiting-upload", "Number of events awaiting upload to archive");
         private final SimpleValueComponent lastUploadState = new SimpleValueComponent(monitoringPrefix + "-last-upload-state", "Last upload to S3 Archive");
+        private final S3BatchObjectCreator s3BatchObjectCreator;
 
-        BatchingUploadHandler(BatchingPolicy batchingPolicy, S3UploadableStorageForInputStream output) {
+        BatchingUploadHandler(BatchingPolicy batchingPolicy, S3UploadableStorageForInputStream uploadableStorage, Map<String, String> appMetadata) {
             this.batchingPolicy = batchingPolicy;
-            this.output = output;
+            this.output = uploadableStorage;
+            this.appMetadata = appMetadata;
             this.eventsAwaitingUploadComponent.updateValue(INFO, batch.size());
             this.lastUploadState.updateValue(INFO, "Nothing uploaded yet");
+            this.s3BatchObjectCreator = new S3BatchObjectCreator(
+                    S3Archiver.this::positionFrom,
+                    batchS3ObjectKeyFormat,
+                    uncompressedSizeMetrics,
+                    compressedSizeMetrics);
         }
 
         @Override
@@ -249,17 +246,15 @@ public class S3Archiver {
                 batch.add(new ResolvedEvent(position, ((EventRecordHolder) deserializedEvent).record));
 
                 if (batchingPolicy.ready(batch)) {
-                    String key = key(batch);
+                    String key = s3BatchObjectCreator.key(batch);
                     try {
-                        byte[] uncompressedContent = content(batch);
-                        int compressedContentSize;
+                        S3BatchObject s3BatchObject = s3BatchObjectCreator.create(batch);
+
                         try (Timer.Context ignored = s3UploadTimer.time()) {
-                            byte[] compressedContent = applyGzippingToBytes(uncompressedContent);
-                            compressedContentSize = compressedContent.length;
-                            output.upload(key, new ByteArrayInputStream(compressedContent), compressedContentSize, buildObjectMetadata(uncompressedContent.length, compressedContentSize));
+                            Map<String, String> allMetadata = new HashMap<>(appMetadata);
+                            allMetadata.putAll(s3BatchObject.metadata);
+                            output.upload(key, s3BatchObject.content, s3BatchObject.contentLength, allMetadata);
                         }
-                        uncompressedSizeMetrics.update(uncompressedContent.length);
-                        compressedSizeMetrics.update(compressedContentSize);
                         lastUploadState.updateValue(INFO, format("Successfully uploaded object=[%s] at [%s]", key, clock.instant()));
                         batch.clear();
                     } catch (IOException e) {
@@ -273,102 +268,6 @@ public class S3Archiver {
 
                 eventsAwaitingUploadComponent.updateValue(INFO, batch.size());
             }
-        }
-
-        private Map<String, String> buildObjectMetadata(int uncompressedContentSize, int compressedContentSize) {
-            Map<String, String> metadata = new HashMap<>();
-
-            metadata.put("event_source", liveEventSource.toString());
-
-            metadata.put("app_name", applicationName);
-            metadata.put("app_version", applicationVersion);
-            metadata.put("hostname", applicationHostname);
-
-            ResolvedEvent maxEvent = lastEventInNonEmptyBatch(batch);
-            metadata.put("max_position", String.valueOf(positionFrom(maxEvent)));
-            metadata.put("min_position", String.valueOf(positionFrom(batch.get(0))));
-            metadata.put("number_of_events_in_batch", String.valueOf(batch.size()));
-
-            EventRecord maxEventRecord = maxEvent.eventRecord();
-            metadata.put("max_event_timestamp", maxEventRecord.timestamp().toString());
-            metadata.put("max_event_stream_category", maxEventRecord.streamId().category());
-            metadata.put("max_event_stream_id", maxEventRecord.streamId().id());
-            metadata.put("max_event_event_type", maxEventRecord.eventType());
-
-            metadata.put("uncompressed_size_in_bytes", String.valueOf(uncompressedContentSize));
-            metadata.put("compressed_size_in_bytes", String.valueOf(compressedContentSize));
-            return metadata;
-        }
-
-        private byte[] content(List<ResolvedEvent> batch) {
-            return batch
-                    .stream()
-                    .map(this::toProtobufsMessage)
-                    .map(this::toBytesPrefixedWithLength)
-                    .collect(
-                            ByteArrayOutputStream::new,
-                            (outputStream, bytes) -> {
-                                try {
-                                    outputStream.write(bytes);
-                                } catch (IOException e1) {
-                                    throw new RuntimeException(e1);
-                                }
-                            },
-                            (a, b) -> { }
-                    )
-                    .toByteArray();
-        }
-
-        private byte[] applyGzippingToBytes(byte[] batchAsProtobufBytes) throws IOException {
-            try (ByteArrayOutputStream gzippedByteArray = new ByteArrayOutputStream();
-                 GZIPOutputStream gzipOutputStream = new GZIPOutputStream(gzippedByteArray)) {
-
-                IOUtils.copy(new ByteArrayInputStream(batchAsProtobufBytes), gzipOutputStream);
-                gzipOutputStream.finish();
-
-                return gzippedByteArray.toByteArray();
-            }
-        }
-
-        private byte[] toBytesPrefixedWithLength(Message message) {
-            byte[] srcArray = message.toByteArray();
-            ByteBuffer buffer= ByteBuffer.allocate(srcArray.length +4).order(LITTLE_ENDIAN);
-
-            buffer.putInt(srcArray.length);
-            buffer.put(srcArray);
-
-            return buffer.array();
-        }
-
-        private Message toProtobufsMessage(ResolvedEvent resolvedEvent) {
-            EventRecord eventRecord = resolvedEvent.eventRecord();
-            StreamId streamId = eventRecord.streamId();
-
-            Instant timestamp = eventRecord.timestamp();
-            EventStoreArchiverProtos.Timestamp protoTimestamp = EventStoreArchiverProtos.Timestamp.newBuilder()
-                    .setSeconds(timestamp.getEpochSecond())
-                    .setNanos(timestamp.getNano())
-                    .build();
-
-            return EventStoreArchiverProtos.Event.newBuilder()
-                    .setPosition(positionFrom(resolvedEvent))
-                    .setTimestamp(protoTimestamp)
-                    .setStreamCategory(streamId.category())
-                    .setStreamId(streamId.id())
-                    .setEventNumber(eventRecord.eventNumber())
-                    .setEventType(eventRecord.eventType())
-                    .setData(ByteString.copyFrom(eventRecord.data()))
-                    .setMetadata(ByteString.copyFrom(eventRecord.metadata()))
-                    .build();
-        }
-
-        private String key(List<ResolvedEvent> batch) {
-            ResolvedEvent lastEventInBatch = lastEventInNonEmptyBatch(batch);
-            return batchS3ObjectKeyFormat.objectKeyFor(positionFrom(lastEventInBatch), "gz");
-        }
-
-        private ResolvedEvent lastEventInNonEmptyBatch(List<ResolvedEvent> batch) {
-            return batch.get(batch.size() - 1);
         }
 
         @SuppressWarnings("WeakerAccess")
