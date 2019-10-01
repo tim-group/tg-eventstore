@@ -69,6 +69,14 @@ tasks.withType(Jar).configureEach {
     }
 }
 
+tasks.named("jar").configure {
+    manifest {
+        attributes(
+                'Automatic-Module-Name': "com.timgroup.eventstore.stitching.legacy"
+        )
+    }
+}
+
 task sourcesJar(type: Jar, dependsOn: classes) {
     classifier = 'sources'
     from sourceSets.main.allSource
