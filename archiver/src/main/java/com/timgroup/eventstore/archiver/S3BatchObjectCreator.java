@@ -1,6 +1,5 @@
 package com.timgroup.eventstore.archiver;
 
-import com.amazonaws.util.IOUtils;
 import com.codahale.metrics.Histogram;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
@@ -16,6 +15,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.zip.GZIPOutputStream;
 
@@ -45,37 +45,35 @@ class S3BatchObjectCreator {
     }
 
     public S3BatchObject create(List<ResolvedEvent> batch) throws IOException {
-        byte[] uncompressedContent = content(batch);
-        byte[] compressedContent = applyGzippingToBytes(uncompressedContent);
-        int compressedContentSize = compressedContent.length;
-        uncompressedSizeMetrics.update(uncompressedContent.length);
-        compressedSizeMetrics.update(compressedContentSize);
+        try (ByteArrayOutputStream gzippedByteArray = new ByteArrayOutputStream(8192);
+             GZIPOutputStream gzipOutputStream = new GZIPOutputStream(gzippedByteArray, 8192)) {
 
-        return new S3BatchObject(
-                new ByteArrayInputStream(compressedContent),
-                compressedContentSize,
-                buildObjectMetadata(uncompressedContent.length, compressedContentSize, batch));
-    }
-
-
-
-    private byte[] content(List<ResolvedEvent> batch) {
-        return batch
-                .stream()
+            AtomicInteger uncompressedBytes = new AtomicInteger(0);
+            batch.stream()
                 .map(this::toProtobufsMessage)
                 .map(this::toBytesPrefixedWithLength)
-                .collect(
-                        ByteArrayOutputStream::new,
-                        (outputStream, bytes) -> {
-                            try {
-                                outputStream.write(bytes);
-                            } catch (IOException e1) {
-                                throw new RuntimeException(e1);
-                            }
-                        },
-                        (a, b) -> { }
-                )
-                .toByteArray();
+                .forEach(bytes -> {
+                    uncompressedBytes.addAndGet(bytes.length);
+                    try {
+                        gzipOutputStream.write(bytes);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+            gzipOutputStream.finish();
+
+            byte[] content =  gzippedByteArray.toByteArray();
+            int uncompressedContentSize = uncompressedBytes.get();
+            int compressedContentSize = content.length;
+
+            uncompressedSizeMetrics.update(uncompressedContentSize);
+            compressedSizeMetrics.update(compressedContentSize);
+
+            return new S3BatchObject(
+                    new ByteArrayInputStream(content),
+                    compressedContentSize,
+                    buildObjectMetadata(uncompressedContentSize, compressedContentSize, batch));
+        }
     }
 
 
@@ -109,17 +107,6 @@ class S3BatchObjectCreator {
                 .setData(ByteString.copyFrom(eventRecord.data()))
                 .setMetadata(ByteString.copyFrom(eventRecord.metadata()))
                 .build();
-    }
-
-    private byte[] applyGzippingToBytes(byte[] batchAsProtobufBytes) throws IOException {
-        try (ByteArrayOutputStream gzippedByteArray = new ByteArrayOutputStream();
-             GZIPOutputStream gzipOutputStream = new GZIPOutputStream(gzippedByteArray)) {
-
-            IOUtils.copy(new ByteArrayInputStream(batchAsProtobufBytes), gzipOutputStream);
-            gzipOutputStream.finish();
-
-            return gzippedByteArray.toByteArray();
-        }
     }
 
     private Map<String, String> buildObjectMetadata(int uncompressedContentSize, int compressedContentSize, List<ResolvedEvent> batch) {
