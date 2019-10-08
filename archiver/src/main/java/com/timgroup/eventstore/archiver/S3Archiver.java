@@ -106,7 +106,7 @@ public class S3Archiver {
         this.maxPositionInArchive.set(maxPositionInArchiveOnStartup.orElse(0L));
         metricRegistry.gauge(this.monitoringPrefix + ".archive.max_position", () -> maxPositionInArchive::get);
         metricRegistry.gauge(this.monitoringPrefix + ".event_source.max_position", () -> maxPositionInEventSource::get);
-        metricRegistry.gauge(this.monitoringPrefix + ".archive.events_awaiting_upload", () -> batchingUploadHandler.batch::size);
+        metricRegistry.gauge(this.monitoringPrefix + ".archive.events_awaiting_upload", () -> batchingUploadHandler.s3BatchObjectCreator::eventsInCurrentBatch);
         this.s3ListingTimer = metricRegistry.timer(this.monitoringPrefix + ".archive.list");
         this.s3UploadTimer = metricRegistry.timer(this.monitoringPrefix + ".archive.upload");
     }
@@ -222,7 +222,6 @@ public class S3Archiver {
         private final S3UploadableStorageForInputStream output;
         private final Map<String, String> appMetadata;
 
-        private final List<ResolvedEvent> batch = new ArrayList<>();
         private final SimpleValueComponent eventsAwaitingUploadComponent = new SimpleValueComponent(monitoringPrefix + "-events-awaiting-upload", "Number of events awaiting upload to archive");
         private final SimpleValueComponent lastUploadState = new SimpleValueComponent(monitoringPrefix + "-last-upload-state", "Last upload to S3 Archive");
         private final S3BatchObjectCreator s3BatchObjectCreator;
@@ -231,7 +230,7 @@ public class S3Archiver {
             this.batchingPolicy = batchingPolicy;
             this.output = uploadableStorage;
             this.appMetadata = appMetadata;
-            this.eventsAwaitingUploadComponent.updateValue(INFO, batch.size());
+            this.eventsAwaitingUploadComponent.updateValue(INFO, 0);
             this.lastUploadState.updateValue(INFO, "Nothing uploaded yet");
             this.s3BatchObjectCreator = new S3BatchObjectCreator(
                     S3Archiver.this::positionFrom,
@@ -243,12 +242,15 @@ public class S3Archiver {
         @Override
         public void apply(@Nonnull Position position, @Nonnull Event deserializedEvent) {
             if (deserializedEvent instanceof EventRecordHolder) {
-                batch.add(new ResolvedEvent(position, ((EventRecordHolder) deserializedEvent).record));
+                ResolvedEvent resolvedEvent = new ResolvedEvent(position, ((EventRecordHolder) deserializedEvent).record);
 
-                if (batchingPolicy.ready(batch)) {
-                    String key = s3BatchObjectCreator.key(batch);
+                s3BatchObjectCreator.add(resolvedEvent);
+                batchingPolicy.notifyAddedToBatch(resolvedEvent);
+
+                if (batchingPolicy.ready()) {
+                    String key = s3BatchObjectCreator.key();
                     try {
-                        S3BatchObject s3BatchObject = s3BatchObjectCreator.create(batch);
+                        S3BatchObject s3BatchObject = s3BatchObjectCreator.prepareBatchForUpload();
 
                         try (Timer.Context ignored = s3UploadTimer.time()) {
                             Map<String, String> allMetadata = new HashMap<>(appMetadata);
@@ -256,7 +258,9 @@ public class S3Archiver {
                             output.upload(key, s3BatchObject.content, s3BatchObject.contentLength, allMetadata);
                         }
                         lastUploadState.updateValue(INFO, format("Successfully uploaded object=[%s] at [%s]", key, clock.instant()));
-                        batch.clear();
+
+                        batchingPolicy.reset();
+                        s3BatchObjectCreator.reset();
                     } catch (IOException e) {
                         lastUploadState.updateValue(INFO, format("Failed to upload object=[%s] at [%s]%n%s", key, clock.instant(), ComponentUtils.getStackTraceAsString(e)));
 
@@ -266,7 +270,7 @@ public class S3Archiver {
                     }
                 }
 
-                eventsAwaitingUploadComponent.updateValue(INFO, batch.size());
+                eventsAwaitingUploadComponent.updateValue(INFO, s3BatchObjectCreator.eventsInCurrentBatch());
             }
         }
 

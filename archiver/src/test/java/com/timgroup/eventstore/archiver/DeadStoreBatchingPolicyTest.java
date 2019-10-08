@@ -21,27 +21,29 @@ public class DeadStoreBatchingPolicyTest {
 
     @Test public void
     batch_is_ready_when_it_reaches_the_configured_batch_size() {
-        boolean isReady = deadStoreBatchingPolicy.ready(asList(
-                new ResolvedEvent(new LongPosition(1), eventRecord()),
-                new ResolvedEvent(new LongPosition(2), eventRecord())
-        ));
-        assertThat(isReady, equalTo(true));
+        asList(new ResolvedEvent(new LongPosition(1), eventRecord()),
+                new ResolvedEvent(new LongPosition(2), eventRecord()))
+            .forEach(deadStoreBatchingPolicy::notifyAddedToBatch);
+
+        assertThat(deadStoreBatchingPolicy.ready(), equalTo(true));
     }
 
     @Test public void
     batch_is_not_ready_if_it_is_smaller_than_the_configured_batch_size_and_has_not_reached_the_max_position() {
-        boolean isReady = deadStoreBatchingPolicy.ready(asList(
+        asList(
                 new ResolvedEvent(new LongPosition(122), eventRecord())
-        ));
-        assertThat(isReady, equalTo(false));
+        ).forEach(deadStoreBatchingPolicy::notifyAddedToBatch);
+
+        assertThat(deadStoreBatchingPolicy.ready(), equalTo(false));
     }
 
     @Test public void
     batch_is_ready_if_it_is_smaller_than_the_configured_batch_size_but_has_reached_the_max_position() {
-        boolean isReady = deadStoreBatchingPolicy.ready(asList(
+        asList(
                 new ResolvedEvent(new LongPosition(123), eventRecord())
-        ));
-        assertThat(isReady, equalTo(true));
+        ).forEach(deadStoreBatchingPolicy::notifyAddedToBatch);
+
+        assertThat(deadStoreBatchingPolicy.ready(), equalTo(true));
     }
 
     private EventRecord eventRecord() {
