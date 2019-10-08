@@ -11,10 +11,15 @@ import java.util.Optional;
 public interface BatchingPolicy {
     void notifyAddedToBatch(ResolvedEvent event);
     boolean ready();
+
     void reset();
 
     boolean isStale(Optional<Long> maxPositionInArchive, Optional<Long> maxPositionInLive, Optional<EventRecord> lastEventInLive);
 
+    /**
+     * BatchingPolicy chases a live event store, uploading on reaching the batch size.
+     *
+     */
     static BatchingPolicy fixedNumberOfEvents(int eventsPerBatch) {
         return new FixedNumberOfEventsBatchingPolicy(eventsPerBatch);
     }
