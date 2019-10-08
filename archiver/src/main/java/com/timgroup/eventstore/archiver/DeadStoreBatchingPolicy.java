@@ -4,14 +4,15 @@ import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
-import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 public final class DeadStoreBatchingPolicy implements BatchingPolicy {
     public static final String NAME = "DeadStoreBatchingPolicy";
 
     private final BatchingPolicy fixedSizeBatchingPolicy;
-    private Position lastEventPosition;
+    private final Position lastEventPosition;
+    private final AtomicReference<ResolvedEvent> lastEventInBatch = new AtomicReference<>();
 
     public DeadStoreBatchingPolicy(int batchSize, Position lastEventPosition) {
         this.fixedSizeBatchingPolicy = BatchingPolicy.fixedNumberOfEvents(batchSize);
@@ -19,13 +20,20 @@ public final class DeadStoreBatchingPolicy implements BatchingPolicy {
     }
 
     @Override
-    public boolean ready(List<ResolvedEvent> batch) {
-        return fixedSizeBatchingPolicy.ready(batch) || isAtMaxPosition(batch);
+    public void notifyAddedToBatch(ResolvedEvent event) {
+        fixedSizeBatchingPolicy.notifyAddedToBatch(event);
+        lastEventInBatch.set(event);
     }
 
-    private boolean isAtMaxPosition(List<ResolvedEvent> batch) {
-        ResolvedEvent lastEventInBatch = batch.get(batch.size() - 1);
-        return lastEventInBatch.position().equals(lastEventPosition);
+    @Override
+    public boolean ready() {
+        return fixedSizeBatchingPolicy.ready() || lastEventInBatch.get().position().equals(lastEventPosition);
+    }
+
+    @Override
+    public void reset() {
+        fixedSizeBatchingPolicy.reset();
+        lastEventInBatch.set(null);
     }
 
     @Override

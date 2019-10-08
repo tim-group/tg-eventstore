@@ -13,21 +13,27 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.zip.GZIPOutputStream;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
 class S3BatchObjectCreator {
-
     private final Function<ResolvedEvent, Long> positionFrom;
     private final S3ArchiveKeyFormat batchS3ObjectKeyFormat;
-
     private final Histogram uncompressedSizeMetrics;
     private final Histogram compressedSizeMetrics;
+
+    private final AtomicReference<ResolvedEvent> firstEventInBatch = new AtomicReference<>(null);
+    private final AtomicReference<ResolvedEvent> lastEventInBatch = new AtomicReference<>(null);
+    private final AtomicInteger currentBatchSize = new AtomicInteger(0);
+    private final AtomicInteger uncompressedBytesCount = new AtomicInteger(0);
+    private ByteArrayOutputStream gzippedByteArray;
+    private GZIPOutputStream gzipOutputStream;
 
     public S3BatchObjectCreator(Function<ResolvedEvent, Long> positionFrom,
                                 S3ArchiveKeyFormat batchS3ObjectKeyFormat,
@@ -37,43 +43,67 @@ class S3BatchObjectCreator {
         this.batchS3ObjectKeyFormat = batchS3ObjectKeyFormat;
         this.uncompressedSizeMetrics = uncompressedSizeMetrics;
         this.compressedSizeMetrics = compressedSizeMetrics;
+
+        this.reset();
     }
 
-    public String key(List<ResolvedEvent> batch) {
-        ResolvedEvent lastEventInBatch = lastEventInNonEmptyBatch(batch);
-        return batchS3ObjectKeyFormat.objectKeyFor(positionFrom.apply(lastEventInBatch), "gz");
-    }
 
-    public S3BatchObject create(List<ResolvedEvent> batch) throws IOException {
-        try (ByteArrayOutputStream gzippedByteArray = new ByteArrayOutputStream(8192);
-             GZIPOutputStream gzipOutputStream = new GZIPOutputStream(gzippedByteArray, 8192)) {
+    public void add(ResolvedEvent resolvedEvent) {
+        this.firstEventInBatch.compareAndSet(null, resolvedEvent);
+        this.lastEventInBatch.set(resolvedEvent);
+        this.currentBatchSize.incrementAndGet();
 
-            AtomicInteger uncompressedBytes = new AtomicInteger(0);
-            batch.stream()
+        byte[] uncompressedBytes = Optional.of(resolvedEvent)
                 .map(this::toProtobufsMessage)
                 .map(this::toBytesPrefixedWithLength)
-                .forEach(bytes -> {
-                    uncompressedBytes.addAndGet(bytes.length);
-                    try {
-                        gzipOutputStream.write(bytes);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
-            gzipOutputStream.finish();
+                .get();
 
-            byte[] content =  gzippedByteArray.toByteArray();
-            int uncompressedContentSize = uncompressedBytes.get();
-            int compressedContentSize = content.length;
+        uncompressedBytesCount.addAndGet(uncompressedBytes.length);
 
-            uncompressedSizeMetrics.update(uncompressedContentSize);
-            compressedSizeMetrics.update(compressedContentSize);
-
-            return new S3BatchObject(
-                    new ByteArrayInputStream(content),
-                    compressedContentSize,
-                    buildObjectMetadata(uncompressedContentSize, compressedContentSize, batch));
+        try {
+            gzipOutputStream.write(uncompressedBytes);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
+
+    }
+
+    public void reset() {
+        this.firstEventInBatch.set(null);
+        this.lastEventInBatch.set(null);
+        this.currentBatchSize.set(0);
+        this.uncompressedBytesCount.set(0);
+        this.gzippedByteArray = new ByteArrayOutputStream(8192);
+        try {
+            this.gzipOutputStream = new GZIPOutputStream(gzippedByteArray, 8192);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public int eventsInCurrentBatch() {
+        return currentBatchSize.get();
+    }
+
+    public String key() {
+        return batchS3ObjectKeyFormat.objectKeyFor(positionFrom.apply(lastEventInBatch.get()), "gz");
+    }
+
+    public S3BatchObject prepareBatchForUpload() throws IOException {
+        gzippedByteArray.close();
+        gzipOutputStream.finish();
+
+        byte[] content =  gzippedByteArray.toByteArray();
+        int uncompressedContentSize = uncompressedBytesCount.get();
+        int compressedContentSize = content.length;
+
+        uncompressedSizeMetrics.update(uncompressedContentSize);
+        compressedSizeMetrics.update(compressedContentSize);
+
+        return new S3BatchObject(
+                new ByteArrayInputStream(content),
+                compressedContentSize,
+                buildObjectMetadata(uncompressedContentSize, compressedContentSize, lastEventInBatch.get()));
     }
 
 
@@ -109,13 +139,13 @@ class S3BatchObjectCreator {
                 .build();
     }
 
-    private Map<String, String> buildObjectMetadata(int uncompressedContentSize, int compressedContentSize, List<ResolvedEvent> batch) {
+    private Map<String, String> buildObjectMetadata(int uncompressedContentSize, int compressedContentSize, ResolvedEvent batch) {
         Map<String, String> metadata = new HashMap<>();
 
-        ResolvedEvent maxEvent = lastEventInNonEmptyBatch(batch);
+        ResolvedEvent maxEvent = lastEventInBatch.get();
         metadata.put("max_position", String.valueOf(positionFrom.apply(maxEvent)));
-        metadata.put("min_position", String.valueOf(positionFrom.apply(batch.get(0))));
-        metadata.put("number_of_events_in_batch", String.valueOf(batch.size()));
+        metadata.put("min_position", String.valueOf(positionFrom.apply(firstEventInBatch.get())));
+        metadata.put("number_of_events_in_batch", String.valueOf(currentBatchSize.get()));
 
         EventRecord maxEventRecord = maxEvent.eventRecord();
         metadata.put("max_event_timestamp", maxEventRecord.timestamp().toString());
@@ -126,10 +156,5 @@ class S3BatchObjectCreator {
         metadata.put("uncompressed_size_in_bytes", String.valueOf(uncompressedContentSize));
         metadata.put("compressed_size_in_bytes", String.valueOf(compressedContentSize));
         return metadata;
-    }
-
-
-    private ResolvedEvent lastEventInNonEmptyBatch(List<ResolvedEvent> batch) {
-        return batch.get(batch.size() - 1);
     }
 }

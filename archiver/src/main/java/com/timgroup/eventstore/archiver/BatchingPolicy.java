@@ -3,12 +3,16 @@ package com.timgroup.eventstore.archiver;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.eventsubscription.EventHandler;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface BatchingPolicy {
-    boolean ready(List<ResolvedEvent> batch);
+    void notifyAddedToBatch(ResolvedEvent event);
+    boolean ready();
+    void reset();
+
     boolean isStale(Optional<Long> maxPositionInArchive, Optional<Long> maxPositionInLive, Optional<EventRecord> lastEventInLive);
 
     static BatchingPolicy fixedNumberOfEvents(int eventsPerBatch) {

@@ -5,19 +5,32 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public final class FixedNumberOfEventsBatchingPolicy implements BatchingPolicy {
     private static final int BATCHES_BEHIND_TOLERANCE = 3;
 
     private final int batchSize;
+    private final AtomicInteger currentBatchSize = new AtomicInteger(0);
 
     public FixedNumberOfEventsBatchingPolicy(int batchSize) {
         this.batchSize = batchSize;
     }
 
     @Override
-    public boolean ready(List<ResolvedEvent> batch) {
-        return !batch.isEmpty() && batch.size() % batchSize == 0;
+    public void notifyAddedToBatch(ResolvedEvent event) {
+        currentBatchSize.incrementAndGet();
+    }
+
+    @Override
+    public boolean ready() {
+        return (currentBatchSize.get() > 0) && (currentBatchSize.get() % batchSize == 0);
+    }
+
+    @Override
+    public void reset() {
+        currentBatchSize.set(0);
     }
 
     @Override
