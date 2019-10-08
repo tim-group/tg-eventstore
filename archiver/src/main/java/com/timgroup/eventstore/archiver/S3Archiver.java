@@ -25,8 +25,8 @@ import java.net.InetAddress;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,18 +47,12 @@ public class S3Archiver {
     private final String eventStoreId;
     private final BatchingPolicy batchingPolicy;
     private final S3ArchiveMaxPositionFetcher maxPositionFetcher;
-    private final S3ArchiveKeyFormat batchS3ObjectKeyFormat;
     private final BatchingUploadHandler batchingUploadHandler;
-
-    private final Clock clock;
 
     private final SimpleValueComponent checkpointPositionComponent;
     private final AtomicLong maxPositionInArchive = new AtomicLong();
     private final AtomicLong maxPositionInEventSource = new AtomicLong();
     private final Timer s3ListingTimer;
-    private final Timer s3UploadTimer;
-    private final Histogram uncompressedSizeMetrics;
-    private final Histogram compressedSizeMetrics;
     private final String monitoringPrefix;
 
     private RunState runState = RunState.UNSTARTED;
@@ -79,9 +73,8 @@ public class S3Archiver {
         this.eventStoreId = eventStoreId;
         this.monitoringPrefix = monitoringPrefix;
         this.batchingPolicy = batchingPolicy;
-        this.batchS3ObjectKeyFormat = new S3ArchiveKeyFormat(eventStoreId);
+        S3ArchiveKeyFormat batchS3ObjectKeyFormat = new S3ArchiveKeyFormat(eventStoreId);
         this.maxPositionFetcher = maxPositionFetcher;
-        this.clock = clock;
 
         this.checkpointPositionComponent =  new SimpleValueComponent(this.monitoringPrefix + "-checkpoint-position",
                 "Checkpoint position that archiver resumed from on startup");
@@ -93,9 +86,19 @@ public class S3Archiver {
         appMetadata.put("app_version", System.getProperty("timgroup.app.version"));
         appMetadata.put("hostname", hostname());
 
-        this.uncompressedSizeMetrics = metricRegistry.histogram(this.monitoringPrefix + ".archive.batch.uncompressed_size_bytes");
-        this.compressedSizeMetrics   = metricRegistry.histogram(this.monitoringPrefix + ".archive.batch.compressed_size_bytes");
-        this.batchingUploadHandler = new BatchingUploadHandler(batchingPolicy, output, appMetadata);
+        Histogram uncompressedSizeMetrics = metricRegistry.histogram(this.monitoringPrefix + ".archive.batch.uncompressed_size_bytes");
+        Histogram compressedSizeMetrics = metricRegistry.histogram(this.monitoringPrefix + ".archive.batch.compressed_size_bytes");
+
+        CurrentBatchWriter currentBatchWriter = new CurrentBatchWriter(
+                batchingPolicy,
+                this::positionFrom,
+                batchS3ObjectKeyFormat,
+                uncompressedSizeMetrics,
+                compressedSizeMetrics);
+        Timer s3UploadTimer = metricRegistry.timer(this.monitoringPrefix + ".archive.upload");
+
+        this.batchingUploadHandler = new BatchingUploadHandler(output, currentBatchWriter, clock, appMetadata, monitoringPrefix, s3UploadTimer);
+
         this.eventSubscription = subscriptionBuilder
                 .readingFrom(liveEventSource.readAll(), convertPosition(maxPositionInArchiveOnStartup))
                 .deserializingUsing(Deserializer.applying(EventRecordHolder::new))
@@ -106,9 +109,8 @@ public class S3Archiver {
         this.maxPositionInArchive.set(maxPositionInArchiveOnStartup.orElse(0L));
         metricRegistry.gauge(this.monitoringPrefix + ".archive.max_position", () -> maxPositionInArchive::get);
         metricRegistry.gauge(this.monitoringPrefix + ".event_source.max_position", () -> maxPositionInEventSource::get);
-        metricRegistry.gauge(this.monitoringPrefix + ".archive.events_awaiting_upload", () -> batchingUploadHandler.s3BatchObjectCreator::eventsInCurrentBatch);
+        metricRegistry.gauge(this.monitoringPrefix + ".archive.events_awaiting_upload", () -> batchingUploadHandler.currentBatchWriter::eventsInCurrentBatch);
         this.s3ListingTimer = metricRegistry.timer(this.monitoringPrefix + ".archive.list");
-        this.s3UploadTimer = metricRegistry.timer(this.monitoringPrefix + ".archive.upload");
     }
 
     private static String hostname() {
@@ -154,7 +156,7 @@ public class S3Archiver {
         List<Component> components = new ArrayList<>();
         components.addAll(liveEventSource.monitoring());
         components.addAll(eventSubscription.statusComponents());
-        components.add(new ArchiveStalenessComponent());
+        components.add(new ArchiveStalenessComponent(monitoringPrefix));
         components.add(checkpointPositionComponent);
         components.addAll(batchingUploadHandler.monitoring());
 
@@ -196,7 +198,7 @@ public class S3Archiver {
 
     private final class ArchiveStalenessComponent extends Component {
 
-        ArchiveStalenessComponent() {
+        ArchiveStalenessComponent(String monitoringPrefix) {
             super(monitoringPrefix + "-staleness", "Is archive up to date?");
         }
 
@@ -217,40 +219,45 @@ public class S3Archiver {
         }
     }
 
-    private final class BatchingUploadHandler implements EventHandler {
-        private final BatchingPolicy batchingPolicy;
+    private static final class BatchingUploadHandler implements EventHandler {
         private final S3UploadableStorageForInputStream output;
+        private final Clock clock;
+        private final CurrentBatchWriter currentBatchWriter;
+
         private final Map<String, String> appMetadata;
+        private final Timer s3UploadTimer;
+        private final SimpleValueComponent eventsAwaitingUploadComponent;
+        private final SimpleValueComponent lastUploadState;
 
-        private final SimpleValueComponent eventsAwaitingUploadComponent = new SimpleValueComponent(monitoringPrefix + "-events-awaiting-upload", "Number of events awaiting upload to archive");
-        private final SimpleValueComponent lastUploadState = new SimpleValueComponent(monitoringPrefix + "-last-upload-state", "Last upload to S3 Archive");
-        private final S3BatchObjectCreator s3BatchObjectCreator;
-
-        BatchingUploadHandler(BatchingPolicy batchingPolicy, S3UploadableStorageForInputStream uploadableStorage, Map<String, String> appMetadata) {
-            this.batchingPolicy = batchingPolicy;
+        BatchingUploadHandler(
+                S3UploadableStorageForInputStream uploadableStorage,
+                CurrentBatchWriter currentBatchWriter,
+                Clock clock,
+                Map<String, String> appMetadata,
+                String monitoringPrefix,
+                Timer s3UploadTimer)
+        {
             this.output = uploadableStorage;
+            this.clock = clock;
+            this.currentBatchWriter = currentBatchWriter;
+
             this.appMetadata = appMetadata;
+            this.s3UploadTimer = s3UploadTimer;
+            this.eventsAwaitingUploadComponent = new SimpleValueComponent(monitoringPrefix + "-events-awaiting-upload", "Number of events awaiting upload to archive");
             this.eventsAwaitingUploadComponent.updateValue(INFO, 0);
+            this.lastUploadState = new SimpleValueComponent(monitoringPrefix + "-last-upload-state", "Last upload to S3 Archive");
             this.lastUploadState.updateValue(INFO, "Nothing uploaded yet");
-            this.s3BatchObjectCreator = new S3BatchObjectCreator(
-                    S3Archiver.this::positionFrom,
-                    batchS3ObjectKeyFormat,
-                    uncompressedSizeMetrics,
-                    compressedSizeMetrics);
         }
 
         @Override
         public void apply(@Nonnull Position position, @Nonnull Event deserializedEvent) {
             if (deserializedEvent instanceof EventRecordHolder) {
-                ResolvedEvent resolvedEvent = new ResolvedEvent(position, ((EventRecordHolder) deserializedEvent).record);
+                currentBatchWriter.add(new ResolvedEvent(position, ((EventRecordHolder) deserializedEvent).record));
 
-                s3BatchObjectCreator.add(resolvedEvent);
-                batchingPolicy.notifyAddedToBatch(resolvedEvent);
-
-                if (batchingPolicy.ready()) {
-                    String key = s3BatchObjectCreator.key();
+                if (currentBatchWriter.readyToUpload()) {
+                    String key = currentBatchWriter.key();
                     try {
-                        S3BatchObject s3BatchObject = s3BatchObjectCreator.prepareBatchForUpload();
+                        S3BatchObject s3BatchObject = currentBatchWriter.prepareBatchForUpload();
 
                         try (Timer.Context ignored = s3UploadTimer.time()) {
                             Map<String, String> allMetadata = new HashMap<>(appMetadata);
@@ -259,8 +266,7 @@ public class S3Archiver {
                         }
                         lastUploadState.updateValue(INFO, format("Successfully uploaded object=[%s] at [%s]", key, clock.instant()));
 
-                        batchingPolicy.reset();
-                        s3BatchObjectCreator.reset();
+                        currentBatchWriter.reset();
                     } catch (IOException e) {
                         lastUploadState.updateValue(INFO, format("Failed to upload object=[%s] at [%s]%n%s", key, clock.instant(), ComponentUtils.getStackTraceAsString(e)));
 
@@ -270,13 +276,13 @@ public class S3Archiver {
                     }
                 }
 
-                eventsAwaitingUploadComponent.updateValue(INFO, s3BatchObjectCreator.eventsInCurrentBatch());
+                eventsAwaitingUploadComponent.updateValue(INFO, currentBatchWriter.eventsInCurrentBatch());
             }
         }
 
         @SuppressWarnings("WeakerAccess")
         public Collection<Component> monitoring() {
-            return Collections.singleton(eventsAwaitingUploadComponent);
+            return Arrays.asList(eventsAwaitingUploadComponent, lastUploadState);
         }
 
     }

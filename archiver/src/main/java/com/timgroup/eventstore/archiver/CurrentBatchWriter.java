@@ -22,7 +22,8 @@ import java.util.zip.GZIPOutputStream;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
-class S3BatchObjectCreator {
+class CurrentBatchWriter {
+    private final BatchingPolicy batchingPolicy;
     private final Function<ResolvedEvent, Long> positionFrom;
     private final S3ArchiveKeyFormat batchS3ObjectKeyFormat;
     private final Histogram uncompressedSizeMetrics;
@@ -32,13 +33,15 @@ class S3BatchObjectCreator {
     private final AtomicReference<ResolvedEvent> lastEventInBatch = new AtomicReference<>(null);
     private final AtomicInteger currentBatchSize = new AtomicInteger(0);
     private final AtomicInteger uncompressedBytesCount = new AtomicInteger(0);
-    private ByteArrayOutputStream gzippedByteArray;
+    private final ByteArrayOutputStream gzippedByteArrayOutputStream = new ByteArrayOutputStream(8192);
     private GZIPOutputStream gzipOutputStream;
 
-    public S3BatchObjectCreator(Function<ResolvedEvent, Long> positionFrom,
-                                S3ArchiveKeyFormat batchS3ObjectKeyFormat,
-                                Histogram uncompressedSizeMetrics,
-                                Histogram compressedSizeMetrics) {
+    public CurrentBatchWriter(BatchingPolicy batchingPolicy,
+                              Function<ResolvedEvent, Long> positionFrom,
+                              S3ArchiveKeyFormat batchS3ObjectKeyFormat,
+                              Histogram uncompressedSizeMetrics,
+                              Histogram compressedSizeMetrics) {
+        this.batchingPolicy = batchingPolicy;
         this.positionFrom = positionFrom;
         this.batchS3ObjectKeyFormat = batchS3ObjectKeyFormat;
         this.uncompressedSizeMetrics = uncompressedSizeMetrics;
@@ -47,6 +50,19 @@ class S3BatchObjectCreator {
         this.reset();
     }
 
+    public void reset() {
+        this.batchingPolicy.reset();
+        this.firstEventInBatch.set(null);
+        this.lastEventInBatch.set(null);
+        this.currentBatchSize.set(0);
+        this.uncompressedBytesCount.set(0);
+        this.gzippedByteArrayOutputStream.reset();
+        try {
+            this.gzipOutputStream = new GZIPOutputStream(gzippedByteArrayOutputStream, 8192);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public void add(ResolvedEvent resolvedEvent) {
         this.firstEventInBatch.compareAndSet(null, resolvedEvent);
@@ -65,24 +81,15 @@ class S3BatchObjectCreator {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
-    }
-
-    public void reset() {
-        this.firstEventInBatch.set(null);
-        this.lastEventInBatch.set(null);
-        this.currentBatchSize.set(0);
-        this.uncompressedBytesCount.set(0);
-        this.gzippedByteArray = new ByteArrayOutputStream(8192);
-        try {
-            this.gzipOutputStream = new GZIPOutputStream(gzippedByteArray, 8192);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        this.batchingPolicy.notifyAddedToBatch(resolvedEvent);
     }
 
     public int eventsInCurrentBatch() {
         return currentBatchSize.get();
+    }
+
+    public boolean readyToUpload() {
+        return batchingPolicy.ready();
     }
 
     public String key() {
@@ -90,10 +97,10 @@ class S3BatchObjectCreator {
     }
 
     public S3BatchObject prepareBatchForUpload() throws IOException {
-        gzippedByteArray.close();
+        gzippedByteArrayOutputStream.close();
         gzipOutputStream.finish();
 
-        byte[] content =  gzippedByteArray.toByteArray();
+        byte[] content =  gzippedByteArrayOutputStream.toByteArray();
         int uncompressedContentSize = uncompressedBytesCount.get();
         int compressedContentSize = content.length;
 
