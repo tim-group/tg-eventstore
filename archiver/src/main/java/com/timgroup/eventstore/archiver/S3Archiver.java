@@ -144,7 +144,12 @@ public class S3Archiver {
     }
 
     public Optional<ResolvedEvent> lastEventInLiveEventStore() {
-        return liveEventSource.readAll().readLastEvent();
+        Optional<ResolvedEvent> lastEventInLive = liveEventSource.readAll().readLastEvent();
+
+        Optional<Long> maxPositionInLive = lastEventInLive.map(this::positionFrom);
+        maxPositionInLive.ifPresent(maxPositionInEventSource::set);
+
+        return lastEventInLive;
     }
 
     public Collection<Component> monitoring() {
@@ -171,14 +176,8 @@ public class S3Archiver {
         }
     }
 
-    private Optional<Long> maxPositionInLive() {
-        Optional<Long> maxPositionInLive = lastEventInLiveEventStore().map(this::positionFrom);
-        maxPositionInLive.ifPresent(maxPositionInEventSource::set);
-        return maxPositionInLive;
-    }
-
     public ArchiverState state() {
-        return new ArchiverState(this.runState, maxPositionInLive(), maxPositionInArchive());
+        return new ArchiverState(this.runState, lastEventInLiveEventStore().map(this::positionFrom), maxPositionInArchive());
     }
     public enum RunState { UNSTARTED, RUNNING, STOPPED }
 
