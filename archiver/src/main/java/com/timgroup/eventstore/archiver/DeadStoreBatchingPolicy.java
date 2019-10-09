@@ -11,8 +11,8 @@ public final class DeadStoreBatchingPolicy implements BatchingPolicy {
     public static final String NAME = "DeadStoreBatchingPolicy";
 
     private final BatchingPolicy fixedSizeBatchingPolicy;
-    private final Position lastEventPosition;
-    private final AtomicReference<ResolvedEvent> lastEventInBatch = new AtomicReference<>();
+    private Position lastEventPosition;
+    private ResolvedEvent lastEventInBatch = null;
 
     public DeadStoreBatchingPolicy(int batchSize, Position lastEventPosition) {
         this.fixedSizeBatchingPolicy = BatchingPolicy.fixedNumberOfEvents(batchSize);
@@ -22,18 +22,18 @@ public final class DeadStoreBatchingPolicy implements BatchingPolicy {
     @Override
     public void notifyAddedToBatch(ResolvedEvent event) {
         fixedSizeBatchingPolicy.notifyAddedToBatch(event);
-        lastEventInBatch.set(event);
+        lastEventInBatch = event;
     }
 
     @Override
     public boolean ready() {
-        return fixedSizeBatchingPolicy.ready() || lastEventInBatch.get().position().equals(lastEventPosition);
+        return fixedSizeBatchingPolicy.ready() || lastEventInBatch.position().equals(lastEventPosition);
     }
 
     @Override
     public void reset() {
         fixedSizeBatchingPolicy.reset();
-        lastEventInBatch.set(null);
+        lastEventInBatch = null;
     }
 
     @Override

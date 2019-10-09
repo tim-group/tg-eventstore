@@ -3,34 +3,31 @@ package com.timgroup.eventstore.archiver;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.ResolvedEvent;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 public final class FixedNumberOfEventsBatchingPolicy implements BatchingPolicy {
     private static final int BATCHES_BEHIND_TOLERANCE = 3;
 
-    private final int batchSize;
-    private final AtomicInteger currentBatchSize = new AtomicInteger(0);
+    private final int configuredBatchSize;
+    private int currentBatchSize = 0;
 
-    public FixedNumberOfEventsBatchingPolicy(int batchSize) {
-        this.batchSize = batchSize;
+    public FixedNumberOfEventsBatchingPolicy(int configuredBatchSize) {
+        this.configuredBatchSize = configuredBatchSize;
     }
 
     @Override
     public void notifyAddedToBatch(ResolvedEvent event) {
-        currentBatchSize.incrementAndGet();
+        currentBatchSize++;
     }
 
     @Override
     public boolean ready() {
-        return (currentBatchSize.get() > 0) && (currentBatchSize.get() % batchSize == 0);
+        return (currentBatchSize > 0) && (currentBatchSize % configuredBatchSize == 0);
     }
 
     @Override
     public void reset() {
-        currentBatchSize.set(0);
+        currentBatchSize = 0;
     }
 
     @Override
@@ -39,10 +36,10 @@ public final class FixedNumberOfEventsBatchingPolicy implements BatchingPolicy {
     }
 
     private boolean archiveIsNotCloseEnoughToLive(Long livePosition, Optional<Long> archivePosition) {
-        return archivePosition.map(archivePos -> (livePosition - archivePos) > (BATCHES_BEHIND_TOLERANCE * batchSize)).orElse(true);
+        return archivePosition.map(archivePos -> (livePosition - archivePos) > (BATCHES_BEHIND_TOLERANCE * configuredBatchSize)).orElse(true);
     }
 
     private Boolean enoughEventsInLiveToBeStale(Optional<Long> livePosition) {
-        return livePosition.map(pos -> pos > batchSize * BATCHES_BEHIND_TOLERANCE).orElse(false);
+        return livePosition.map(pos -> pos > configuredBatchSize * BATCHES_BEHIND_TOLERANCE).orElse(false);
     }
 }

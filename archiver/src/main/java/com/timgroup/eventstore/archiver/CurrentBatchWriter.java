@@ -16,7 +16,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.zip.GZIPOutputStream;
 
@@ -29,10 +28,11 @@ class CurrentBatchWriter {
     private final Histogram uncompressedSizeMetrics;
     private final Histogram compressedSizeMetrics;
 
-    private final AtomicReference<ResolvedEvent> firstEventInBatch = new AtomicReference<>(null);
-    private final AtomicReference<ResolvedEvent> lastEventInBatch = new AtomicReference<>(null);
-    private final AtomicInteger currentBatchSize = new AtomicInteger(0);
-    private final AtomicInteger uncompressedBytesCount = new AtomicInteger(0);
+    private ResolvedEvent firstEventInBatch = null;
+    private ResolvedEvent lastEventInBatch = null;
+    private AtomicInteger currentBatchSize = new AtomicInteger(0);
+    private int uncompressedBytesCount = 0;
+
     private final ByteArrayOutputStream gzippedByteArrayOutputStream = new ByteArrayOutputStream(8192);
     private GZIPOutputStream gzipOutputStream;
 
@@ -52,10 +52,10 @@ class CurrentBatchWriter {
 
     public void reset() {
         this.batchingPolicy.reset();
-        this.firstEventInBatch.set(null);
-        this.lastEventInBatch.set(null);
-        this.currentBatchSize.set(0);
-        this.uncompressedBytesCount.set(0);
+        this.firstEventInBatch = null;
+        this.lastEventInBatch = null;
+        this.currentBatchSize = new AtomicInteger(0);
+        this.uncompressedBytesCount = 0;
         this.gzippedByteArrayOutputStream.reset();
         try {
             this.gzipOutputStream = new GZIPOutputStream(gzippedByteArrayOutputStream, 8192);
@@ -65,8 +65,10 @@ class CurrentBatchWriter {
     }
 
     public void add(ResolvedEvent resolvedEvent) {
-        this.firstEventInBatch.compareAndSet(null, resolvedEvent);
-        this.lastEventInBatch.set(resolvedEvent);
+        if (this.firstEventInBatch == null) {
+            this.firstEventInBatch = resolvedEvent;
+        }
+        this.lastEventInBatch = resolvedEvent;
         this.currentBatchSize.incrementAndGet();
 
         byte[] uncompressedBytes = Optional.of(resolvedEvent)
@@ -74,7 +76,7 @@ class CurrentBatchWriter {
                 .map(this::toBytesPrefixedWithLength)
                 .get();
 
-        uncompressedBytesCount.addAndGet(uncompressedBytes.length);
+        uncompressedBytesCount += uncompressedBytes.length;
 
         try {
             gzipOutputStream.write(uncompressedBytes);
@@ -93,7 +95,7 @@ class CurrentBatchWriter {
     }
 
     public String key() {
-        return batchS3ObjectKeyFormat.objectKeyFor(positionFrom.apply(lastEventInBatch.get()), "gz");
+        return batchS3ObjectKeyFormat.objectKeyFor(positionFrom.apply(lastEventInBatch), "gz");
     }
 
     public S3BatchObject prepareBatchForUpload() throws IOException {
@@ -101,7 +103,7 @@ class CurrentBatchWriter {
         gzipOutputStream.finish();
 
         byte[] content =  gzippedByteArrayOutputStream.toByteArray();
-        int uncompressedContentSize = uncompressedBytesCount.get();
+        int uncompressedContentSize = uncompressedBytesCount;
         int compressedContentSize = content.length;
 
         uncompressedSizeMetrics.update(uncompressedContentSize);
@@ -110,7 +112,7 @@ class CurrentBatchWriter {
         return new S3BatchObject(
                 new ByteArrayInputStream(content),
                 compressedContentSize,
-                buildObjectMetadata(uncompressedContentSize, compressedContentSize, lastEventInBatch.get()));
+                buildObjectMetadata(uncompressedContentSize, compressedContentSize, lastEventInBatch));
     }
 
 
@@ -149,12 +151,11 @@ class CurrentBatchWriter {
     private Map<String, String> buildObjectMetadata(int uncompressedContentSize, int compressedContentSize, ResolvedEvent batch) {
         Map<String, String> metadata = new HashMap<>();
 
-        ResolvedEvent maxEvent = lastEventInBatch.get();
-        metadata.put("max_position", String.valueOf(positionFrom.apply(maxEvent)));
-        metadata.put("min_position", String.valueOf(positionFrom.apply(firstEventInBatch.get())));
-        metadata.put("number_of_events_in_batch", String.valueOf(currentBatchSize.get()));
+        metadata.put("max_position", String.valueOf(positionFrom.apply(lastEventInBatch)));
+        metadata.put("min_position", String.valueOf(positionFrom.apply(firstEventInBatch)));
+        metadata.put("number_of_events_in_batch", String.valueOf(currentBatchSize));
 
-        EventRecord maxEventRecord = maxEvent.eventRecord();
+        EventRecord maxEventRecord = lastEventInBatch.eventRecord();
         metadata.put("max_event_timestamp", maxEventRecord.timestamp().toString());
         metadata.put("max_event_stream_category", maxEventRecord.streamId().category());
         metadata.put("max_event_stream_id", maxEventRecord.streamId().id());
