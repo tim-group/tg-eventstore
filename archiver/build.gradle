@@ -26,12 +26,12 @@ dependencies {
     api project(":mysql") 
     api project(":subscription")
     api "com.google.protobuf:protobuf-java:2.4.1"
-    api "com.timgroup:Tucker:1.0.1538" // autobump
-    api "com.timgroup:tim-structured-events:0.4.1269" // autobump
+    api "com.timgroup:Tucker:1.0.1539" // autobump
+    api "com.timgroup:tim-structured-events:0.4.1270" // autobump
 
     implementation "com.google.code.findbugs:jsr305:3.0.2"
-    implementation "com.timgroup:tim-logger:1.5.1098" // autobump
-    implementation "com.timgroup:tim-remote-file-storage-s3:0.0.1182" // autobump
+    implementation "com.timgroup:tim-logger:1.5.1099" // autobump
+    implementation "com.timgroup:tim-remote-file-storage-s3:0.0.1183" // autobump
 
     runtimeOnly "javax.xml.bind:jaxb-api:2.3.0"
     runtimeOnly "com.sun.xml.bind:jaxb-core:2.3.0"
