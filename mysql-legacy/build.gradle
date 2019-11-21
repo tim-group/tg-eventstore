@@ -1,5 +1,5 @@
 plugins {
-    id "java"
+    id "java-library"
     id "scala"
     id "com.timgroup.jarmangit"
     id "com.github.maiflai.scalatest"
@@ -22,11 +22,12 @@ sourceSets.test.scala.srcDir "src/test/java"
 sourceSets.test.java.srcDirs = []
 
 dependencies {
-    compile project(":api-legacy")
-    compile project(":mysql")
-    compile "com.fasterxml.jackson.core:jackson-databind:2.9.8"
+    api project(":api-legacy")
+    implementation project(":mysql")
+    implementation "com.fasterxml.jackson.core:jackson-databind:2.9.8"
     compileOnly "org.joda:joda-convert:1.3.1"
-    compile "org.slf4j:slf4j-api:1.7.25"
+    implementation "org.slf4j:slf4j-api:1.7.25"
+    implementation "org.scala-lang:scala-library:$scalaVersion"
 
     testImplementation project(":api-legacy:testlib")
     testImplementation project(":memory-legacy")
