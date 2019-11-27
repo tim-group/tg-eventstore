@@ -48,7 +48,7 @@ dependencies {
 
     testImplementation "com.timgroup:tg-config-java-bindings:1.0.61" // autobump
     testImplementation "org.apache.commons:commons-lang3:3.3.2"
-    testImplementation "com.timgroup:clocks-testing:1.0.1100" // autobump
+    testImplementation "com.timgroup:clocks-testing:1.0.1101" // autobump
     testImplementation "net.ttsui.junit.rules.pending:pending:0.0.1055"
     testImplementation "org.mockito:mockito-core:2.26.0"
     testImplementation "com.youdevise:Matchers:0.0.1291" // autobump

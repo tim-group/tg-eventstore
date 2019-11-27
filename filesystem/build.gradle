@@ -24,7 +24,7 @@ dependencies {
     testImplementation "junit:junit:4.12"
     testImplementation "org.hamcrest:hamcrest-core:1.3"
     testImplementation "org.hamcrest:hamcrest-library:1.3"
-    testImplementation "com.timgroup:clocks-testing:1.0.1100" // autobump
+    testImplementation "com.timgroup:clocks-testing:1.0.1101" // autobump
     testImplementation "com.youdevise:Matchers:0.0.1291" // autobump
 }
 
