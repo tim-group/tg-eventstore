@@ -124,9 +124,9 @@ public class EventSubscription {
     }
 
     public void start() {
+        subscriptionStatus.notifyStarted();
         disruptor.start();
         chaserExecutor.scheduleWithFixedDelay(chaser, 0, runFrequency.toMillis(), MILLISECONDS);
-        subscriptionStatus.notifyStarted();
     }
 
     public void stop() {
