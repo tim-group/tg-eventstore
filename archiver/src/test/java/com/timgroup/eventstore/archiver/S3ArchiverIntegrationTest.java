@@ -266,7 +266,7 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
 
         assertThat(archiver.monitoring(), allOf(
                 hasItem(tuckerComponent(equalTo(Status.INFO), containsString("JavaInMemoryEventStore"))),
-                hasItem(tuckerComponent(equalTo(Status.OK), containsString("Awaiting initial catchup. No events processed yet."))),
+                hasItem(tuckerComponent(equalTo(Status.WARNING), containsString("Subscription not yet started"))),
                 hasItem(tuckerComponent(equalTo(Status.INFO), containsString("Awaiting initial catchup")))));
     }
 
