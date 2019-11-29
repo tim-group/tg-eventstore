@@ -42,15 +42,22 @@ public final class EventSubscriptionStatus extends Component implements Health, 
         this.clock = clock;
         this.staleness = staleness;
         this.initialReplay = initialReplay;
-        this.startTime = Instant.now(clock);
         this.lastCaughtUpAt = Instant.now(clock);
         this.eventSink = eventSink;
+    }
+
+    public void notifyStarted() {
+        startTime = Instant.now(clock);
     }
 
     @Override
     public Report getReport() {
         if (terminatedReport != null) {
             return terminatedReport;
+        }
+
+        if (startTime == null) {
+            return new Report(WARNING, "Subscription not yet started");
         }
 
         Duration staleFor = Duration.between(lastCaughtUpAt, Instant.now(clock));

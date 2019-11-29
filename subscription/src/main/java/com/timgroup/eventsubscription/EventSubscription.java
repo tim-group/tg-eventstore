@@ -45,7 +45,6 @@ public class EventSubscription {
     private final EventStoreChaser chaser;
     private final Duration runFrequency;
 
-    @SuppressWarnings("unchecked")
     EventSubscription(
                 String name,
                 String description,
@@ -95,14 +94,11 @@ public class EventSubscription {
         disruptor.handleEventsWithWorkerPool(
                 new DisruptorDeserializationAdapter(deserializer),
                 new DisruptorDeserializationAdapter(deserializer)
-        ).then(new DisruptorEventHandlerAdapter(new EventHandler() {
-            @Override
-            public void apply(Position position, Event deserialized) {
-                try {
-                    eventHandler.apply(position, deserialized);
-                } finally {
-                    subscriptionStatus.apply(position, deserialized);
-                }
+        ).then(new DisruptorEventHandlerAdapter((position, deserialized) -> {
+            try {
+                eventHandler.apply(position, deserialized);
+            } finally {
+                subscriptionStatus.apply(position, deserialized);
             }
         }, metricRegistry.map(r -> r.counter(String.format("eventsubscription.%s.missedCatchup", name)))));
 
@@ -130,6 +126,7 @@ public class EventSubscription {
     public void start() {
         disruptor.start();
         chaserExecutor.scheduleWithFixedDelay(chaser, 0, runFrequency.toMillis(), MILLISECONDS);
+        subscriptionStatus.notifyStarted();
     }
 
     public void stop() {

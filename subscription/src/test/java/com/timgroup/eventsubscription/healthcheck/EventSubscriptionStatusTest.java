@@ -29,7 +29,8 @@ public class EventSubscriptionStatusTest {
 
     @Before
     public void setup() {
-        status = new EventSubscriptionStatus("", clock, DurationThreshold.warningThresholdWithCriticalRatio(Duration.ofSeconds(123), 1.25), new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(30)), new LocalEventSink());
+        status = createStatus();
+        status.notifyStarted();
     }
 
     @Test public void
@@ -149,5 +150,21 @@ public class EventSubscriptionStatusTest {
         assertThat(status.getReport().getStatus(), is(CRITICAL));
         assertThat(status.getReport().getValue().toString(), containsString("Event subscription terminated. Failed to process position 1: Failure from handler"));
         assertThat(status.getReport().getValue().toString(), containsString("EventSubscriptionStatusTest"));
+    }
+
+    @Test public void
+    warns_until_subscription_is_started() {
+        EventSubscriptionStatus manualStatus = createStatus();
+
+        assertThat(manualStatus.getReport().getStatus(), is(WARNING));
+        assertThat(manualStatus.getReport().getValue().toString(), is("Subscription not yet started"));
+
+        manualStatus.notifyStarted();
+
+        assertThat(manualStatus.getReport().getStatus(), is(OK));
+    }
+
+    private EventSubscriptionStatus createStatus() {
+        return new EventSubscriptionStatus("", clock, DurationThreshold.warningThresholdWithCriticalRatio(Duration.ofSeconds(123), 1.25), new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(30)), new LocalEventSink());
     }
 }
