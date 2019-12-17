@@ -21,6 +21,13 @@ protobuf {
     }
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+    withSourcesJar()
+    withJavadocJar()
+}
+
 dependencies {
     api project(":api")
     api project(":mysql") 
@@ -55,8 +62,6 @@ dependencies {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    sourceCompatibility = "1.8"
-    targetCompatibility = "1.8"
     options.encoding = "UTF-8"
     options.incremental = true
     options.deprecation = true
@@ -82,23 +87,6 @@ tasks.named("jar").configure {
     }
 }
 
-task sourcesJar(type: Jar, dependsOn: ["generateProto", "classes"]) {
-    archiveClassifier = 'sources'
-    from sourceSets.main.allSource
-    from "$buildDir/generated/source/proto/main/java"
-}
-
-
-assemble.dependsOn(sourcesJar)
-
-task javadocJar(type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
-    from javadoc.destinationDir
-}
-
-assemble.dependsOn(javadocJar)
-
-
 publishing {
     repositories {
         if (project.hasProperty("repoUrl")) {
@@ -115,8 +103,6 @@ publishing {
         mavenJava(MavenPublication) {
             artifactId "eventstore-archiver"
             from components.java
-            artifact(sourcesJar)
-            artifact(javadocJar)
         }
     }
 }

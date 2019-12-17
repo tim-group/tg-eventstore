@@ -13,6 +13,13 @@ repositories {
     }
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+    withSourcesJar()
+    withJavadocJar()
+}
+
 dependencies {
     implementation project(":mysql")
     implementation "io.dropwizard.metrics:metrics-core:3.2.3"
@@ -32,8 +39,6 @@ dependencies {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    sourceCompatibility = "1.8"
-    targetCompatibility = "1.8"
     options.encoding = "UTF-8"
     options.incremental = true
     options.deprecation = true
@@ -58,20 +63,6 @@ tasks.named("jar").configure {
     }
 }
 
-task sourcesJar(type: Jar, dependsOn: classes) {
-    classifier = 'sources'
-    from sourceSets.main.allSource
-}
-
-assemble.dependsOn(sourcesJar)
-
-task javadocJar(type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
-    from javadoc.destinationDir
-}
-
-assemble.dependsOn(javadocJar)
-
 publishing {
     repositories {
         if (project.hasProperty("repoUrl")) {
@@ -88,8 +79,6 @@ publishing {
         mavenJava(MavenPublication) {
             artifactId "eventstore-diffing"
             from components.java
-            artifact(sourcesJar)
-            artifact(javadocJar)
         }
     }
 }

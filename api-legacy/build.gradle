@@ -15,6 +15,13 @@ repositories {
     }
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+    withSourcesJar()
+    withJavadocJar()
+}
+
 // https://chrismarks.wordpress.com/2013/07/31/compiling-a-mixed-scala-project-with-gradle/
 sourceSets.main.scala.srcDir "src/main/java"
 sourceSets.main.java.srcDirs = []
@@ -43,8 +50,6 @@ dependencies {
 check.dependsOn("scalatest")
 
 tasks.withType(JavaCompile).configureEach {
-    sourceCompatibility = "1.8"
-    targetCompatibility = "1.8"
     options.encoding = "UTF-8"
     options.incremental = true
     options.deprecation = true
@@ -52,8 +57,6 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 tasks.withType(ScalaCompile).configureEach {
-    sourceCompatibility = "1.8"
-    targetCompatibility = "1.8"
     options.encoding = "UTF-8"
     options.deprecation = true
     options.compilerArgs << "-parameters"
@@ -78,20 +81,6 @@ tasks.named("jar").configure {
     }
 }
 
-task sourcesJar(type: Jar, dependsOn: classes) {
-    classifier = 'sources'
-    from sourceSets.main.allSource
-}
-
-assemble.dependsOn(sourcesJar)
-
-task javadocJar(type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
-    from javadoc.destinationDir
-}
-
-assemble.dependsOn(javadocJar)
-
 publishing {
     repositories {
         if (project.hasProperty("repoUrl")) {
@@ -108,8 +97,6 @@ publishing {
         mavenJava(MavenPublication) {
             artifactId "eventstore-api-legacy_${scalaApiVersion}"
             from components.java
-            artifact(sourcesJar)
-            artifact(javadocJar)
         }
     }
 }
