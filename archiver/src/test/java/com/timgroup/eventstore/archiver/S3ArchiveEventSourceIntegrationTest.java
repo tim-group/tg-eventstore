@@ -57,6 +57,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -177,14 +178,29 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
         )));
 
         assertThat(s3ArchiveEventSource.readAll().readAllForwards().collect(toList()), hasSize(6));
-
     }
 
     @Test public void
-    read_all_forwards_with_a_position_only_downloads_relevant_batches_and_can_start_from_position_within_batch() throws Exception {
+    read_all_forwards_with_position_only_downloads_relevant_batches_and_can_start_from_position_within_batch() throws Exception {
         archiveEvents(anyStream(), nCopies(6, anyEvent("type-A")));
 
-        S3DownloadableStorageWithoutDestinationFile s3Downloader = Mockito.spy(createDownloadableStorage());
+        S3DownloadableStorageWithoutDestinationFile s3Downloader = spy(createDownloadableStorage());
+        EventSource s3ArchiveEventSource = createS3ArchiveEventSource(s3Downloader);
+
+        List<ResolvedEvent> eventsFromPosition = s3ArchiveEventSource.readAll().readAllForwards(new S3ArchivePosition(3))
+                .collect(toList());
+
+        assertThat(eventsFromPosition,
+                Contains.inOrder(withPosition(3), withPosition(4), withPosition(5), withPosition(6)));
+
+        verify(s3Downloader, times(2)).download(any(String.class), ArgumentMatchers.<Function<InputStream, Object>>any());
+    }
+
+    @Test public void
+    read_all_forwards_with_position_only_downloads_relevant_batches_and_can_start_from_position_at_end_of_batch() throws Exception {
+        archiveEvents(anyStream(), nCopies(6, anyEvent("type-A")));
+
+        S3DownloadableStorageWithoutDestinationFile s3Downloader = spy(createDownloadableStorage());
         EventSource s3ArchiveEventSource = createS3ArchiveEventSource(s3Downloader);
 
         List<ResolvedEvent> eventsFromPosition = s3ArchiveEventSource.readAll().readAllForwards(new S3ArchivePosition(4))
@@ -192,6 +208,37 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
 
         assertThat(eventsFromPosition,
                 Contains.inOrder(withPosition(4), withPosition(5), withPosition(6)));
+
+        verify(s3Downloader, times(2)).download(any(String.class), ArgumentMatchers.<Function<InputStream, Object>>any());
+    }
+
+    @Test public void
+    read_all_forwards_with_position_returns_empty_stream_when_position_is_beyond_max() throws Exception {
+        archiveEvents(anyStream(), nCopies(6, anyEvent("type-A")));
+
+        S3DownloadableStorageWithoutDestinationFile s3Downloader = spy(createDownloadableStorage());
+        EventSource s3ArchiveEventSource = createS3ArchiveEventSource(s3Downloader);
+
+        List<ResolvedEvent> eventsFromPosition = s3ArchiveEventSource.readAll().readAllForwards(new S3ArchivePosition(7))
+                .collect(toList());
+
+        assertThat(eventsFromPosition, Contains.nothing());
+
+        verify(s3Downloader, times(0)).download(any(String.class), ArgumentMatchers.<Function<InputStream, Object>>any());
+    }
+
+    @Test public void
+    read_all_forwards_with_position_of_first_event_reads_all_events() throws Exception {
+        archiveEvents(anyStream(), nCopies(4, anyEvent("type-A")));
+
+        S3DownloadableStorageWithoutDestinationFile s3Downloader = spy(createDownloadableStorage());
+        EventSource s3ArchiveEventSource = createS3ArchiveEventSource(s3Downloader);
+
+        List<ResolvedEvent> eventsFromPosition = s3ArchiveEventSource.readAll().readAllForwards(new S3ArchivePosition(0))
+                .collect(toList());
+
+        assertThat(eventsFromPosition,
+                Contains.inOrder(withPosition(1), withPosition(2), withPosition(3), withPosition(4)));
 
         verify(s3Downloader, times(2)).download(any(String.class), ArgumentMatchers.<Function<InputStream, Object>>any());
     }

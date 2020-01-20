@@ -14,7 +14,6 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
-import java.util.Comparator;
 import java.util.Optional;
 import java.util.Spliterator;
 import java.util.Spliterators;
@@ -47,15 +46,16 @@ public final class S3ArchivedEventReader implements EventReader {
         } else {
             S3ArchivePosition toReadFrom = (S3ArchivePosition) positionExclusive;
 
-            RemoteFileDetails batchContainingPositionToReadFrom = s3ListableStorage.list(eventStoreId + "/", null)
-                    .filter(upToAndIncludingPosition(toReadFrom))
-                    .max(Comparator.comparing(file -> file.name))
-                    .get();
+            Optional<RemoteFileDetails> batchContainingPositionToReadFrom = s3ListableStorage.list(eventStoreId + "/", null)
+                    .filter(batchesEndingWithPositionGreaterThan(toReadFrom))
+                    .findFirst();
 
-            return s3ListableStorage.list(eventStoreId + "/", null)
-                    .filter(listingFile -> listingFile.name.compareTo(batchContainingPositionToReadFrom.name) >= 0)
+            return batchContainingPositionToReadFrom.isPresent()
+            ? s3ListableStorage.list(eventStoreId + "/", null)
+                    .filter(listingFile -> listingFile.name.compareTo(batchContainingPositionToReadFrom.get().name) >= 0)
                     .flatMap(this::getEventsFromMultiTry)
-                    .filter(fromPosition(toReadFrom));
+                    .filter(fromPosition(toReadFrom))
+            : Stream.empty();
         }
     }
 
@@ -63,10 +63,10 @@ public final class S3ArchivedEventReader implements EventReader {
         return (event) -> ((S3ArchivePosition)event.position()).value >= toReadFrom.value;
     }
 
-    private Predicate<RemoteFileDetails> upToAndIncludingPosition(S3ArchivePosition toReadFrom) {
+    private Predicate<RemoteFileDetails> batchesEndingWithPositionGreaterThan(S3ArchivePosition toReadFrom) {
         return (batchFile) -> {
             Long maxPositionInFile = new S3ArchiveKeyFormat(eventStoreId).positionValueFrom(batchFile.name);
-            return maxPositionInFile <= toReadFrom.value;
+            return maxPositionInFile >= toReadFrom.value;
         };
     }
 
