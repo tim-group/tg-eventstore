@@ -22,7 +22,6 @@ import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Report;
 import com.timgroup.tucker.info.Status;
 import com.youdevise.testutils.matchers.Contains;
-import net.ttsui.junit.rules.pending.PendingImplementation;
 import org.hamcrest.FeatureMatcher;
 import org.hamcrest.Matcher;
 import org.junit.After;
@@ -49,6 +48,7 @@ import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.eventstore.api.StreamId.streamId;
 import static com.youdevise.testutils.matchers.JOptionalMatcher.isPresent;
 import static java.util.Arrays.asList;
+import static java.util.Collections.nCopies;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
@@ -125,11 +125,7 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
 
     @Test public void
     monitoring_includes_component_that_is_okay_and_contains_max_position_when_it_can_connect_to_archive() throws Exception {
-        EventSource liveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
-        StreamId anyStream = streamId(randomCategory(), "1");
-        NewEvent anyEvent = newEvent("type-A", randomData(), randomData());
-        liveEventSource.writeStream().write(anyStream, asList(anyEvent, anyEvent, anyEvent, anyEvent));
-        successfullyArchiveUntilCaughtUp(fixedClock, liveEventSource);
+        archiveEvents(anyStream(), nCopies(4, anyEvent("type-A")));
 
         EventSource s3ArchiveEventSource = createS3ArchiveEventSource();
 
@@ -146,14 +142,15 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
 
     @Test public void
     is_not_confused_by_matching_prefix_of_a_distinct_event_store() throws Exception {
-        StreamId anyStream = streamId(randomCategory(), "1");
-        NewEvent anyEvent = newEvent("type-A", randomData(), randomData());
+        StreamId anyStream = anyStream();
+        NewEvent anyEvent = anyEvent("type-A");
 
         EventSource otherLiveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
-        otherLiveEventSource.writeStream().write(anyStream, asList(anyEvent, anyEvent, anyEvent, anyEvent));
+        otherLiveEventSource.writeStream().write(anyStream, nCopies(4, anyEvent));
 
         EventSource thisLiveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
-        thisLiveEventSource.writeStream().write(anyStream, asList(anyEvent, anyEvent, anyEvent, anyEvent,
+        thisLiveEventSource.writeStream().write(anyStream, nCopies(4, anyEvent));
+        thisLiveEventSource.writeStream().write(anyStream, asList(
                 newEvent("type-B", randomData(), randomData()),
                 newEvent("type-C", randomData(), randomData())));
 
@@ -185,11 +182,7 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
 
     @Test public void
     read_all_forwards_with_a_position_only_downloads_relevant_batches_and_can_start_from_position_within_batch() throws Exception {
-        EventSource liveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
-        StreamId anyStream = streamId(randomCategory(), "1");
-        NewEvent anyEvent = newEvent("type-A", randomData(), randomData());
-        liveEventSource.writeStream().write(anyStream, asList(anyEvent, anyEvent, anyEvent, anyEvent, anyEvent, anyEvent));
-        successfullyArchiveUntilCaughtUp(fixedClock, liveEventSource);
+        archiveEvents(anyStream(), nCopies(6, anyEvent("type-A")));
 
         S3DownloadableStorageWithoutDestinationFile s3Downloader = Mockito.spy(createDownloadableStorage());
         EventSource s3ArchiveEventSource = createS3ArchiveEventSource(s3Downloader);
@@ -203,6 +196,19 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
         verify(s3Downloader, times(2)).download(any(String.class), ArgumentMatchers.<Function<InputStream, Object>>any());
     }
 
+    private NewEvent anyEvent(String type) {
+        return newEvent(type, randomData(), randomData());
+    }
+
+    private void archiveEvents(StreamId streamId, List<NewEvent> events) {
+        EventSource liveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
+        liveEventSource.writeStream().write(streamId, events);
+        successfullyArchiveUntilCaughtUp(fixedClock, liveEventSource);
+    }
+
+    private StreamId anyStream() {
+        return streamId(randomCategory(), "1");
+    }
 
     private Matcher<ResolvedEvent> withPosition(long s3ArchivePosition) {
         return new FeatureMatcher<ResolvedEvent, S3ArchivePosition>(equalTo(new S3ArchivePosition(s3ArchivePosition)), "position", "") {
@@ -221,7 +227,6 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
             }
         };
     }
-
 
     private S3ArchiveConnectionComponent getConnectionComponent(EventSource s3ArchiveEventSource) {
         Collection<Component> monitoring = s3ArchiveEventSource.monitoring();
