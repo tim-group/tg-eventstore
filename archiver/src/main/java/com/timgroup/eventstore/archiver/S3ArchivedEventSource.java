@@ -42,13 +42,13 @@ public final class S3ArchivedEventSource implements EventSource {
     @Nonnull
     @Override
     public EventStreamReader readStream() {
-        throw new UnsupportedOperationException("readCategory not supported. Only readAll is supported.");
+        throw new UnsupportedOperationException("readStream not supported. Only readAll is supported.");
     }
 
     @Nonnull
     @Override
     public EventStreamWriter writeStream() {
-        throw new UnsupportedOperationException("readCategory not supported. Only readAll is supported.");
+        throw new UnsupportedOperationException("writeStream not supported. Only readAll is supported.");
     }
 
     @Nonnull
