@@ -94,18 +94,6 @@ public final class S3ArchivedEventReader implements EventReader {
 
     @Nonnull
     @Override
-    public Stream<ResolvedEvent> readAllBackwards() {
-        throw new UnsupportedOperationException("Cannot readAllBackwards");
-    }
-
-    @Nonnull
-    @Override
-    public Stream<ResolvedEvent> readAllBackwards(Position positionExclusive) {
-        throw new UnsupportedOperationException("Cannot readAllBackwards");
-    }
-
-    @Nonnull
-    @Override
     public Optional<ResolvedEvent> readLastEvent() {
         return s3ListableStorage.list(eventStoreId + "/", null)
                 .reduce((r1, r2) -> r2)
