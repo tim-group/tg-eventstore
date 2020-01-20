@@ -27,15 +27,15 @@ import static java.util.stream.Collectors.toList;
 public final class S3ArchivedEventReader implements EventReader {
     private final S3ListableStorage s3ListableStorage;
     private final S3DownloadableStorageWithoutDestinationFile s3DownloadableStorage;
-    private final String eventStoreId;
+    private S3ArchiveKeyFormat s3ArchiveKeyFormat;
 
     public S3ArchivedEventReader(
             S3ListableStorage s3ListableStorage,
             S3DownloadableStorageWithoutDestinationFile s3DownloadableStorage,
-            String eventStoreId) {
+            S3ArchiveKeyFormat s3ArchiveKeyFormat) {
         this.s3ListableStorage = s3ListableStorage;
         this.s3DownloadableStorage = s3DownloadableStorage;
-        this.eventStoreId = eventStoreId;
+        this.s3ArchiveKeyFormat = s3ArchiveKeyFormat;
     }
 
     @Nonnull
@@ -50,7 +50,7 @@ public final class S3ArchivedEventReader implements EventReader {
     }
 
     private Stream<RemoteFileDetails> listAllBatches() {
-        return s3ListableStorage.list(eventStoreId + "/", null);
+        return s3ListableStorage.list(s3ArchiveKeyFormat.eventStorePrefix(), null);
     }
 
     private Predicate<ResolvedEvent> fromPosition(S3ArchivePosition toReadFrom) {
@@ -58,7 +58,7 @@ public final class S3ArchivedEventReader implements EventReader {
     }
 
     private Predicate<RemoteFileDetails> batchesEndingWithPositionGreaterThan(S3ArchivePosition toReadFrom) {
-        return (batchFile) -> new S3ArchiveKeyFormat(eventStoreId).positionValueFrom(batchFile.name) >= toReadFrom.value;
+        return (batchFile) -> s3ArchiveKeyFormat.positionValueFrom(batchFile.name) >= toReadFrom.value;
     }
 
     private Stream<ResolvedEvent> getEventsFromMultiTry(RemoteFileDetails remoteFileDetails) {

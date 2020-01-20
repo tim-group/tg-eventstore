@@ -317,7 +317,7 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
 
         S3ListableStorage listableStorage = createListableStorage();
         S3Archiver archiver = S3Archiver.newS3Archiver(liveEventSource, createUploadableStorage(), givenEventStoreId, subscription,
-                twoEventsPerBatch, new S3ArchiveMaxPositionFetcher(listableStorage, givenEventStoreId),
+                twoEventsPerBatch, new S3ArchiveMaxPositionFetcher(listableStorage, new S3ArchiveKeyFormat(givenEventStoreId)),
                 testClassName, metricRegistry, S3Archiver.DEFAULT_MONITORING_PREFIX, clock);
 
         archiver.start();

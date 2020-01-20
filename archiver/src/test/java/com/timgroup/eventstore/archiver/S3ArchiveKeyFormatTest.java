@@ -36,4 +36,10 @@ public class S3ArchiveKeyFormatTest {
                 equalTo(asList(1L, 3L, 20L, 1_000L, 9_999L)));
     }
 
+    @Test public void
+    key_prefix_terminates_event_store_id_to_prevent_ambiguity() {
+        S3ArchiveKeyFormat format = new S3ArchiveKeyFormat("MyShinyEventStore");
+        assertThat(format.eventStorePrefix(), equalTo("MyShinyEventStore/"));
+    }
+
 }

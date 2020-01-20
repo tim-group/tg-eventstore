@@ -19,18 +19,24 @@ public final class S3ArchivedEventSource implements EventSource {
     private final S3DownloadableStorageWithoutDestinationFile s3DownloadableStorage;
     private final String bucketName;
     private final String eventStoreId;
+    private final S3ArchiveKeyFormat s3ArchiveKeyFormat;
 
-    public S3ArchivedEventSource(S3ListableStorage s3ListableStorage, S3DownloadableStorageWithoutDestinationFile s3DownloadableStorage, String bucketName, String eventStoreId) {
+    public S3ArchivedEventSource(S3ListableStorage s3ListableStorage,
+                                 S3DownloadableStorageWithoutDestinationFile s3DownloadableStorage,
+                                 String bucketName,
+                                 String eventStoreId)
+    {
         this.s3ListableStorage = s3ListableStorage;
         this.s3DownloadableStorage = s3DownloadableStorage;
         this.bucketName = bucketName;
         this.eventStoreId = eventStoreId;
+        this.s3ArchiveKeyFormat = new S3ArchiveKeyFormat(eventStoreId);
     }
 
     @Nonnull
     @Override
     public EventReader readAll() {
-        return new S3ArchivedEventReader(s3ListableStorage, s3DownloadableStorage, eventStoreId);
+        return new S3ArchivedEventReader(s3ListableStorage, s3DownloadableStorage, s3ArchiveKeyFormat);
     }
 
     @Nonnull
@@ -56,6 +62,8 @@ public final class S3ArchivedEventSource implements EventSource {
     public Collection<Component> monitoring() {
         String id = "tg-eventstore-s3-archive-EventSource-connection-" + this.eventStoreId;
         String label = "S3 Archive EventStore (bucket=" + bucketName + ", eventStoreId=" + this.eventStoreId + ")";
-        return Collections.singletonList(new S3ArchiveConnectionComponent(id, label, eventStoreId, new S3ArchiveMaxPositionFetcher(s3ListableStorage, eventStoreId)));
+        return Collections.singletonList(
+                new S3ArchiveConnectionComponent(id, label, eventStoreId,
+                        new S3ArchiveMaxPositionFetcher(s3ListableStorage, s3ArchiveKeyFormat)));
     }
 }

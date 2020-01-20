@@ -311,7 +311,7 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
     @Test public void
     max_position_from_archive_is_absent_when_there_is_no_events() {
         ListableStorage listableStorage = new S3ListableStorage(amazonS3, bucketName, 1);
-        S3ArchiveMaxPositionFetcher fetcher = new S3ArchiveMaxPositionFetcher(listableStorage, eventStoreId);
+        S3ArchiveMaxPositionFetcher fetcher = new S3ArchiveMaxPositionFetcher(listableStorage, new S3ArchiveKeyFormat(eventStoreId));
 
         assertThat(fetcher.maxPosition(), equalTo(Optional.empty()));
     }
@@ -324,7 +324,7 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
 
         successfullyArchiveUntilCaughtUp(liveEventSource);
 
-        S3ArchiveMaxPositionFetcher fetcher = new S3ArchiveMaxPositionFetcher(createListableStorage(), eventStoreId);
+        S3ArchiveMaxPositionFetcher fetcher = new S3ArchiveMaxPositionFetcher(createListableStorage(), new S3ArchiveKeyFormat(eventStoreId));
 
         assertThat(fetcher.maxPosition(), equalTo(Optional.of(4L)));
     }
@@ -438,7 +438,7 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
     }
 
     private S3Archiver createUnstartedArchiver(EventSource liveEventSource) {
-        S3ArchiveMaxPositionFetcher maxPositionFetcher = new S3ArchiveMaxPositionFetcher(createListableStorage(), eventStoreId);
+        S3ArchiveMaxPositionFetcher maxPositionFetcher = new S3ArchiveMaxPositionFetcher(createListableStorage(), new S3ArchiveKeyFormat(eventStoreId));
         return S3Archiver.newS3Archiver(liveEventSource,
                 createUploadableStorage(),
                 eventStoreId,
@@ -463,7 +463,7 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
 
         S3ListableStorage listableStorage = createListableStorage();
         S3Archiver archiver = S3Archiver.newS3Archiver(liveEventSource, createUploadableStorage(), eventStoreId, subscription,
-                twoEventsPerBatch, new S3ArchiveMaxPositionFetcher(listableStorage, eventStoreId),
+                twoEventsPerBatch, new S3ArchiveMaxPositionFetcher(listableStorage, new S3ArchiveKeyFormat(eventStoreId)),
                 testClassName, metricRegistry, S3Archiver.DEFAULT_MONITORING_PREFIX, clock);
 
         archiver.start();

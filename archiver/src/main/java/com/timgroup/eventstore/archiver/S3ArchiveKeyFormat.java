@@ -11,11 +11,15 @@ public final class S3ArchiveKeyFormat {
     }
 
     public Long positionValueFrom(String batchS3ObjectKey) {
-        String batchName = batchS3ObjectKey.replaceAll(eventStoreId + "/", "");
+        String batchName = batchS3ObjectKey.replaceAll(eventStorePrefix(), "");
         return Long.parseLong(batchName.split("\\.")[0]);
     }
 
     public String objectKeyFor(Long maxPosition, String fileExtension) {
-        return eventStoreId + "/" + String.format(ALPHANUMERIC_SORT_CONSISTENT_WITH_POSITION_SORT_FORMAT, maxPosition) + "." + fileExtension;
+        return eventStorePrefix() + String.format(ALPHANUMERIC_SORT_CONSISTENT_WITH_POSITION_SORT_FORMAT, maxPosition) + "." + fileExtension;
+    }
+
+    public String eventStorePrefix() {
+        return eventStoreId + "/";
     }
 }

@@ -87,7 +87,7 @@ public class S3ArchiverFactory {
 
     public S3ArchiveMaxPositionFetcher newS3ArchiveMaxPositionFetcher(String eventStoreId) {
         final S3ListableStorage s3ListableStorage = createS3ListableStorage(amazonS3);
-        return new S3ArchiveMaxPositionFetcher(s3ListableStorage, eventStoreId);
+        return new S3ArchiveMaxPositionFetcher(s3ListableStorage, new S3ArchiveKeyFormat(eventStoreId));
     }
 
     private S3ListableStorage createS3ListableStorage(AmazonS3 amazonS3) {
