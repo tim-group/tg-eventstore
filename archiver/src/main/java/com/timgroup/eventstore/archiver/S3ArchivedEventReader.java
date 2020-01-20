@@ -41,22 +41,16 @@ public final class S3ArchivedEventReader implements EventReader {
     @Nonnull
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-        if (emptyStorePosition().equals(positionExclusive)) {
-            return s3ListableStorage.list(eventStoreId + "/", null).flatMap(this::getEventsFromMultiTry);
-        } else {
-            S3ArchivePosition toReadFrom = (S3ArchivePosition) positionExclusive;
+        S3ArchivePosition toReadFrom = (S3ArchivePosition) positionExclusive;
 
-            Optional<RemoteFileDetails> batchContainingPositionToReadFrom = s3ListableStorage.list(eventStoreId + "/", null)
-                    .filter(batchesEndingWithPositionGreaterThan(toReadFrom))
-                    .findFirst();
+        return listAllBatches()
+                .filter(batchesEndingWithPositionGreaterThan(toReadFrom))
+                .flatMap(this::getEventsFromMultiTry)
+                .filter(fromPosition(toReadFrom));
+    }
 
-            return batchContainingPositionToReadFrom.isPresent()
-            ? s3ListableStorage.list(eventStoreId + "/", null)
-                    .filter(listingFile -> listingFile.name.compareTo(batchContainingPositionToReadFrom.get().name) >= 0)
-                    .flatMap(this::getEventsFromMultiTry)
-                    .filter(fromPosition(toReadFrom))
-            : Stream.empty();
-        }
+    private Stream<RemoteFileDetails> listAllBatches() {
+        return s3ListableStorage.list(eventStoreId + "/", null);
     }
 
     private Predicate<ResolvedEvent> fromPosition(S3ArchivePosition toReadFrom) {
@@ -64,10 +58,7 @@ public final class S3ArchivedEventReader implements EventReader {
     }
 
     private Predicate<RemoteFileDetails> batchesEndingWithPositionGreaterThan(S3ArchivePosition toReadFrom) {
-        return (batchFile) -> {
-            Long maxPositionInFile = new S3ArchiveKeyFormat(eventStoreId).positionValueFrom(batchFile.name);
-            return maxPositionInFile >= toReadFrom.value;
-        };
+        return (batchFile) -> new S3ArchiveKeyFormat(eventStoreId).positionValueFrom(batchFile.name) >= toReadFrom.value;
     }
 
     private Stream<ResolvedEvent> getEventsFromMultiTry(RemoteFileDetails remoteFileDetails) {
@@ -122,7 +113,7 @@ public final class S3ArchivedEventReader implements EventReader {
     @Nonnull
     @Override
     public Optional<ResolvedEvent> readLastEvent() {
-        return s3ListableStorage.list(eventStoreId + "/", null)
+        return listAllBatches()
                 .reduce((r1, r2) -> r2)
                 .map(this::getEventsFrom)
                 .flatMap(events -> events.reduce((e1, e2) -> e2));
