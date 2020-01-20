@@ -21,13 +21,18 @@ import com.timgroup.remotefilestorage.s3.S3UploadableStorageForInputStream;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Report;
 import com.timgroup.tucker.info.Status;
+import com.youdevise.testutils.matchers.Contains;
+import net.ttsui.junit.rules.pending.PendingImplementation;
 import org.hamcrest.FeatureMatcher;
 import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.time.Clock;
 import java.time.Duration;
@@ -35,7 +40,9 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
+import java.util.List;
 import java.util.Properties;
+import java.util.function.Function;
 
 import static com.amazonaws.SDKGlobalConfiguration.ACCESS_KEY_SYSTEM_PROPERTY;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
@@ -49,6 +56,9 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
     private AmazonS3 amazonS3;
@@ -165,7 +175,7 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
         assertThat(report.getStatus(), equalTo(Status.OK));
 
         assertThat(s3ArchiveEventSource.readAll().readLastEvent(), isPresent(allOf(
-                withPosition(new S3ArchivePosition(6)),
+                withPosition(6),
                 withEventType("type-C")
         )));
 
@@ -173,8 +183,30 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
 
     }
 
-    private Matcher<ResolvedEvent> withPosition(S3ArchivePosition s3ArchivePosition) {
-        return new FeatureMatcher<ResolvedEvent, S3ArchivePosition>(equalTo(s3ArchivePosition), "position", "") {
+    @PendingImplementation
+    @Test public void
+    read_all_forwards_with_a_position_only_downloads_relevant_batches_and_can_start_from_position_within_batch() throws Exception {
+        EventSource liveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
+        StreamId anyStream = streamId(randomCategory(), "1");
+        NewEvent anyEvent = newEvent("type-A", randomData(), randomData());
+        liveEventSource.writeStream().write(anyStream, asList(anyEvent, anyEvent, anyEvent, anyEvent, anyEvent, anyEvent));
+        successfullyArchiveUntilCaughtUp(fixedClock, liveEventSource);
+
+        S3DownloadableStorageWithoutDestinationFile s3Downloader = Mockito.spy(createDownloadableStorage());
+        EventSource s3ArchiveEventSource = createS3ArchiveEventSource(s3Downloader);
+
+        List<ResolvedEvent> eventsFromPosition = s3ArchiveEventSource.readAll().readAllForwards(new S3ArchivePosition(4))
+                .collect(toList());
+
+        assertThat(eventsFromPosition,
+                Contains.inOrder(withPosition(4), withPosition(5), withPosition(6)));
+
+        verify(s3Downloader, times(2)).download(any(String.class), ArgumentMatchers.<Function<InputStream, Object>>any());
+    }
+
+
+    private Matcher<ResolvedEvent> withPosition(long s3ArchivePosition) {
+        return new FeatureMatcher<ResolvedEvent, S3ArchivePosition>(equalTo(new S3ArchivePosition(s3ArchivePosition)), "position", "") {
             @Override
             protected S3ArchivePosition featureValueOf(ResolvedEvent actual) {
                 return (S3ArchivePosition) actual.position();
@@ -206,6 +238,10 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
 
     private EventSource createS3ArchiveEventSource(String eventStoreId) throws IOException {
         return new S3ArchivedEventSource(createListableStorage(), createDownloadableStorage(), bucketName, eventStoreId);
+    }
+
+    private EventSource createS3ArchiveEventSource(S3DownloadableStorageWithoutDestinationFile s3Downloader) {
+        return new S3ArchivedEventSource(createListableStorage(), s3Downloader, bucketName, eventStoreId);
     }
 
     private S3DownloadableStorageWithoutDestinationFile createDownloadableStorage() throws IOException {
