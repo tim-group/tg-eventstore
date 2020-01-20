@@ -14,9 +14,11 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.Optional;
 import java.util.Spliterator;
 import java.util.Spliterators;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import java.util.zip.GZIPInputStream;
@@ -40,7 +42,32 @@ public final class S3ArchivedEventReader implements EventReader {
     @Nonnull
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-       return s3ListableStorage.list(eventStoreId + "/", null).flatMap(this::getEventsFromMultiTry);
+        if (emptyStorePosition().equals(positionExclusive)) {
+            return s3ListableStorage.list(eventStoreId + "/", null).flatMap(this::getEventsFromMultiTry);
+        } else {
+            S3ArchivePosition toReadFrom = (S3ArchivePosition) positionExclusive;
+
+            RemoteFileDetails batchContainingPositionToReadFrom = s3ListableStorage.list(eventStoreId + "/", null)
+                    .filter(upToAndIncludingPosition(toReadFrom))
+                    .max(Comparator.comparing(file -> file.name))
+                    .get();
+
+            return s3ListableStorage.list(eventStoreId + "/", null)
+                    .filter(listingFile -> listingFile.name.compareTo(batchContainingPositionToReadFrom.name) >= 0)
+                    .flatMap(this::getEventsFromMultiTry)
+                    .filter(fromPosition(toReadFrom));
+        }
+    }
+
+    private Predicate<ResolvedEvent> fromPosition(S3ArchivePosition toReadFrom) {
+        return (event) -> ((S3ArchivePosition)event.position()).value >= toReadFrom.value;
+    }
+
+    private Predicate<RemoteFileDetails> upToAndIncludingPosition(S3ArchivePosition toReadFrom) {
+        return (batchFile) -> {
+            Long maxPositionInFile = new S3ArchiveKeyFormat(eventStoreId).positionValueFrom(batchFile.name);
+            return maxPositionInFile <= toReadFrom.value;
+        };
     }
 
     private Stream<ResolvedEvent> getEventsFromMultiTry(RemoteFileDetails remoteFileDetails) {

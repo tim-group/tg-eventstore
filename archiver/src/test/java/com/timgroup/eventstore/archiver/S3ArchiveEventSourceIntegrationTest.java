@@ -183,7 +183,6 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
 
     }
 
-    @PendingImplementation
     @Test public void
     read_all_forwards_with_a_position_only_downloads_relevant_batches_and_can_start_from_position_within_batch() throws Exception {
         EventSource liveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
