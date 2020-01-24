@@ -35,6 +35,7 @@ import org.mockito.Mockito;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -428,7 +429,7 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
 
     private S3DownloadableStorageWithoutDestinationFile createDownloadableStorage() throws IOException {
         return new S3DownloadableStorageWithoutDestinationFile(
-                new S3DownloadableStorage(amazonS3, Files.createTempDirectory(testClassName), bucketName),
+                new S3DownloadableStorage(amazonS3, Paths.get("unused-path"), bucketName),
                 amazonS3, bucketName);
     }
 
