@@ -5,7 +5,7 @@ import com.timgroup.eventsubscription.Event;
 import com.timgroup.eventsubscription.lifecycleevents.CaughtUp;
 import com.timgroup.eventsubscription.lifecycleevents.InitialCatchupCompleted;
 import com.timgroup.eventsubscription.lifecycleevents.SubscriptionTerminated;
-import com.timgroup.structuredevents.LocalEventSink;
+import com.timgroup.structuredevents.testing.LocalEventSink;
 import com.timgroup.tucker.info.Report;
 import org.junit.Before;
 import org.junit.Test;
