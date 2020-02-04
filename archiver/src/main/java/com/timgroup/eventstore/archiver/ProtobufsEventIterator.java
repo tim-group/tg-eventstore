@@ -30,8 +30,9 @@ public class ProtobufsEventIterator<T extends Message> implements Iterator<T> {
     public T next() {
         try {
             int size = in.readFixed32();
-            T msg = parser.parseFrom(in.readRawBytes(size));
-            in.resetSizeCounter();
+            int oldLimit = in.pushLimit(size);
+            T msg = parser.parseFrom(in);
+            in.popLimit(oldLimit);
             return msg;
         } catch (IOException e) {
             throw new RuntimeException(e);
