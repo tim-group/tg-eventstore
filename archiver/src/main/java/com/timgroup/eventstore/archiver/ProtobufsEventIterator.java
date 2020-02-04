@@ -1,8 +1,8 @@
 package com.timgroup.eventstore.archiver;
 
 import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
+import com.google.protobuf.Parser;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,11 +36,5 @@ public class ProtobufsEventIterator<T extends Message> implements Iterator<T> {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-    }
-
-
-    // Replace with com.google.protobuf.Parser when on a version >= 2.6
-    interface Parser<MessageType> {
-        MessageType parseFrom(byte[] inputStream) throws InvalidProtocolBufferException;
     }
 }

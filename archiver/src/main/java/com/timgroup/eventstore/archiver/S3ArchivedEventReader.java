@@ -40,7 +40,7 @@ public final class S3ArchivedEventReader implements EventReader {
 
     @Nonnull
     @Override
-    public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
+    public Stream<ResolvedEvent> readAllForwards(@Nonnull Position positionExclusive) {
         S3ArchivePosition toReadFrom = (S3ArchivePosition) positionExclusive;
 
         return listAllBatches()
@@ -84,7 +84,7 @@ public final class S3ArchivedEventReader implements EventReader {
     private Stream<ResolvedEvent> deserialize(InputStream inputStream) {
         try (GZIPInputStream decompressor = new GZIPInputStream(inputStream)) {
 
-            ProtobufsEventIterator<EventStoreArchiverProtos.Event> eventIterator = new ProtobufsEventIterator<>(EventStoreArchiverProtos.Event::parseFrom, decompressor);
+            ProtobufsEventIterator<EventStoreArchiverProtos.Event> eventIterator = new ProtobufsEventIterator<>(EventStoreArchiverProtos.Event.parser(), decompressor);
             return StreamSupport.stream(Spliterators.spliteratorUnknownSize(eventIterator, Spliterator.IMMUTABLE | Spliterator.ORDERED | Spliterator.NONNULL), false)
                     .map(this::toResolvedEvent)
                     .collect(toList())

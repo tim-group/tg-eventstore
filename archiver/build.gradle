@@ -7,7 +7,7 @@ plugins {
 }
 
 group = 'com.timgroup'
-if (buildNumber) version = '0.0.' + buildNumber
+if (buildNumber) version = "0.0.${buildNumber}"
 
 repositories {
     maven {
@@ -17,7 +17,7 @@ repositories {
 
 protobuf {
     protoc {
-        artifact = 'com.github.os72:protoc:2.4.1'
+        artifact = "com.google.protobuf:protoc:$protobufVersion"
     }
 }
 
@@ -32,7 +32,7 @@ dependencies {
     api project(":api")
     api project(":mysql") 
     api project(":subscription")
-    api "com.google.protobuf:protobuf-java:2.4.1"
+    api "com.google.protobuf:protobuf-java:$protobufVersion"
     api "com.timgroup:Tucker:1.0.1544" // autobump
     api "com.timgroup:tim-structured-events:0.4.1281" // autobump
 
