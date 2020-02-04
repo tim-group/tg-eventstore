@@ -21,6 +21,8 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 
+import static java.util.Objects.requireNonNull;
+
 public final class S3ArchivedEventReader implements EventReader {
     private static <T> Optional<T> lastElementOf(List<? extends T> list) {
         if (list.isEmpty())
@@ -45,34 +47,35 @@ public final class S3ArchivedEventReader implements EventReader {
     @Nonnull
     @Override
     public Stream<ResolvedEvent> readAllForwards(@Nonnull Position positionExclusive) {
-        S3ArchivePosition toReadFrom = (S3ArchivePosition) positionExclusive;
+        S3ArchivePosition toReadFrom = (S3ArchivePosition) requireNonNull(positionExclusive);
 
         return listAllBatches()
                 .filter(batchesEndingWithPositionGreaterThan(toReadFrom))
                 .flatMap(this::getEventsFromMultiTry)
-                .filter(fromPosition(toReadFrom));
+                .filter(fromPosition(toReadFrom))
+                .map(this::toResolvedEvent);
     }
 
     private Stream<RemoteFileDetails> listAllBatches() {
         return s3ListableStorage.list(s3ArchiveKeyFormat.eventStorePrefix(), null);
     }
 
-    private Predicate<ResolvedEvent> fromPosition(S3ArchivePosition toReadFrom) {
-        return (event) -> ((S3ArchivePosition)event.position()).value >= toReadFrom.value;
+    private Predicate<EventStoreArchiverProtos.Event> fromPosition(@Nonnull S3ArchivePosition toReadFrom) {
+        return (event) -> event.getPosition() >= toReadFrom.value;
     }
 
-    private Predicate<RemoteFileDetails> batchesEndingWithPositionGreaterThan(S3ArchivePosition toReadFrom) {
+    private Predicate<RemoteFileDetails> batchesEndingWithPositionGreaterThan(@Nonnull S3ArchivePosition toReadFrom) {
         return (batchFile) -> s3ArchiveKeyFormat.positionValueFrom(batchFile.name) >= toReadFrom.value;
     }
 
-    private Stream<ResolvedEvent> getEventsFromMultiTry(RemoteFileDetails remoteFileDetails) {
+    private Stream<EventStoreArchiverProtos.Event> getEventsFromMultiTry(RemoteFileDetails remoteFileDetails) {
         int maxAttempts = 5;
         int attemptsSoFar = 0;
         Optional<Exception> lastException = Optional.empty();
         while(attemptsSoFar < maxAttempts) {
             attemptsSoFar += 1;
             try {
-                return loadEventMessages(remoteFileDetails).stream().map(this::toResolvedEvent);
+                return loadEventMessages(remoteFileDetails).stream();
             } catch(Exception e) {
                 lastException = Optional.of(e);
             }
