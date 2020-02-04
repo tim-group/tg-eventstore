@@ -14,15 +14,12 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
-import java.util.Spliterator;
-import java.util.Spliterators;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 import java.util.zip.GZIPInputStream;
-
-import static java.util.stream.Collectors.toList;
 
 public final class S3ArchivedEventReader implements EventReader {
     private final S3ListableStorage s3ListableStorage;
@@ -82,16 +79,13 @@ public final class S3ArchivedEventReader implements EventReader {
     }
 
     private Stream<ResolvedEvent> deserialize(InputStream inputStream) {
+        List<EventStoreArchiverProtos.Event> events = new ArrayList<>();
         try (GZIPInputStream decompressor = new GZIPInputStream(inputStream)) {
-
-            ProtobufsEventIterator<EventStoreArchiverProtos.Event> eventIterator = new ProtobufsEventIterator<>(EventStoreArchiverProtos.Event.parser(), decompressor);
-            return StreamSupport.stream(Spliterators.spliteratorUnknownSize(eventIterator, Spliterator.IMMUTABLE | Spliterator.ORDERED | Spliterator.NONNULL), false)
-                    .map(this::toResolvedEvent)
-                    .collect(toList())
-                    .stream();
+            new ProtobufsEventIterator<>(EventStoreArchiverProtos.Event.parser(), decompressor).forEachRemaining(events::add);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        return events.stream().map(this::toResolvedEvent);
     }
 
     private ResolvedEvent toResolvedEvent(EventStoreArchiverProtos.Event event) {
