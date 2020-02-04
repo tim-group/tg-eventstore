@@ -5,7 +5,7 @@ import com.timgroup.eventstore.api.PositionCodec;
 
 import javax.annotation.Nullable;
 
-public class S3ArchivePosition implements Position, Comparable<S3ArchivePosition> {
+final class S3ArchivePosition implements Position, Comparable<S3ArchivePosition> {
     static final S3ArchivePosition EMPTY_STORE_POSITION = new S3ArchivePosition(-1);
     static final PositionCodec CODEC = PositionCodec.ofComparable(S3ArchivePosition.class,
             str -> new S3ArchivePosition(Long.parseLong(str)),
