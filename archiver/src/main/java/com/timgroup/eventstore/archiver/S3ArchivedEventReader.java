@@ -22,9 +22,16 @@ import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 
 public final class S3ArchivedEventReader implements EventReader {
+    private static <T> Optional<T> lastElementOf(List<? extends T> list) {
+        if (list.isEmpty())
+            return Optional.empty();
+        else
+            return Optional.of(list.get(list.size() - 1));
+    }
+
     private final S3ListableStorage s3ListableStorage;
     private final S3DownloadableStorageWithoutDestinationFile s3DownloadableStorage;
-    private S3ArchiveKeyFormat s3ArchiveKeyFormat;
+    private final S3ArchiveKeyFormat s3ArchiveKeyFormat;
 
     public S3ArchivedEventReader(
             S3ListableStorage s3ListableStorage,
@@ -65,7 +72,7 @@ public final class S3ArchivedEventReader implements EventReader {
         while(attemptsSoFar < maxAttempts) {
             attemptsSoFar += 1;
             try {
-                return getEventsFrom(remoteFileDetails);
+                return loadEventMessages(remoteFileDetails).stream().map(this::toResolvedEvent);
             } catch(Exception e) {
                 lastException = Optional.of(e);
             }
@@ -74,18 +81,20 @@ public final class S3ArchivedEventReader implements EventReader {
 
     }
 
-    private Stream<ResolvedEvent> getEventsFrom(RemoteFileDetails remoteFileDetails) {
-        return s3DownloadableStorage.download(remoteFileDetails.name, this::deserialize);
+    @Nonnull
+    private List<EventStoreArchiverProtos.Event> loadEventMessages(RemoteFileDetails remoteFileDetails) {
+        return s3DownloadableStorage.download(remoteFileDetails.name, this::parseEventMessages);
     }
 
-    private Stream<ResolvedEvent> deserialize(InputStream inputStream) {
+    @Nonnull
+    private List<EventStoreArchiverProtos.Event> parseEventMessages(InputStream inputStream) {
         List<EventStoreArchiverProtos.Event> events = new ArrayList<>();
         try (GZIPInputStream decompressor = new GZIPInputStream(inputStream)) {
             new ProtobufsEventIterator<>(EventStoreArchiverProtos.Event.parser(), decompressor).forEachRemaining(events::add);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        return events.stream().map(this::toResolvedEvent);
+        return events;
     }
 
     private ResolvedEvent toResolvedEvent(EventStoreArchiverProtos.Event event) {
@@ -109,8 +118,8 @@ public final class S3ArchivedEventReader implements EventReader {
     public Optional<ResolvedEvent> readLastEvent() {
         return listAllBatches()
                 .reduce((r1, r2) -> r2)
-                .map(this::getEventsFrom)
-                .flatMap(events -> events.reduce((e1, e2) -> e2));
+                .flatMap(file -> lastElementOf(loadEventMessages(file)))
+                .map(this::toResolvedEvent);
     }
 
     @Nonnull
