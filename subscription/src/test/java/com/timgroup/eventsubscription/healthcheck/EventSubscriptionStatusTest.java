@@ -122,7 +122,7 @@ public class EventSubscriptionStatusTest {
     }
 
     @Test public void
-    reports_warning_if_stale_for_more_than_25_pct_over_configured_maximum_duration_during_initial_catchup() {
+    reports_critical_if_stale_for_more_than_25_pct_over_configured_maximum_duration_during_initial_catchup() {
         status.apply(new TestPosition(1), new Event() {});
 
         clock.bumpSeconds(800);
