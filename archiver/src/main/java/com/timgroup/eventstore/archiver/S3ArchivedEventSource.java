@@ -6,8 +6,8 @@ import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.archiver.monitoring.S3ArchiveConnectionComponent;
-import com.timgroup.remotefilestorage.s3.S3DownloadableStorageWithoutDestinationFile;
 import com.timgroup.remotefilestorage.s3.S3ListableStorage;
+import com.timgroup.remotefilestorage.s3.S3StreamingDownloadableStorage;
 import com.timgroup.tucker.info.Component;
 
 import javax.annotation.Nonnull;
@@ -16,18 +16,18 @@ import java.util.Collections;
 
 public final class S3ArchivedEventSource implements EventSource {
     private final S3ListableStorage s3ListableStorage;
-    private final S3DownloadableStorageWithoutDestinationFile s3DownloadableStorage;
+    private final S3StreamingDownloadableStorage s3StreamingDownloadableStorage;
     private final String bucketName;
     private final String eventStoreId;
     private final S3ArchiveKeyFormat s3ArchiveKeyFormat;
 
     public S3ArchivedEventSource(S3ListableStorage s3ListableStorage,
-                                 S3DownloadableStorageWithoutDestinationFile s3DownloadableStorage,
+                                 S3StreamingDownloadableStorage s3StreamingDownloadableStorage,
                                  String bucketName,
                                  String eventStoreId)
     {
         this.s3ListableStorage = s3ListableStorage;
-        this.s3DownloadableStorage = s3DownloadableStorage;
+        this.s3StreamingDownloadableStorage = s3StreamingDownloadableStorage;
         this.bucketName = bucketName;
         this.eventStoreId = eventStoreId;
         this.s3ArchiveKeyFormat = new S3ArchiveKeyFormat(eventStoreId);
@@ -36,7 +36,7 @@ public final class S3ArchivedEventSource implements EventSource {
     @Nonnull
     @Override
     public EventReader readAll() {
-        return new S3ArchivedEventReader(s3ListableStorage, s3DownloadableStorage, s3ArchiveKeyFormat);
+        return new S3ArchivedEventReader(s3ListableStorage, s3StreamingDownloadableStorage, s3ArchiveKeyFormat);
     }
 
     @Nonnull

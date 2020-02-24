@@ -13,9 +13,8 @@ import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import com.timgroup.eventsubscription.SubscriptionBuilder;
 import com.timgroup.eventsubscription.healthcheck.InitialCatchupFuture;
 import com.timgroup.remotefilestorage.s3.S3ClientFactory;
-import com.timgroup.remotefilestorage.s3.S3DownloadableStorage;
-import com.timgroup.remotefilestorage.s3.S3DownloadableStorageWithoutDestinationFile;
 import com.timgroup.remotefilestorage.s3.S3ListableStorage;
+import com.timgroup.remotefilestorage.s3.S3StreamingDownloadableStorage;
 import com.timgroup.remotefilestorage.s3.S3UploadableStorage;
 import com.timgroup.remotefilestorage.s3.S3UploadableStorageForInputStream;
 import com.timgroup.tucker.info.Component;
@@ -29,10 +28,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -41,7 +36,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
-import java.util.function.Function;
 
 import static com.amazonaws.SDKGlobalConfiguration.ACCESS_KEY_SYSTEM_PROPERTY;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
@@ -82,7 +76,7 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
     }
 
     @Test public void
-    monitoring_includes_component_with_archive_metadata_in_label() throws Exception {
+    monitoring_includes_component_with_archive_metadata_in_label() {
         EventSource s3ArchiveEventSource = createS3ArchiveEventSource();
 
         S3ArchiveConnectionComponent connectionComponent = getConnectionComponent(s3ArchiveEventSource);
@@ -90,7 +84,7 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
     }
 
     @Test public void
-    monitoring_includes_component_that_is_critical_when_it_cannot_connect_to_s3_archive() throws IOException {
+    monitoring_includes_component_that_is_critical_when_it_cannot_connect_to_s3_archive() {
         Properties properties = ConfigLoader.loadConfig(S3_PROPERTIES_FILE);
         properties.setProperty("s3.region", "us-gov-east-1");
 
@@ -111,7 +105,7 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
     }
 
     @Test public void
-    monitoring_includes_component_that_is_critical_when_connects_to_s3_archive_but_event_store_does_not_exist() throws IOException {
+    monitoring_includes_component_that_is_critical_when_connects_to_s3_archive_but_event_store_does_not_exist() {
         EventSource s3ArchiveEventSource = createS3ArchiveEventSource();
 
         Component connectionComponent = getConnectionComponent(s3ArchiveEventSource);
@@ -125,7 +119,7 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
     }
 
     @Test public void
-    monitoring_includes_component_that_is_okay_and_contains_max_position_when_it_can_connect_to_archive() throws Exception {
+    monitoring_includes_component_that_is_okay_and_contains_max_position_when_it_can_connect_to_archive() {
         archiveEvents(anyStream(), nCopies(4, anyEvent("type-A")));
 
         EventSource s3ArchiveEventSource = createS3ArchiveEventSource();
@@ -142,7 +136,7 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
     }
 
     @Test public void
-    is_not_confused_by_matching_prefix_of_a_distinct_event_store() throws Exception {
+    is_not_confused_by_matching_prefix_of_a_distinct_event_store() {
         StreamId anyStream = anyStream();
         NewEvent anyEvent = anyEvent("type-A");
 
@@ -181,10 +175,10 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
     }
 
     @Test public void
-    read_all_forwards_with_position_only_downloads_relevant_batches_and_can_start_from_position_within_batch() throws Exception {
+    read_all_forwards_with_position_only_downloads_relevant_batches_and_can_start_from_position_within_batch() {
         archiveEvents(anyStream(), nCopies(6, anyEvent("type-A")));
 
-        S3DownloadableStorageWithoutDestinationFile s3Downloader = spy(createDownloadableStorage());
+        S3StreamingDownloadableStorage s3Downloader = spy(createDownloadableStorage());
         EventSource s3ArchiveEventSource = createS3ArchiveEventSource(s3Downloader);
 
         List<ResolvedEvent> eventsFromPosition = s3ArchiveEventSource.readAll().readAllForwards(new S3ArchivePosition(3))
@@ -193,14 +187,14 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
         assertThat(eventsFromPosition,
                 Contains.inOrder(withPosition(3), withPosition(4), withPosition(5), withPosition(6)));
 
-        verify(s3Downloader, times(2)).download(any(String.class), ArgumentMatchers.<Function<InputStream, Object>>any());
+        verify(s3Downloader, times(2)).download(any(String.class), ArgumentMatchers.any());
     }
 
     @Test public void
-    read_all_forwards_with_position_only_downloads_relevant_batches_and_can_start_from_position_at_end_of_batch() throws Exception {
+    read_all_forwards_with_position_only_downloads_relevant_batches_and_can_start_from_position_at_end_of_batch() {
         archiveEvents(anyStream(), nCopies(6, anyEvent("type-A")));
 
-        S3DownloadableStorageWithoutDestinationFile s3Downloader = spy(createDownloadableStorage());
+        S3StreamingDownloadableStorage s3Downloader = spy(createDownloadableStorage());
         EventSource s3ArchiveEventSource = createS3ArchiveEventSource(s3Downloader);
 
         List<ResolvedEvent> eventsFromPosition = s3ArchiveEventSource.readAll().readAllForwards(new S3ArchivePosition(4))
@@ -209,14 +203,14 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
         assertThat(eventsFromPosition,
                 Contains.inOrder(withPosition(4), withPosition(5), withPosition(6)));
 
-        verify(s3Downloader, times(2)).download(any(String.class), ArgumentMatchers.<Function<InputStream, Object>>any());
+        verify(s3Downloader, times(2)).download(any(String.class), ArgumentMatchers.any());
     }
 
     @Test public void
-    read_all_forwards_with_position_returns_empty_stream_when_position_is_beyond_max() throws Exception {
+    read_all_forwards_with_position_returns_empty_stream_when_position_is_beyond_max() {
         archiveEvents(anyStream(), nCopies(6, anyEvent("type-A")));
 
-        S3DownloadableStorageWithoutDestinationFile s3Downloader = spy(createDownloadableStorage());
+        S3StreamingDownloadableStorage s3Downloader = spy(createDownloadableStorage());
         EventSource s3ArchiveEventSource = createS3ArchiveEventSource(s3Downloader);
 
         List<ResolvedEvent> eventsFromPosition = s3ArchiveEventSource.readAll().readAllForwards(new S3ArchivePosition(7))
@@ -224,14 +218,14 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
 
         assertThat(eventsFromPosition, Contains.nothing());
 
-        verify(s3Downloader, times(0)).download(any(String.class), ArgumentMatchers.<Function<InputStream, Object>>any());
+        verify(s3Downloader, times(0)).download(any(String.class), ArgumentMatchers.any());
     }
 
     @Test public void
-    read_all_forwards_with_position_of_first_event_reads_all_events() throws Exception {
+    read_all_forwards_with_position_of_first_event_reads_all_events() {
         archiveEvents(anyStream(), nCopies(4, anyEvent("type-A")));
 
-        S3DownloadableStorageWithoutDestinationFile s3Downloader = spy(createDownloadableStorage());
+        S3StreamingDownloadableStorage s3Downloader = spy(createDownloadableStorage());
         EventSource s3ArchiveEventSource = createS3ArchiveEventSource(s3Downloader);
 
         List<ResolvedEvent> eventsFromPosition = s3ArchiveEventSource.readAll().readAllForwards(new S3ArchivePosition(0))
@@ -240,7 +234,7 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
         assertThat(eventsFromPosition,
                 Contains.inOrder(withPosition(1), withPosition(2), withPosition(3), withPosition(4)));
 
-        verify(s3Downloader, times(2)).download(any(String.class), ArgumentMatchers.<Function<InputStream, Object>>any());
+        verify(s3Downloader, times(2)).download(any(String.class), ArgumentMatchers.any());
     }
 
     private NewEvent anyEvent(String type) {
@@ -283,21 +277,20 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
         return (S3ArchiveConnectionComponent) connectionComponent;
     }
 
-    private EventSource createS3ArchiveEventSource() throws IOException {
+    private EventSource createS3ArchiveEventSource() {
         return createS3ArchiveEventSource(this.eventStoreId);
     }
 
-    private EventSource createS3ArchiveEventSource(String eventStoreId) throws IOException {
+    private EventSource createS3ArchiveEventSource(String eventStoreId) {
         return new S3ArchivedEventSource(createListableStorage(), createDownloadableStorage(), bucketName, eventStoreId);
     }
 
-    private EventSource createS3ArchiveEventSource(S3DownloadableStorageWithoutDestinationFile s3Downloader) {
+    private EventSource createS3ArchiveEventSource(S3StreamingDownloadableStorage s3Downloader) {
         return new S3ArchivedEventSource(createListableStorage(), s3Downloader, bucketName, eventStoreId);
     }
 
-    private S3DownloadableStorageWithoutDestinationFile createDownloadableStorage() throws IOException {
-        return new S3DownloadableStorageWithoutDestinationFile(
-                new S3DownloadableStorage(amazonS3, Paths.get("unused-path"), bucketName), amazonS3, bucketName);
+    private S3StreamingDownloadableStorage createDownloadableStorage() {
+        return new S3StreamingDownloadableStorage(amazonS3, bucketName);
     }
 
     private S3ListableStorage createListableStorage() {

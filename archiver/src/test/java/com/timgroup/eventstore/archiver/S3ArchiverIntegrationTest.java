@@ -18,9 +18,8 @@ import com.timgroup.eventsubscription.SubscriptionBuilder;
 import com.timgroup.eventsubscription.healthcheck.InitialCatchupFuture;
 import com.timgroup.remotefilestorage.api.ListableStorage;
 import com.timgroup.remotefilestorage.s3.S3ClientFactory;
-import com.timgroup.remotefilestorage.s3.S3DownloadableStorage;
-import com.timgroup.remotefilestorage.s3.S3DownloadableStorageWithoutDestinationFile;
 import com.timgroup.remotefilestorage.s3.S3ListableStorage;
+import com.timgroup.remotefilestorage.s3.S3StreamingDownloadableStorage;
 import com.timgroup.remotefilestorage.s3.S3UploadableStorage;
 import com.timgroup.remotefilestorage.s3.S3UploadableStorageForInputStream;
 import com.timgroup.tucker.info.Component;
@@ -32,10 +31,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -67,6 +63,7 @@ import static org.mockito.Mockito.doReturn;
 
 
 //TO run the test, please follow instructions in README.md in this module.
+@SuppressWarnings("OptionalGetWithoutIsPresent")
 public class S3ArchiverIntegrationTest extends S3IntegrationTest {
     private AmazonS3 amazonS3;
     private String bucketName;
@@ -95,20 +92,20 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
     }
 
     @Test public void
-    readLastEvent_is_empty_when_there_are_no_events() throws IOException {
+    readLastEvent_is_empty_when_there_are_no_events() {
         EventSource s3EventSource = createS3ArchivedEventSource();
         assertThat(s3EventSource.readAll().readLastEvent(), equalTo(Optional.empty()));
     }
 
     @Test public void
-    readAllForwards_is_empty_when_there_are_no_events() throws IOException {
+    readAllForwards_is_empty_when_there_are_no_events() {
         EventSource s3EventSource = createS3ArchivedEventSource();
         assertThat(s3EventSource.readAll().readAllForwards().count(), equalTo(0L));
     }
 
 
     @Test public void
-    readAllForwards_can_reconstitute_events() throws Exception {
+    readAllForwards_can_reconstitute_events() {
         EventSource liveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
 
         liveEventSource.writeStream().write(stream_1, asList(event_1, event_2));
@@ -139,7 +136,7 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
     }
 
     @Test public void
-    readAllForwards_consumes_all_available_batches() throws Exception {
+    readAllForwards_consumes_all_available_batches() {
         EventSource liveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
 
         liveEventSource.writeStream().write(stream_1, asList(event_1, event_2, event_3, event_4, event_5));
@@ -163,7 +160,7 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
     }
 
     @Test public void
-    readLastEvent_provides_last_event_from_last_batch_in_s3_bucket() throws Exception {
+    readLastEvent_provides_last_event_from_last_batch_in_s3_bucket() {
         EventSource liveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
 
         liveEventSource.writeStream().write(stream_1, asList(event_1, event_2, event_3, event_4, event_5));
@@ -210,14 +207,14 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
     }
 
     @Test public void
-    archiver_stores_content_with_gzip_compression() throws Exception {
+    archiver_stores_content_with_gzip_compression() {
         EventSource liveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
 
         liveEventSource.writeStream().write(stream_1, asList(event_1, event_2));
 
         successfullyArchiveUntilCaughtUp(liveEventSource);
 
-        S3DownloadableStorageWithoutDestinationFile downloadableStorage = createDownloadableStorage();
+        S3StreamingDownloadableStorage downloadableStorage = createDownloadableStorage();
 
         String onlyBatchKey = new S3ArchiveKeyFormat(eventStoreId).objectKeyFor(2L, "gz");
         assertThat(downloadableStorage.download(onlyBatchKey, (this::isGzipped)), is(true));
@@ -237,6 +234,7 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
         }
     }
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     @Test public void
     archiver_resumes_subscription_from_last_archived_position() {
         EventSource liveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
@@ -423,14 +421,12 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
         );
     }
 
-    private EventSource createS3ArchivedEventSource() throws IOException {
+    private EventSource createS3ArchivedEventSource() {
         return new S3ArchivedEventSource(createListableStorage(), createDownloadableStorage(), bucketName, eventStoreId);
     }
 
-    private S3DownloadableStorageWithoutDestinationFile createDownloadableStorage() throws IOException {
-        return new S3DownloadableStorageWithoutDestinationFile(
-                new S3DownloadableStorage(amazonS3, Paths.get("unused-path"), bucketName),
-                amazonS3, bucketName);
+    private S3StreamingDownloadableStorage createDownloadableStorage() {
+        return new S3StreamingDownloadableStorage(amazonS3, bucketName);
     }
 
     private S3ListableStorage createListableStorage() {

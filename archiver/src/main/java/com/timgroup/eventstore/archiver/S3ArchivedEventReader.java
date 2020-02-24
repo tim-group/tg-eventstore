@@ -7,8 +7,8 @@ import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.remotefilestorage.api.RemoteFileDetails;
-import com.timgroup.remotefilestorage.s3.S3DownloadableStorageWithoutDestinationFile;
 import com.timgroup.remotefilestorage.s3.S3ListableStorage;
+import com.timgroup.remotefilestorage.s3.S3StreamingDownloadableStorage;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -32,15 +32,15 @@ public final class S3ArchivedEventReader implements EventReader {
     }
 
     private final S3ListableStorage s3ListableStorage;
-    private final S3DownloadableStorageWithoutDestinationFile s3DownloadableStorage;
+    private final S3StreamingDownloadableStorage s3StreamingDownloadableStorage;
     private final S3ArchiveKeyFormat s3ArchiveKeyFormat;
 
     public S3ArchivedEventReader(
             S3ListableStorage s3ListableStorage,
-            S3DownloadableStorageWithoutDestinationFile s3DownloadableStorage,
+            S3StreamingDownloadableStorage s3StreamingDownloadableStorage,
             S3ArchiveKeyFormat s3ArchiveKeyFormat) {
         this.s3ListableStorage = s3ListableStorage;
-        this.s3DownloadableStorage = s3DownloadableStorage;
+        this.s3StreamingDownloadableStorage = s3StreamingDownloadableStorage;
         this.s3ArchiveKeyFormat = s3ArchiveKeyFormat;
     }
 
@@ -86,7 +86,7 @@ public final class S3ArchivedEventReader implements EventReader {
 
     @Nonnull
     private List<EventStoreArchiverProtos.Event> loadEventMessages(RemoteFileDetails remoteFileDetails) {
-        return s3DownloadableStorage.download(remoteFileDetails.name, this::parseEventMessages);
+        return s3StreamingDownloadableStorage.download(remoteFileDetails.name, this::parseEventMessages);
     }
 
     @Nonnull

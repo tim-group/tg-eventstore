@@ -6,15 +6,12 @@ import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.archiver.monitoring.S3ArchiveBucketConfigurationComponent;
 import com.timgroup.eventsubscription.SubscriptionBuilder;
 import com.timgroup.remotefilestorage.s3.S3ClientFactory;
-import com.timgroup.remotefilestorage.s3.S3DownloadableStorage;
-import com.timgroup.remotefilestorage.s3.S3DownloadableStorageWithoutDestinationFile;
 import com.timgroup.remotefilestorage.s3.S3ListableStorage;
+import com.timgroup.remotefilestorage.s3.S3StreamingDownloadableStorage;
 import com.timgroup.remotefilestorage.s3.S3UploadableStorage;
 import com.timgroup.remotefilestorage.s3.S3UploadableStorageForInputStream;
 import com.timgroup.tucker.info.Component;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.time.Clock;
 import java.util.Collection;
 import java.util.Collections;
@@ -75,14 +72,8 @@ public class S3ArchiverFactory {
         return new S3ArchivedEventSource(createS3ListableStorage(amazonS3), createDownloadableStorage(amazonS3), bucketName, eventStoreId);
     }
 
-    private S3DownloadableStorageWithoutDestinationFile createDownloadableStorage(AmazonS3 amazonS3)  {
-        try {
-            return new S3DownloadableStorageWithoutDestinationFile(
-                    new S3DownloadableStorage(amazonS3, Files.createTempDirectory(S3_ARCHIVER_TMP_DIR_PREFIX), bucketName),
-                    amazonS3, bucketName);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to create tmp dir for Downloadable storage", e);
-        }
+    private S3StreamingDownloadableStorage createDownloadableStorage(AmazonS3 amazonS3)  {
+        return new S3StreamingDownloadableStorage(amazonS3, bucketName);
     }
 
     public S3ArchiveMaxPositionFetcher newS3ArchiveMaxPositionFetcher(String eventStoreId) {
