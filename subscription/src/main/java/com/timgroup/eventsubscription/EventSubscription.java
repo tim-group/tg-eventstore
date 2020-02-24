@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -44,6 +45,7 @@ public class EventSubscription {
     private final Disruptor<EventContainer> disruptor;
     private final EventStoreChaser chaser;
     private final Duration runFrequency;
+    private final AtomicBoolean running = new AtomicBoolean(false);
 
     EventSubscription(
                 String name,
@@ -95,10 +97,12 @@ public class EventSubscription {
                 new DisruptorDeserializationAdapter(deserializer),
                 new DisruptorDeserializationAdapter(deserializer)
         ).then(new DisruptorEventHandlerAdapter((position, deserialized) -> {
-            try {
-                eventHandler.apply(position, deserialized);
-            } finally {
-                subscriptionStatus.apply(position, deserialized);
+            if (running.get()) {
+                try {
+                    eventHandler.apply(position, deserialized);
+                } finally {
+                    subscriptionStatus.apply(position, deserialized);
+                }
             }
         }, metricRegistry.map(r -> r.counter(String.format("eventsubscription.%s.missedCatchup", name)))));
 
@@ -124,6 +128,7 @@ public class EventSubscription {
     }
 
     public void start() {
+        running.set(true);
         subscriptionStatus.notifyStarted();
         disruptor.start();
         chaserExecutor.scheduleWithFixedDelay(chaser, 0, runFrequency.toMillis(), MILLISECONDS);
@@ -131,6 +136,7 @@ public class EventSubscription {
 
     public void stop() {
         try {
+            running.set(false);
             chaserExecutor.shutdown();
             chaserExecutor.awaitTermination(1, TimeUnit.SECONDS);
             disruptor.halt();
