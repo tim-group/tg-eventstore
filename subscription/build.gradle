@@ -38,6 +38,7 @@ dependencies {
     testImplementation "com.timgroup:tim-structured-events-testing:0.4.1281" // autobump
     testImplementation "org.mockito:mockito-core:2.26.0"
     testImplementation "com.youdevise:Matchers:0.0.1292" // autobump
+    testImplementation "net.ttsui.junit.rules.pending:pending:0.0.1055"
     testRuntimeOnly "org.slf4j:slf4j-simple:1.7.25"
 }
 
