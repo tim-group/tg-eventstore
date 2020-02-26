@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -26,44 +27,38 @@ import static org.junit.Assert.assertThat;
 public class EventSubscriptionTest {
 
     private final LocalEventSink eventSink = new LocalEventSink();
-    private final List<Event> events = new ArrayList<>();
-    private final InMemoryEventSource eventSource = new InMemoryEventSource(new ManualClock(Instant.EPOCH, ZoneOffset.UTC));
-
-    private EventSubscription subscription;
 
     @Test
     public void no_events_are_processed_after_calling_stop() throws InterruptedException {
         InMemoryEventSource eventSource = new InMemoryEventSource(new ManualClock(Instant.EPOCH, ZoneOffset.UTC));
 
+        List<Event> processedEvents = new ArrayList<>();
         List<NewEvent> testEvents = IntStream.range(1, 1000).mapToObj(i -> NewEvent.newEvent("testEvent", String.valueOf(i).getBytes())).collect(Collectors.toList());
         eventSource.writeStream().write(StreamId.streamId("all", "all"), testEvents);
 
         CountDownLatch latch = new CountDownLatch(1);
 
+        AtomicReference<EventSubscription> subscriptionRef = new AtomicReference<>();
         Consumer<Event> eventHandler = (event) -> {
-            events.add(event);
+            processedEvents.add(event);
             String data = ((TestEvent) event).data;
             if (data.equals("500")) {
-                stopSubscription();
+                subscriptionRef.get().stop();
                 latch.countDown();
             }
         };
-        subscription = SubscriptionBuilder.eventSubscription("all")
+        subscriptionRef.set(SubscriptionBuilder.eventSubscription("all")
                 .readingFrom(eventSource.readAll())
                 .deserializingUsing(Deserializer.applying(eventRecord -> new TestEvent(new String(eventRecord.data()))))
                 .publishingTo(eventHandler)
                 .withEventSink(eventSink)
-                .build();
+                .build());
 
-        subscription.start();
+        subscriptionRef.get().start();
 
         latch.await(5, TimeUnit.SECONDS);
 
-        assertThat(events.size(), is(500));
-    }
-
-    public void stopSubscription() {
-        subscription.stop();
+        assertThat(processedEvents.size(), is(500));
     }
 
     public static class TestEvent implements Event {
