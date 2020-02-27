@@ -64,7 +64,6 @@ public class EventSubscriptionTest {
         assertThat(processedEvents.size(), is(500));
     }
 
-    @PendingImplementation
     @Test
     public void stopping_subscription_shuts_down_all_threads() throws InterruptedException {
         InMemoryEventSource eventSource = new InMemoryEventSource(new ManualClock(Instant.EPOCH, ZoneOffset.UTC));
@@ -98,8 +97,8 @@ public class EventSubscriptionTest {
         eventProcessingStartedLatch.await(5, TimeUnit.SECONDS);
 
         assertThat(eventSubscriptionThreads(), is(not(emptyIterable())));
-        reachedShutdownPointLatch.await(5, TimeUnit.SECONDS);
 
+        reachedShutdownPointLatch.await(5, TimeUnit.SECONDS);
         assertThat(eventSubscriptionThreads(), is(emptyIterable()));
     }
 

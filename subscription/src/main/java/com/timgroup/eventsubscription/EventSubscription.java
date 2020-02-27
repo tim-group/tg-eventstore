@@ -106,7 +106,7 @@ public class EventSubscription {
             }
         }, metricRegistry.map(r -> r.counter(String.format("eventsubscription.%s.missedCatchup", name)))));
 
-        chaser = new EventStoreChaser(eventSource, startingPosition, disruptor, chaserHealth, clock, metricRegistry.map(r -> r.counter(format("eventsubscription.%s.chaserRun", name))));
+        chaser = new EventStoreChaser(eventSource, startingPosition, disruptor, chaserHealth, clock, metricRegistry.map(r -> r.counter(format("eventsubscription.%s.chaserRun", name))), running::get);
 
         statusComponents = new ArrayList<>();
         statusComponents.add(Component.supplyInfo("event-subscription-description", "Subscription source (" + name + ")", () -> description));
@@ -138,9 +138,9 @@ public class EventSubscription {
         try {
             running.set(false);
             chaserExecutor.shutdown();
-            chaserExecutor.awaitTermination(1, TimeUnit.SECONDS);
             disruptor.halt();
             eventHandlerExecutor.shutdown();
+            chaserExecutor.awaitTermination(1, TimeUnit.SECONDS);
             eventHandlerExecutor.awaitTermination(1, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
