@@ -185,7 +185,7 @@ public final class StacksConfiguredDataSource {
         dataSource.setUser(username);
         dataSource.setPassword(password);
         dataSource.setIdleConnectionTestPeriod(60 * 5);
-        dataSource.setMinPoolSize(3);
+        dataSource.setMinPoolSize(Math.min(3, maxPoolsize));
         dataSource.setInitialPoolSize(3);
         dataSource.setAcquireIncrement(1);
         dataSource.setAcquireRetryAttempts(5);
