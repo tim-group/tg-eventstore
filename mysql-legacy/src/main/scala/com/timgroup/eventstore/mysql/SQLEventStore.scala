@@ -115,7 +115,7 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
         override def estimateSize(): Long = Long.MaxValue
 
         override def tryAdvance(action: Consumer[_ >: EventInStream]): Boolean = {
-          if (resultSet.next()) {
+          if (!resultSet.isClosed && resultSet.next()) {
             action.accept(EventInStream(
                             new DateTime(resultSet.getTimestamp("effective_timestamp"), DateTimeZone.UTC),
                             EventData(
