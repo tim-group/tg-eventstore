@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
+import static com.timgroup.eventsubscription.EndToEndTest.eventually;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.Matchers.is;
@@ -65,7 +66,7 @@ public class EventSubscriptionTest {
     }
 
     @Test
-    public void stopping_subscription_shuts_down_all_threads() throws InterruptedException {
+    public void stopping_subscription_shuts_down_all_threads() throws Exception {
         InMemoryEventSource eventSource = new InMemoryEventSource(new ManualClock(Instant.EPOCH, ZoneOffset.UTC));
 
         List<NewEvent> testEvents = IntStream.range(1, 6).mapToObj(i -> NewEvent.newEvent("testEvent", String.valueOf(i).getBytes())).collect(toList());
@@ -99,7 +100,8 @@ public class EventSubscriptionTest {
         assertThat(eventSubscriptionThreads(), is(not(emptyIterable())));
 
         reachedShutdownPointLatch.await(5, TimeUnit.SECONDS);
-        assertThat(eventSubscriptionThreads(), is(emptyIterable()));
+
+        eventually(() -> assertThat(eventSubscriptionThreads(), is(emptyIterable())));
     }
 
     private List<String> eventSubscriptionThreads() {

@@ -312,7 +312,7 @@ public class EndToEndTest {
         return subscription.statusComponents().stream().filter(c -> c.getId().equals("event-subscription-status-test")).findFirst().orElseThrow(() -> new AssertionFailedError("No event-subscription-status-test component"));
     }
 
-    private void eventually(Runnable work) throws Exception {
+    public static void eventually(Runnable work) throws Exception {
         Duration patience = Duration.ofSeconds(1);
         Duration interval = Duration.ofMillis(15);
         int remaining = (int) (patience.toMillis() / interval.toMillis());
