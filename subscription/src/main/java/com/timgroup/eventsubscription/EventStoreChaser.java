@@ -9,7 +9,6 @@ import com.timgroup.eventsubscription.lifecycleevents.CaughtUp;
 import com.timgroup.eventsubscription.lifecycleevents.InitialCatchupCompleted;
 
 import java.time.Clock;
-import java.util.Iterator;
 import java.util.Optional;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
@@ -51,14 +50,12 @@ public class EventStoreChaser implements Runnable {
     public void run() {
         try {
             try (Stream<ResolvedEvent> stream = eventSource.apply(lastPosition)) {
-                Iterator<ResolvedEvent> it = stream.iterator();
-                while (it.hasNext()) {
+                stream.forEachOrdered(nextEvent -> {
                     checkForShutdown();
-                    ResolvedEvent nextEvent = it.next();
                     listener.chaserReceived(nextEvent.position());
                     lastPosition = nextEvent.position();
                     publish(translator.setting(nextEvent));
-                };
+                });
             }
 
             if (initialCatchupCompleted) {
@@ -95,6 +92,6 @@ public class EventStoreChaser implements Runnable {
         }
     }
 
-    private static class ShutdownException extends Exception {
+    private static class ShutdownException extends RuntimeException {
     }
 }
