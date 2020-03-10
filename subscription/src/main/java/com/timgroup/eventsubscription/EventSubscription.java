@@ -108,6 +108,7 @@ public class EventSubscription {
                             if (cancelSignal == SubscriptionCanceller.Signal.CANCEL_INCLUSIVE) {
                                 eventHandler.apply(position, deserialized);
                             }
+                            return;
                         }
                     }
                     eventHandler.apply(position, deserialized);

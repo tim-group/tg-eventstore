@@ -43,25 +43,29 @@ public class EventSubscriptionTest {
 
         CountDownLatch latch = new CountDownLatch(1);
 
-        AtomicReference<EventSubscription> subscriptionRef = new AtomicReference<>();
         Consumer<Event> eventHandler = (event) -> {
             processedEvents.add(event);
             String data = ((TestEvent) event).data;
             if (data.equals("500")) {
-                subscriptionRef.get().stop();
                 latch.countDown();
             }
         };
-        subscriptionRef.set(SubscriptionBuilder.eventSubscription("all")
+        EventSubscription subscription = SubscriptionBuilder.eventSubscription("all")
                 .readingFrom(eventSource.readAll())
                 .deserializingUsing(Deserializer.applying(eventRecord -> new TestEvent(new String(eventRecord.data()))))
                 .publishingTo(eventHandler)
+                .cancellingWhen((position, event) -> {
+                    String data = ((TestEvent) event).data;
+                    return data.equals("500") ? SubscriptionCanceller.Signal.CANCEL_INCLUSIVE : SubscriptionCanceller.Signal.CONTINUE;
+                })
                 .withEventSink(eventSink)
-                .build());
+                .build();
 
-        subscriptionRef.get().start();
+        subscription.start();
 
         latch.await(5, TimeUnit.SECONDS);
+
+        subscription.stop();
 
         assertThat(processedEvents.size(), is(500));
     }
