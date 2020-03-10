@@ -78,14 +78,13 @@ public class EventSubscriptionTest {
 
         int bufferSizeToEnsurePublishingBlocks = 2;
 
-        AtomicReference<EventSubscription> subscriptionRef = new AtomicReference<>();
         Consumer<Event> eventHandler = (event) -> {
             eventProcessingStartedLatch.countDown();
             if (event instanceof SubscriptionCancelled) {
                 reachedShutdownPointLatch.countDown();
             }
         };
-        subscriptionRef.set(SubscriptionBuilder.eventSubscription("all")
+        EventSubscription subscription = SubscriptionBuilder.eventSubscription("all")
                 .runningInParallelWithBuffer(bufferSizeToEnsurePublishingBlocks)
                 .readingFrom(eventSource.readAll())
                 .deserializingUsing(Deserializer.applying(eventRecord -> new TestEvent(new String(eventRecord.data()))))
@@ -97,15 +96,15 @@ public class EventSubscriptionTest {
                             : SubscriptionCanceller.Signal.CONTINUE;
                 })
                 .withEventSink(eventSink)
-                .build());
+                .build();
 
-        subscriptionRef.get().start();
+        subscription.start();
         eventProcessingStartedLatch.await(5, TimeUnit.SECONDS);
 
         assertThat(eventSubscriptionThreads(), is(not(emptyIterable())));
 
         reachedShutdownPointLatch.await(5, TimeUnit.SECONDS);
-        subscriptionRef.get().stop();
+        subscription.stop();
 
         eventually(() -> assertThat(eventSubscriptionThreads(), is(emptyIterable())));
     }
