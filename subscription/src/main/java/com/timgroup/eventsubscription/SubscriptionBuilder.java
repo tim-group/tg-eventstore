@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
@@ -32,6 +33,7 @@ public class SubscriptionBuilder {
     private final List<EventHandler> handlers = new ArrayList<>();
 
     private Function<Position, Stream<ResolvedEvent>> reader = null;
+    private SubscriptionCanceller canceller = null;
     private Position startingPosition = null;
     private Deserializer<? extends Event> deserializer = null;
     private EventSink eventSink = new Slf4jEventSink();
@@ -123,6 +125,11 @@ public class SubscriptionBuilder {
         return this;
     }
 
+    public SubscriptionBuilder cancellingWhen(SubscriptionCanceller canceller) {
+        this.canceller = canceller;
+        return this;
+    }
+
     public SubscriptionBuilder withEventSink(EventSink eventSink) {
         this.eventSink = requireNonNull(eventSink);
         return this;
@@ -157,6 +164,7 @@ public class SubscriptionBuilder {
                 name,
                 readerDescription,
                 reader,
+                canceller,
                 deserializer,
                 eventHandler,
                 clock,

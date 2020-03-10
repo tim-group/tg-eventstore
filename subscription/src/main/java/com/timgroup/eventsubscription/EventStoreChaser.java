@@ -7,6 +7,7 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventsubscription.lifecycleevents.CaughtUp;
 import com.timgroup.eventsubscription.lifecycleevents.InitialCatchupCompleted;
+import com.timgroup.eventsubscription.lifecycleevents.SubscriptionCancelled;
 
 import java.time.Clock;
 import java.util.Optional;
@@ -73,7 +74,11 @@ public class EventStoreChaser implements Runnable {
             listener.chaserUpToDate(lastPosition);
             counter.ifPresent(Counter::inc);
         } catch (ShutdownException e) {
-            // Ignore
+            publish((event, sequence) -> {
+                event.deserializedEvent = new SubscriptionCancelled(lastPosition);
+                event.position = lastPosition;
+            });
+            listener.chaserStopped(lastPosition);
         } catch (Exception e) {
             listener.transientFailure(e);
         }

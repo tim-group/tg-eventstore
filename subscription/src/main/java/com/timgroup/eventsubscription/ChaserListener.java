@@ -8,4 +8,6 @@ public interface ChaserListener {
     void chaserReceived(Position position);
 
     void chaserUpToDate(Position position);
+
+    void chaserStopped(Position position);
 }

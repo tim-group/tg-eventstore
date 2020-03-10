@@ -17,6 +17,7 @@ import com.timgroup.tucker.info.Health;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -48,19 +49,20 @@ public class EventSubscription {
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     EventSubscription(
-                String name,
-                String description,
-                Function<Position, Stream<ResolvedEvent>> eventSource,
-                Deserializer<? extends Event> deserializer,
-                EventHandler eventHandler,
-                Clock clock,
-                int bufferSize,
-                Duration runFrequency,
-                Position startingPosition,
-                DurationThreshold initialReplay,
-                DurationThreshold staleness,
-                EventSink eventSink,
-                Optional<MetricRegistry> metricRegistry
+            String name,
+            String description,
+            Function<Position, Stream<ResolvedEvent>> eventSource,
+            @Nullable SubscriptionCanceller canceller,
+            Deserializer<? extends Event> deserializer,
+            EventHandler eventHandler,
+            Clock clock,
+            int bufferSize,
+            Duration runFrequency,
+            Position startingPosition,
+            DurationThreshold initialReplay,
+            DurationThreshold staleness,
+            EventSink eventSink,
+            Optional<MetricRegistry> metricRegistry
     ) {
         this.runFrequency = runFrequency;
         ChaserHealth chaserHealth = new ChaserHealth(name, clock, runFrequency);
@@ -99,6 +101,15 @@ public class EventSubscription {
         ).then(new DisruptorEventHandlerAdapter((position, deserialized) -> {
             if (running.get()) {
                 try {
+                    if (canceller != null) {
+                        SubscriptionCanceller.Signal cancelSignal = canceller.cancel(position, deserialized);
+                        if (cancelSignal != SubscriptionCanceller.Signal.CONTINUE) {
+                            running.set(false);
+                            if (cancelSignal == SubscriptionCanceller.Signal.CANCEL_INCLUSIVE) {
+                                eventHandler.apply(position, deserialized);
+                            }
+                        }
+                    }
                     eventHandler.apply(position, deserialized);
                 } finally {
                     subscriptionStatus.apply(position, deserialized);

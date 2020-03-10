@@ -4,6 +4,7 @@ import com.timgroup.clocks.testing.ManualClock;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.InMemoryEventSource;
+import com.timgroup.eventsubscription.lifecycleevents.SubscriptionCancelled;
 import com.timgroup.structuredevents.testing.LocalEventSink;
 import net.ttsui.junit.rules.pending.PendingImplementation;
 import net.ttsui.junit.rules.pending.PendingRule;
@@ -80,9 +81,7 @@ public class EventSubscriptionTest {
         AtomicReference<EventSubscription> subscriptionRef = new AtomicReference<>();
         Consumer<Event> eventHandler = (event) -> {
             eventProcessingStartedLatch.countDown();
-            String data = ((TestEvent) event).data;
-            if (data.equals(String.valueOf(bufferSizeToEnsurePublishingBlocks))) {
-                subscriptionRef.get().stop();
+            if (event instanceof SubscriptionCancelled) {
                 reachedShutdownPointLatch.countDown();
             }
         };
@@ -91,6 +90,12 @@ public class EventSubscriptionTest {
                 .readingFrom(eventSource.readAll())
                 .deserializingUsing(Deserializer.applying(eventRecord -> new TestEvent(new String(eventRecord.data()))))
                 .publishingTo(eventHandler)
+                .cancellingWhen((position, event) -> {
+                    String data = ((TestEvent) event).data;
+                    return (data.equals(String.valueOf(bufferSizeToEnsurePublishingBlocks)))
+                            ? SubscriptionCanceller.Signal.CANCEL_EXCLUSIVE
+                            : SubscriptionCanceller.Signal.CONTINUE;
+                })
                 .withEventSink(eventSink)
                 .build());
 
@@ -100,6 +105,7 @@ public class EventSubscriptionTest {
         assertThat(eventSubscriptionThreads(), is(not(emptyIterable())));
 
         reachedShutdownPointLatch.await(5, TimeUnit.SECONDS);
+        subscriptionRef.get().stop();
 
         eventually(() -> assertThat(eventSubscriptionThreads(), is(emptyIterable())));
     }

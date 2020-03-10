@@ -71,6 +71,11 @@ public final class ChaserHealth extends Component implements ChaserListener {
         lastPollTimestamp = Instant.now(clock);
     }
 
+    @Override
+    public void chaserStopped(Position position) {
+        currentPosition = position;
+    }
+
     private static Duration max(Duration d1, Duration d2) {
         return d1.compareTo(d2) > 0 ? d1 : d2;
     }
