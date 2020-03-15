@@ -26,10 +26,12 @@ public final class EventRecord {
         this.metadata = requireNonNull(metadata);
     }
 
+    @Nonnull
     public static EventRecord eventRecord(Instant timestamp, StreamId streamId, long eventNumber, String eventType, byte[] data, byte[] metadata) {
         return new EventRecord(timestamp, streamId, eventNumber, eventType, data, metadata);
     }
 
+    @Nonnull
     public ResolvedEvent toResolvedEvent(Position position) {
         return new ResolvedEvent(position, this);
     }

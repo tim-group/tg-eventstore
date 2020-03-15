@@ -15,6 +15,7 @@ public interface PositionCodec {
         throw new UnsupportedOperationException();
     }
 
+    @Nonnull
     static <T extends Position> PositionCodec fromComparator(
             Class<T> clazz,
             Function<? super String, ? extends T> deserialize,
@@ -45,6 +46,7 @@ public interface PositionCodec {
         };
     }
 
+    @Nonnull
     static <T extends Position & Comparable<T>> PositionCodec ofComparable(
             Class<T> clazz,
             Function<? super String, ? extends T> deserialize,

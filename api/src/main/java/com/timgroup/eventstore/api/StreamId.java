@@ -17,6 +17,7 @@ public final class StreamId {
         this.id = requireNonNull(id);
     }
 
+    @Nonnull
     public static StreamId streamId(String category, String id) {
         return new StreamId(category, id);
     }

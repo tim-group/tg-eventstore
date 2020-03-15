@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.stream.Stream;
 
 public final class EmptyEventSource implements EventSource, EventReader, EventCategoryReader, EventStreamReader {
+    @Nonnull
     public static final EmptyEventSource INSTANCE = new EmptyEventSource();
 
     public static final class EmptyPosition implements Position {

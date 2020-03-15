@@ -16,6 +16,7 @@ public interface EventSource {
     @Nonnull EventStreamWriter writeStream();
     @Nonnull Collection<Component> monitoring();
 
+    @Nonnull
     default EventSource withMonitoring(Collection<? extends Component> moreMonitoring) {
         requireNonNull(moreMonitoring);
 

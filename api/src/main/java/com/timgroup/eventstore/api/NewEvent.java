@@ -20,14 +20,17 @@ public final class NewEvent {
         this.metadata = requireNonNull(metadata);
     }
 
+    @Nonnull
     public static NewEvent newEvent(String type, byte[] data, byte[] metadata) {
         return new NewEvent(type, data, metadata);
     }
 
+    @Nonnull
     public static NewEvent newEvent(String type, byte[] data) {
         return new NewEvent(type, data, EMPTY);
     }
 
+    @Nonnull
     public EventRecord toEventRecord(Instant timestamp, StreamId streamId, long eventNumber) {
         return eventRecord(timestamp, streamId, eventNumber, type, data, metadata);
     }
