@@ -53,8 +53,29 @@ public class DeserializerTest {
     }
 
     @Test
+    public void filtering_using_default_method() {
+        Deserializer<String> deserializer = Deserializer.applying(EventRecord::eventType).filter(event -> !event.eventType().endsWith("Ignore"));
+
+        List<String> outputs = new ArrayList<>();
+        deserializer.deserialize(eventOfType("SomeEvent"), outputs::add);
+        deserializer.deserialize(eventOfType("SomeEventIgnore"), outputs::add);
+
+        assertThat(outputs, equalTo(ImmutableList.of("SomeEvent")));
+    }
+
+    @Test
     public void wrapping() {
         Deserializer<String> deserializer = Deserializer.wrapping((type, event) -> type + "=" + event.eventType(), Deserializer.applying(EventRecord::eventType));
+
+        List<String> outputs = new ArrayList<>();
+        deserializer.deserialize(eventOfType("SomeEvent"), outputs::add);
+
+        assertThat(outputs, equalTo(ImmutableList.of("SomeEvent=SomeEvent")));
+    }
+
+    @Test
+    public void wrapping_using_default_method() {
+        Deserializer<String> deserializer = Deserializer.applying(EventRecord::eventType).map((type, event) -> type + "=" + event.eventType());
 
         List<String> outputs = new ArrayList<>();
         deserializer.deserialize(eventOfType("SomeEvent"), outputs::add);

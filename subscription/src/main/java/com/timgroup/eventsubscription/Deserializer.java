@@ -14,6 +14,14 @@ import static java.util.Objects.requireNonNull;
 public interface Deserializer<T> {
     void deserialize(EventRecord event, Consumer<? super T> consumer);
 
+    default Deserializer<T> filter(Predicate<? super EventRecord> predicate) {
+        return filtering(predicate, this);
+    }
+
+    default <U> Deserializer<U> map(BiFunction<? super T, ? super EventRecord, ? extends U> mapper) {
+        return wrapping(mapper, this);
+    }
+
     static <T> Deserializer<T> applying(Function<? super EventRecord, ? extends T> function) {
         return new Deserializer<T>() {
             @Override
