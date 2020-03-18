@@ -3,9 +3,12 @@ package com.timgroup.eventsubscription;
 import com.timgroup.eventstore.api.EventRecord;
 
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+
+import static java.util.Objects.requireNonNull;
 
 @FunctionalInterface
 public interface Deserializer<T> {
@@ -51,6 +54,24 @@ public interface Deserializer<T> {
             @Override
             public String toString() {
                 return "filtering(" + downstream + " with " + predicate + ")";
+            }
+        };
+    }
+
+    static <T, U> Deserializer<U> wrapping(
+            BiFunction<? super T, ? super EventRecord, ? extends U> wrapper, Deserializer<? extends T> underlying) {
+        requireNonNull(underlying);
+        return new Deserializer<U>() {
+            @Override
+            public void deserialize(EventRecord event, Consumer<? super U> consumer) {
+                underlying.deserialize(event, deserialized -> {
+                    consumer.accept(wrapper.apply(deserialized, event));
+                });
+            }
+
+            @Override
+            public String toString() {
+                return "wrapping(" + underlying + ")";
             }
         };
     }
