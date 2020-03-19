@@ -33,7 +33,7 @@ dependencies {
     api project(":mysql") 
     api project(":subscription")
     api "com.google.protobuf:protobuf-java:$protobufVersion"
-    api "com.timgroup:Tucker:1.0.1546" // autobump
+    api "com.timgroup:Tucker:1.0.1547" // autobump
     api "com.timgroup:tim-structured-events:0.4.1281" // autobump
 
     implementation "com.google.code.findbugs:jsr305:3.0.2"
@@ -55,7 +55,7 @@ dependencies {
 
     testImplementation "com.timgroup:tg-config-java-bindings:1.0.66" // autobump
     testImplementation "org.apache.commons:commons-lang3:3.3.2"
-    testImplementation "com.timgroup:clocks-testing:1.0.1105" // autobump
+    testImplementation "com.timgroup:clocks-testing:1.0.1106" // autobump
     testImplementation "net.ttsui.junit.rules.pending:pending:0.0.1055"
     testImplementation "org.mockito:mockito-core:2.26.0"
     testImplementation "com.youdevise:Matchers:0.0.1292" // autobump
