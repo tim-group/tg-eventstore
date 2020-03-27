@@ -5,7 +5,6 @@ import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.InMemoryEventSource;
 import com.timgroup.structuredevents.testing.LocalEventSink;
-import net.ttsui.junit.rules.pending.PendingImplementation;
 import net.ttsui.junit.rules.pending.PendingRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -22,10 +21,10 @@ import java.util.stream.IntStream;
 
 import static com.timgroup.eventsubscription.EndToEndTest.eventually;
 import static java.util.stream.Collectors.toList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertThat;
 
 public class EventSubscriptionTest {
     @Rule public PendingRule pendingRule = new PendingRule();

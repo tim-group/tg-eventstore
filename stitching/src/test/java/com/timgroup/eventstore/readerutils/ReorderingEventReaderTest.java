@@ -12,13 +12,15 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.google.common.collect.Iterables.getLast;
-import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.eventstore.api.EventRecordMatcher.anEventRecord;
+import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static java.time.ZoneId.systemDefault;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.is;
 
 public final class ReorderingEventReaderTest {
 
