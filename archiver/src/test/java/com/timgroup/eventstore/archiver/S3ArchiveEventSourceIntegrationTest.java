@@ -86,7 +86,8 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
     @Test public void
     monitoring_includes_component_that_is_critical_when_it_cannot_connect_to_s3_archive() {
         Properties properties = ConfigLoader.loadConfig(S3_PROPERTIES_FILE);
-        properties.setProperty("s3.region", "us-gov-east-1");
+        properties.setProperty("s3.accessKey", "xyzzy");
+        properties.setProperty("s3.secretKey", "xyzzy");
 
         amazonS3 = new S3ClientFactory().fromProperties(properties);
         EventSource s3ArchiveEventSource = createS3ArchiveEventSource();
