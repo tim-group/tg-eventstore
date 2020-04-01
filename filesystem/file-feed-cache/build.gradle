@@ -25,7 +25,7 @@ dependencies {
     implementation project (":archiver")
     implementation "org.slf4j:slf4j-api:1.7.25"
     implementation "com.timgroup:file-feed-consumer:0.0.3348" // autobump
-    implementation "com.timgroup:tim-remote-file-storage-s3:0.0.1170"  //autobump
+    implementation "com.timgroup:tim-remote-file-storage-s3:0.0.1206"  //autobump
 
     testImplementation project(":stitching")
     testImplementation "junit:junit:4.13"
