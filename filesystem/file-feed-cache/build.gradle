@@ -1,0 +1,79 @@
+plugins {
+    id "java-library"
+    id "com.timgroup.jarmangit"
+    id "maven-publish"
+}
+
+group = 'com.timgroup'
+if (buildNumber) version = '0.0.' + buildNumber
+
+repositories {
+    maven {
+        url "${repoUrl}/groups/public"
+    }
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+    withSourcesJar()
+    withJavadocJar()
+}
+
+dependencies {
+    api project(":api")
+    implementation project (":archiver")
+    implementation "org.slf4j:slf4j-api:1.7.25"
+    implementation "com.timgroup:file-feed-consumer:0.0.3348" // autobump
+    implementation "com.timgroup:tim-remote-file-storage-s3:0.0.1170"  //autobump
+
+    testImplementation project(":stitching")
+    testImplementation "junit:junit:4.13"
+    testImplementation "org.hamcrest:hamcrest-core:1.3"
+    testImplementation "org.hamcrest:hamcrest-library:1.3"
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+    options.incremental = true
+    options.deprecation = true
+    options.compilerArgs << "-parameters"
+}
+
+tasks.withType(Jar).configureEach {
+    manifest {
+        attributes(
+                'Implementation-Title': project.name,
+                'Implementation-Version': project.version,
+                'Implementation-Vendor': 'TIM Group Ltd'
+        )
+    }
+}
+
+tasks.named("jar").configure {
+    manifest {
+        attributes(
+                'Automatic-Module-Name': "com.timgroup.eventstore.filesystem.filefeedcache"
+        )
+    }
+}
+
+publishing {
+    repositories {
+        if (project.hasProperty("repoUrl")) {
+            maven {
+                url "${project.repoUrl}/repositories/yd-release-candidates"
+                credentials {
+                    username = project.repoUsername
+                    password = project.repoPassword
+                }
+            }
+        }
+    }
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId "eventstore-filesystem-file-feed-cache"
+            from components.java
+        }
+    }
+}
