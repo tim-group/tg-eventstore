@@ -21,8 +21,8 @@ public class ReadingMDEventsFromFileFeedCache {
     public static void main(String[] args) {
         HttpFeedCacheStorage downloadableStorage = new HttpFeedCacheStorage(URI.create("http://latest-file-feed-cacheapp-vip.oy.net.local:8000"));
 
-        NamedReaderWithCodec marketdataEventReader = eventReaderFor(new FileFeedCacheEventReader(downloadableStorage, new S3ArchiveKeyFormat("marketdata-event")), "marketdata-event");
-        FileFeedCacheEventReader imeEventReader = new FileFeedCacheEventReader(downloadableStorage, new S3ArchiveKeyFormat("tradeideasmonitor-Event"));
+        NamedReaderWithCodec marketdataEventReader = eventReaderFor(new FileFeedCacheEventSource(downloadableStorage, new S3ArchiveKeyFormat("marketdata-event")), "marketdata-event");
+        FileFeedCacheEventSource imeEventReader = new FileFeedCacheEventSource(downloadableStorage, new S3ArchiveKeyFormat("tradeideasmonitor-Event"));
         NamedReaderWithCodec timIMEEventReader = eventReaderFor(imeEventReader, "tradeideasmonitor-Event");
 
         MergedEventReader eventReader = new MergedEventReader(Clock.systemUTC(), (MergingStrategy<Instant>) event ->
