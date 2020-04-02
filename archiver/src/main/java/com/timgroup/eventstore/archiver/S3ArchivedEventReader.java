@@ -61,11 +61,11 @@ public final class S3ArchivedEventReader implements EventReader {
     }
 
     private Predicate<EventStoreArchiverProtos.Event> fromPosition(@Nonnull S3ArchivePosition toReadFrom) {
-        return (event) -> event.getPosition() >= toReadFrom.value;
+        return (event) -> event.getPosition() > toReadFrom.value;
     }
 
     private Predicate<RemoteFileDetails> batchesEndingWithPositionGreaterThan(@Nonnull S3ArchivePosition toReadFrom) {
-        return (batchFile) -> s3ArchiveKeyFormat.positionValueFrom(batchFile.name) >= toReadFrom.value;
+        return (batchFile) -> s3ArchiveKeyFormat.positionValueFrom(batchFile.name) > toReadFrom.value;
     }
 
     private Stream<EventStoreArchiverProtos.Event> getEventsFromMultiTry(RemoteFileDetails remoteFileDetails) {
