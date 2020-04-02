@@ -21,6 +21,8 @@ java {
 }
 
 dependencies {
+    runtimeOnly "mysql:mysql-connector-java:5.1.39"
+
     api project(":api")
     implementation project (":archiver")
 
