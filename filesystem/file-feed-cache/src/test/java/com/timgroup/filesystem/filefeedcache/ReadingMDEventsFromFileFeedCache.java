@@ -29,7 +29,7 @@ public class ReadingMDEventsFromFileFeedCache {
     private static AtomicLong eventCount = new AtomicLong(0);
 
     public static void main(String[] args) throws IOException {
-        if (Boolean.parseBoolean(args[1])) {
+        if (Boolean.parseBoolean(args[0])) {
             readEventsFromCache();
         } else {
             readFromCacheAndLive();
