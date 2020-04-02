@@ -24,6 +24,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class ReadingMDEventsFromFileFeedCache {
     private static AtomicLong eventCount = new AtomicLong(0);
@@ -43,28 +44,30 @@ public class ReadingMDEventsFromFileFeedCache {
         config.load(Files.newInputStream(Paths.get("/home/mshah/config.properties"), StandardOpenOption.READ));
 
         HttpFeedCacheStorage downloadableStorage = new HttpFeedCacheStorage(URI.create("http://latest-file-feed-cacheapp-vip.oy.net.local:8000"));
-        S3ArchiveKeyFormat s3ArchiveKeyFormat = new S3ArchiveKeyFormat("marketdata-event");
+        S3ArchiveKeyFormat s3ArchiveKeyFormat = new S3ArchiveKeyFormat("tradeideasmonitor-Event");
         FileFeedCacheMaxPositionFetcher maxPositionFetcher = new FileFeedCacheMaxPositionFetcher(downloadableStorage, s3ArchiveKeyFormat);
 
 
-        final FileFeedCacheEventSource fileFeedCacheEventSource = new FileFeedCacheEventSource(downloadableStorage, new S3ArchiveKeyFormat("marketdata-event"));
+        final FileFeedCacheEventSource fileFeedCacheEventSource = new FileFeedCacheEventSource(downloadableStorage, s3ArchiveKeyFormat);
         MetricRegistry metricsRegistry = new MetricRegistry();
 
-        EventSource marketDataEventSource = BasicMysqlEventSource.pooledReadOnlyDbEventSource(
+        EventSource eventstore = BasicMysqlEventSource.pooledReadOnlyDbEventSource(
                 config,
-                "db.marketdata.",
-                "event",
-                "marketdata",
+                "db.tradeideasmonitor.",
+                "TIM_EVENT_STORE",
+                "ime",
                 metricsRegistry
         );
-        final Position position1 = maxPositionFetcher.maxPosition().map(position -> marketDataEventSource.readAll().storePositionCodec().deserializePosition(Long.toString(position))).get();
+        final Position cutover = maxPositionFetcher.maxPosition().map(position -> eventstore.readAll().storePositionCodec().deserializePosition(Long.toString(position))).get();
 
-        final BackfillStitchingEventSource backfillStitchingEventSource = new BackfillStitchingEventSource(fileFeedCacheEventSource, marketDataEventSource, position1);
+        final BackfillStitchingEventSource backfillStitchingEventSource = new BackfillStitchingEventSource(fileFeedCacheEventSource, eventstore, cutover);
 
+        AtomicReference<Position> reference = new AtomicReference<>(backfillStitchingEventSource.readAll().emptyStorePosition());
         long start = System.currentTimeMillis();
         try (PrintWriter printWriter = new PrintWriter("s3eventstoretimes.csv")) {
             printWriter.println("position,time(s)");
             backfillStitchingEventSource.readAll().readAllForwards().forEach(e -> {
+                reference.set(e.position());
                 Duration inMillis = Duration.of((System.currentTimeMillis() - start), ChronoUnit.MILLIS);
                 long eventCount = ReadingMDEventsFromFileFeedCache.eventCount.incrementAndGet();
                 if (eventCount % 100000 == 0) {
@@ -75,6 +78,7 @@ public class ReadingMDEventsFromFileFeedCache {
             Duration inMillis = Duration.ofMillis((System.currentTimeMillis() - start));
             printWriter.println(String.format("%s,%s", eventCount.get(), inMillis.getSeconds()));
             System.out.println(String.format("%s marketdataevents events takes: %s seconds to read", eventCount.get(), inMillis.getSeconds()));
+            System.out.println("Final position is: " + reference.get());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
