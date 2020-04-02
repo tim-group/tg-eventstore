@@ -33,7 +33,6 @@ import static com.timgroup.filefeed.reading.StorageLocation.TimGroupEventStoreFe
 import static java.util.Objects.requireNonNull;
 
 public final class FileFeedCacheEventSource implements EventReader, EventSource {
-
     private final ReadableFeedStorage downloadableStorage;
     private final S3ArchiveKeyFormat s3ArchiveKeyFormat;
 
@@ -47,9 +46,9 @@ public final class FileFeedCacheEventSource implements EventReader, EventSource 
         S3ArchivePosition toReadFrom = (S3ArchivePosition) requireNonNull(positionExclusive);
 
         return listFeedFiles()
-                .filter(fileName -> s3ArchiveKeyFormat.positionValueFrom(fileName) >= toReadFrom.value)
+                .filter(fileName -> s3ArchiveKeyFormat.positionValueFrom(fileName) > toReadFrom.value)
                 .flatMap(fileName -> loadEventMessages(fileName).stream())
-                .filter(event -> event.getPosition() >= toReadFrom.value)  // TODO why not ">", if positionExclusive?
+                .filter(event -> event.getPosition() > toReadFrom.value)
                 .map(FileFeedCacheEventSource::toResolvedEvent);
     }
 
@@ -77,7 +76,7 @@ public final class FileFeedCacheEventSource implements EventReader, EventSource 
 
     private List<EventStoreArchiverProtos.Event> loadEventMessages(String fileName) {
         Optional<org.joda.time.Instant> arrivalTime = downloadableStorage.getArrivalTime(TimGroupEventStoreFeedStore, fileName);
-        if (arrivalTime.isPresent()) {
+        if (arrivalTime.isPresent()) {  // TODO why do we need this check? (whenever we call this method, we already know the file exists?)
             try (InputStream inputStream = downloadableStorage.get(TimGroupEventStoreFeedStore, fileName)) {
                 return parseEventMessages(inputStream);
             } catch (IOException e) {
