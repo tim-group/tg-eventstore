@@ -60,11 +60,11 @@ public class ReadingMDEventsFromFileFeedCache {
                 metricsRegistry
         );
         final Position lastPositionInArchive = maxPositionFetcher.maxPosition()
-                .map(position -> S3ArchivePosition.CODEC.deserializePosition(Long.toString(position)))
+                .map(position -> eventstore.readAll().storePositionCodec().deserializePosition(Long.toString(position)))
                 .orElseThrow(() -> new RuntimeException("Can't determine the max position of feed: " + s3ArchiveKeyFormat.eventStorePrefix()));
 
 
-        ArchiveToLiveEventReader appendingEventReader = new ArchiveToLiveEventReader(fileFeedCacheEventSource, eventstore, lastPositionInArchive);
+        ArchiveToLiveEventSource appendingEventReader = new ArchiveToLiveEventSource(fileFeedCacheEventSource, eventstore, lastPositionInArchive);
 
         final BackfillStitchingEventSource backfillStitchingEventSource = new BackfillStitchingEventSource(fileFeedCacheEventSource, eventstore, lastPositionInArchive);
 

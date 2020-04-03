@@ -129,6 +129,6 @@ public final class FileFeedCacheEventSource implements EventReader, EventSource 
 
     @Nonnull @Override
     public Collection<Component> monitoring() {
-        return Collections.emptyList();
+        return Collections.emptyList(); // TODO add component that fetches latest archive position
     }
 }

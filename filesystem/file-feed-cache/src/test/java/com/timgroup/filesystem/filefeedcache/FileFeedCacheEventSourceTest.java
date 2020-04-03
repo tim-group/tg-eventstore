@@ -3,7 +3,6 @@ package com.timgroup.filesystem.filefeedcache;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 import com.timgroup.eventstore.archiver.EventStoreArchiverProtos;
@@ -50,33 +49,33 @@ public final class FileFeedCacheEventSourceTest {
     @Test public void
     returns_events_after_given_position() {
         ReadableFeedStorage storage = new FakeReadableFeedStorage(ImmutableMap.of(
-                EVENT_STORE_ID + "/0001.gz", ImmutableList.of(event(1)),
-                EVENT_STORE_ID + "/0003.gz", ImmutableList.of(event(2), event(3))
+                EVENT_STORE_ID + "/0001.gz", ImmutableList.of(archivedEvent(1)),
+                EVENT_STORE_ID + "/0003.gz", ImmutableList.of(archivedEvent(2), archivedEvent(3))
         ));
         FileFeedCacheEventSource reader = new FileFeedCacheEventSource(storage, new S3ArchiveKeyFormat(EVENT_STORE_ID));
 
         List<String> returnedEvents = reader.readAllForwards(reader.storePositionCodec().deserializePosition("1"))
                 .map(e -> e.eventRecord().eventType()).collect(toList());
 
-        assertThat(returnedEvents, contains("event2", "event3"));
+        assertThat(returnedEvents, contains("ArchiveEvent2", "ArchiveEvent3"));
     }
 
     @Test public void
     returns_last_event() {
         ReadableFeedStorage storage = new FakeReadableFeedStorage(ImmutableMap.of(
-                EVENT_STORE_ID + "/0001.gz", ImmutableList.of(event(1)),
-                EVENT_STORE_ID + "/0003.gz", ImmutableList.of(event(2), event(3))
+                EVENT_STORE_ID + "/0001.gz", ImmutableList.of(archivedEvent(1)),
+                EVENT_STORE_ID + "/0003.gz", ImmutableList.of(archivedEvent(2), archivedEvent(3))
         ));
         FileFeedCacheEventSource reader = new FileFeedCacheEventSource(storage, new S3ArchiveKeyFormat(EVENT_STORE_ID));
 
-        assertThat(reader.readLastEvent().map(e -> e.eventRecord().eventType()), is(Optional.of("event3")));
+        assertThat(reader.readLastEvent().map(e -> e.eventRecord().eventType()), is(Optional.of("ArchiveEvent3")));
     }
 
     @Test public void
     only_accesses_required_files() {
         FakeReadableFeedStorage storage = new FakeReadableFeedStorage(ImmutableMap.of(
-                EVENT_STORE_ID + "/0002.gz", ImmutableList.of(event(1), event(2)),
-                EVENT_STORE_ID + "/0004.gz", ImmutableList.of(event(3), event(4))
+                EVENT_STORE_ID + "/0002.gz", ImmutableList.of(archivedEvent(1), archivedEvent(2)),
+                EVENT_STORE_ID + "/0004.gz", ImmutableList.of(archivedEvent(3), archivedEvent(4))
         ));
         FileFeedCacheEventSource reader = new FileFeedCacheEventSource(storage, new S3ArchiveKeyFormat(EVENT_STORE_ID));
 
@@ -85,21 +84,21 @@ public final class FileFeedCacheEventSourceTest {
         assertThat(storage.accessedFiles, contains(EVENT_STORE_ID + "/0004.gz"));
     }
 
-    private static Event event(long position) {
+    static Event archivedEvent(long position) {
         return Event.newBuilder()
                 .setPosition(position).setEventNumber(position)
-                .setEventType("event" + position)
+                .setEventType("ArchiveEvent" + position)
                 .setTimestamp(EventStoreArchiverProtos.Timestamp.newBuilder().setSeconds(position).setNanos(0).build())
                 .setStreamCategory("aStreamCategory").setStreamId("aStreamId")
                 .setData(ByteString.EMPTY).setMetadata(ByteString.EMPTY)
                 .build();
     }
 
-    private static final class FakeReadableFeedStorage implements ReadableFeedStorage {
+    static final class FakeReadableFeedStorage implements ReadableFeedStorage {
         private final Map<String, List<Event>> eventsByFile;
         private Set<String> accessedFiles = new HashSet<>();
 
-        private FakeReadableFeedStorage(Map<String, List<Event>> eventsByFile) {
+        FakeReadableFeedStorage(Map<String, List<Event>> eventsByFile) {
             this.eventsByFile = eventsByFile;
         }
 
