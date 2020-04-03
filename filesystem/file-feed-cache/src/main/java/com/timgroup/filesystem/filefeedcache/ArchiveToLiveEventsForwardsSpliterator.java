@@ -10,32 +10,30 @@ import java.util.stream.StreamSupport;
 import static java.lang.Long.MAX_VALUE;
 import static java.util.Objects.requireNonNull;
 
-public class TransitioningEventsForwardsSpliterator implements Spliterator<ResolvedEvent> {
-
-
-    private final Spliterator<ResolvedEvent> transitionSpliterator;
+public final class ArchiveToLiveEventsForwardsSpliterator implements Spliterator<ResolvedEvent> {
+    private final Spliterator<ResolvedEvent> archiveSpliterator;
     private final Spliterator<ResolvedEvent> liveSpliterator;
-    private TransitionPosition lastPosition;
-    private boolean beforeStitch = true;
+    private ArchiveToLivePosition lastPosition;
+    private boolean withinArchiveEvents = true;
 
-    private TransitioningEventsForwardsSpliterator(Stream<ResolvedEvent> archiveStream, Stream<ResolvedEvent> liveStream, TransitionPosition startingPositionExclusive) {
-        this.transitionSpliterator = archiveStream.spliterator();
+    private ArchiveToLiveEventsForwardsSpliterator(Stream<ResolvedEvent> archiveStream, Stream<ResolvedEvent> liveStream, ArchiveToLivePosition startingPositionExclusive) {
+        this.archiveSpliterator = archiveStream.spliterator();
         this.liveSpliterator = liveStream.spliterator();
         this.lastPosition = requireNonNull(startingPositionExclusive);
     }
 
-    static Stream<ResolvedEvent> transitionedStreamFrom(Stream<ResolvedEvent> archiveStream, Stream<ResolvedEvent> liveStream, TransitionPosition startingPositionExclusive) {
-        return StreamSupport.stream(new TransitioningEventsForwardsSpliterator(archiveStream, liveStream, startingPositionExclusive), false)
+    static Stream<ResolvedEvent> transitionedStreamFrom(Stream<ResolvedEvent> archiveStream, Stream<ResolvedEvent> liveStream, ArchiveToLivePosition startingPositionExclusive) {
+        return StreamSupport.stream(new ArchiveToLiveEventsForwardsSpliterator(archiveStream, liveStream, startingPositionExclusive), false)
                 .onClose(() -> {archiveStream.close(); liveStream.close();});
     }
 
     @Override
     public boolean tryAdvance(Consumer<? super ResolvedEvent> consumer) {
         boolean hasNext;
-        if (beforeStitch) {
-            hasNext = transitionSpliterator.tryAdvance(backfillConsumer(consumer));
+        if (withinArchiveEvents) {
+            hasNext = archiveSpliterator.tryAdvance(backfillConsumer(consumer));
             if (!hasNext) {
-                beforeStitch = false;
+                withinArchiveEvents = false;
                 hasNext = liveSpliterator.tryAdvance(liveConsumer(consumer));
             }
         }
@@ -46,9 +44,9 @@ public class TransitioningEventsForwardsSpliterator implements Spliterator<Resol
 
     @Override
     public void forEachRemaining(Consumer<? super ResolvedEvent> consumer) {
-        if (beforeStitch) {
+        if (withinArchiveEvents) {
             Consumer<? super ResolvedEvent> backfillConsumer = backfillConsumer(consumer);
-            transitionSpliterator.forEachRemaining(backfillConsumer);
+            archiveSpliterator.forEachRemaining(backfillConsumer);
         }
         Consumer<? super ResolvedEvent> liveConsumer = liveConsumer(consumer);
         liveSpliterator.forEachRemaining(liveConsumer);
@@ -56,14 +54,14 @@ public class TransitioningEventsForwardsSpliterator implements Spliterator<Resol
 
     private Consumer<? super ResolvedEvent> backfillConsumer(Consumer<? super ResolvedEvent> consumer) {
         return re -> {
-            lastPosition = new TransitionPosition(re.position());
+            lastPosition = new ArchiveToLivePosition(re.position());
             consumer.accept(new ResolvedEvent(lastPosition, re.eventRecord()));
         };
     }
 
     private Consumer<? super ResolvedEvent> liveConsumer(Consumer<? super ResolvedEvent> consumer) {
         return re -> {
-            lastPosition = new TransitionPosition(re.position());
+            lastPosition = new ArchiveToLivePosition(re.position());
             consumer.accept(new ResolvedEvent(lastPosition, re.eventRecord()));
         };
     }
@@ -82,6 +80,4 @@ public class TransitioningEventsForwardsSpliterator implements Spliterator<Resol
     public int characteristics() {
         return ORDERED | NONNULL | DISTINCT;
     }
-
-
 }

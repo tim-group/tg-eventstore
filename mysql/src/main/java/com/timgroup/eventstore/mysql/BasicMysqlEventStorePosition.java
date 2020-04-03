@@ -7,7 +7,7 @@ import javax.annotation.Nullable;
 
 final class BasicMysqlEventStorePosition implements Position, Comparable<BasicMysqlEventStorePosition> {
     static final BasicMysqlEventStorePosition EMPTY_STORE_POSITION = new BasicMysqlEventStorePosition(-1);
-    static final PositionCodec CODEC = PositionCodec.ofComparable(BasicMysqlEventStorePosition.class,
+    public static final PositionCodec CODEC = PositionCodec.ofComparable(BasicMysqlEventStorePosition.class,
             str -> new BasicMysqlEventStorePosition(Long.parseLong(str)),
             pos -> Long.toString(pos.value));
     final long value;

@@ -5,6 +5,7 @@ import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.archiver.S3ArchiveKeyFormat;
+import com.timgroup.eventstore.archiver.S3ArchivePosition;
 import com.timgroup.eventstore.merging.MergedEventReader;
 import com.timgroup.eventstore.merging.MergingStrategy;
 import com.timgroup.eventstore.merging.NamedReaderWithCodec;
@@ -58,14 +59,14 @@ public class ReadingMDEventsFromFileFeedCache {
                 "ime",
                 metricsRegistry
         );
-        final Position cutover = maxPositionFetcher.maxPosition()
-                .map(position -> eventstore.readAll().storePositionCodec().deserializePosition(Long.toString(position)))
+        final Position lastPositionInArchive = maxPositionFetcher.maxPosition()
+                .map(position -> S3ArchivePosition.CODEC.deserializePosition(Long.toString(position)))
                 .orElseThrow(() -> new RuntimeException("Can't determine the max position of feed: " + s3ArchiveKeyFormat.eventStorePrefix()));
 
 
-        TransitioningToLiveEventReader appendingEventReader = new TransitioningToLiveEventReader(fileFeedCacheEventSource, eventstore, cutover);
+        ArchiveToLiveEventReader appendingEventReader = new ArchiveToLiveEventReader(fileFeedCacheEventSource, eventstore, lastPositionInArchive);
 
-        final BackfillStitchingEventSource backfillStitchingEventSource = new BackfillStitchingEventSource(fileFeedCacheEventSource, eventstore, cutover);
+        final BackfillStitchingEventSource backfillStitchingEventSource = new BackfillStitchingEventSource(fileFeedCacheEventSource, eventstore, lastPositionInArchive);
 
         AtomicReference<Position> reference = new AtomicReference<>(appendingEventReader.emptyStorePosition());
         long start = System.currentTimeMillis();
