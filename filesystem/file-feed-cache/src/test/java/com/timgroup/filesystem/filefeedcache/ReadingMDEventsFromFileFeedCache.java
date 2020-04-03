@@ -62,13 +62,16 @@ public class ReadingMDEventsFromFileFeedCache {
                 .map(position -> eventstore.readAll().storePositionCodec().deserializePosition(Long.toString(position)))
                 .orElseThrow(() -> new RuntimeException("Can't determine the max position of feed: " + s3ArchiveKeyFormat.eventStorePrefix()));
 
+
+        TransitioningToLiveEventReader appendingEventReader = new TransitioningToLiveEventReader(fileFeedCacheEventSource, eventstore, cutover);
+
         final BackfillStitchingEventSource backfillStitchingEventSource = new BackfillStitchingEventSource(fileFeedCacheEventSource, eventstore, cutover);
 
-        AtomicReference<Position> reference = new AtomicReference<>(backfillStitchingEventSource.readAll().emptyStorePosition());
+        AtomicReference<Position> reference = new AtomicReference<>(appendingEventReader.emptyStorePosition());
         long start = System.currentTimeMillis();
         try (PrintWriter printWriter = new PrintWriter("s3eventstoretimes.csv")) {
             printWriter.println("position,time(s)");
-            backfillStitchingEventSource.readAll().readAllForwards().forEach(e -> {
+            appendingEventReader.readAllForwards().forEach(e -> {
                 reference.set(e.position());
                 Duration inMillis = Duration.of((System.currentTimeMillis() - start), ChronoUnit.MILLIS);
                 long eventCount = ReadingMDEventsFromFileFeedCache.eventCount.incrementAndGet();
