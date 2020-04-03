@@ -182,7 +182,7 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
         S3StreamingDownloadableStorage s3Downloader = spy(createDownloadableStorage());
         EventSource s3ArchiveEventSource = createS3ArchiveEventSource(s3Downloader);
 
-        List<ResolvedEvent> eventsFromPosition = s3ArchiveEventSource.readAll().readAllForwards(new S3ArchivePosition(3))
+        List<ResolvedEvent> eventsFromPosition = s3ArchiveEventSource.readAll().readAllForwards(new S3ArchivePosition(2))
                 .collect(toList());
 
         assertThat(eventsFromPosition,
@@ -198,7 +198,7 @@ public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
         S3StreamingDownloadableStorage s3Downloader = spy(createDownloadableStorage());
         EventSource s3ArchiveEventSource = createS3ArchiveEventSource(s3Downloader);
 
-        List<ResolvedEvent> eventsFromPosition = s3ArchiveEventSource.readAll().readAllForwards(new S3ArchivePosition(4))
+        List<ResolvedEvent> eventsFromPosition = s3ArchiveEventSource.readAll().readAllForwards(new S3ArchivePosition(3))
                 .collect(toList());
 
         assertThat(eventsFromPosition,
