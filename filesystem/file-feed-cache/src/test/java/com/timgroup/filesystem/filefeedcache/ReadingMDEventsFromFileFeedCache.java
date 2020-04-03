@@ -58,7 +58,9 @@ public class ReadingMDEventsFromFileFeedCache {
                 "ime",
                 metricsRegistry
         );
-        final Position cutover = maxPositionFetcher.maxPosition().map(position -> eventstore.readAll().storePositionCodec().deserializePosition(Long.toString(position))).get();
+        final Position cutover = maxPositionFetcher.maxPosition()
+                .map(position -> eventstore.readAll().storePositionCodec().deserializePosition(Long.toString(position)))
+                .orElseThrow(() -> new RuntimeException("Can't determine the max position of feed: " + s3ArchiveKeyFormat.eventStorePrefix()));
 
         final BackfillStitchingEventSource backfillStitchingEventSource = new BackfillStitchingEventSource(fileFeedCacheEventSource, eventstore, cutover);
 

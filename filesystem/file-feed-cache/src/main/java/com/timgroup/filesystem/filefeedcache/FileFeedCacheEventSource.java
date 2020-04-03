@@ -75,15 +75,11 @@ public final class FileFeedCacheEventSource implements EventReader, EventSource 
     }
 
     private List<EventStoreArchiverProtos.Event> loadEventMessages(String fileName) {
-        Optional<org.joda.time.Instant> arrivalTime = downloadableStorage.getArrivalTime(TimGroupEventStoreFeedStore, fileName);
-        if (arrivalTime.isPresent()) {  // TODO why do we need this check? (whenever we call this method, we already know the file exists?)
-            try (InputStream inputStream = downloadableStorage.get(TimGroupEventStoreFeedStore, fileName)) {
-                return parseEventMessages(inputStream);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+        try (InputStream inputStream = downloadableStorage.get(TimGroupEventStoreFeedStore, fileName)) {
+            return parseEventMessages(inputStream);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-        return Collections.emptyList();
     }
 
     private static List<EventStoreArchiverProtos.Event> parseEventMessages(InputStream inputStream) throws IOException {
