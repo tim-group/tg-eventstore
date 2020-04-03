@@ -34,7 +34,7 @@ import static java.util.Objects.requireNonNull;
 
 public final class FileFeedCacheEventSource implements EventReader, EventSource {
     private final ReadableFeedStorage downloadableStorage;
-    private final S3ArchiveKeyFormat s3ArchiveKeyFormat;
+    private final S3ArchiveKeyFormat s3ArchiveKeyFormat; // TODO rename class and field to ArchiveKeyFormat? also, S3ArchivePosition to ArchivePosition?
 
     public FileFeedCacheEventSource(ReadableFeedStorage downloadableStorage, S3ArchiveKeyFormat s3ArchiveKeyFormat) {
         this.downloadableStorage = downloadableStorage;
