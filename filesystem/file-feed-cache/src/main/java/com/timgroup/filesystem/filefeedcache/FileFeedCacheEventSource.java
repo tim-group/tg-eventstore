@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -33,10 +34,12 @@ import static com.timgroup.filefeed.reading.StorageLocation.TimGroupEventStoreFe
 import static java.util.Objects.requireNonNull;
 
 public final class FileFeedCacheEventSource implements EventReader, EventSource {
+    private final String eventStoreId;
     private final ReadableFeedStorage downloadableStorage;
     private final S3ArchiveKeyFormat s3ArchiveKeyFormat; // TODO rename class and field to ArchiveKeyFormat? also, S3ArchivePosition to ArchivePosition?
 
-    public FileFeedCacheEventSource(ReadableFeedStorage downloadableStorage, S3ArchiveKeyFormat s3ArchiveKeyFormat) {
+    public FileFeedCacheEventSource(String eventStoreId, ReadableFeedStorage downloadableStorage, S3ArchiveKeyFormat s3ArchiveKeyFormat) {
+        this.eventStoreId = eventStoreId;
         this.downloadableStorage = downloadableStorage;
         this.s3ArchiveKeyFormat = s3ArchiveKeyFormat;
     }
@@ -129,6 +132,6 @@ public final class FileFeedCacheEventSource implements EventReader, EventSource 
 
     @Nonnull @Override
     public Collection<Component> monitoring() {
-        return Collections.emptyList(); // TODO add component that fetches latest archive position
+        return Arrays.asList(new FileFeedCacheConnectionComponent(eventStoreId, new FileFeedCacheMaxPositionFetcher(downloadableStorage, s3ArchiveKeyFormat)));
     }
 }

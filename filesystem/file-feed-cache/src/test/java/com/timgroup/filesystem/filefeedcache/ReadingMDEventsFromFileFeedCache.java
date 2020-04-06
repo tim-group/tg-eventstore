@@ -45,11 +45,12 @@ public class ReadingMDEventsFromFileFeedCache {
         config.load(Files.newInputStream(Paths.get("/home/mshah/config.properties"), StandardOpenOption.READ));
 
         HttpFeedCacheStorage downloadableStorage = new HttpFeedCacheStorage(URI.create("http://latest-file-feed-cacheapp-vip.oy.net.local:8000"));
-        S3ArchiveKeyFormat s3ArchiveKeyFormat = new S3ArchiveKeyFormat("tradeideasmonitor-Event");
+        final String eventStoreId = "tradeideasmonitor-Event";
+        S3ArchiveKeyFormat s3ArchiveKeyFormat = new S3ArchiveKeyFormat(eventStoreId);
         FileFeedCacheMaxPositionFetcher maxPositionFetcher = new FileFeedCacheMaxPositionFetcher(downloadableStorage, s3ArchiveKeyFormat);
 
 
-        final FileFeedCacheEventSource fileFeedCacheEventSource = new FileFeedCacheEventSource(downloadableStorage, s3ArchiveKeyFormat);
+        final FileFeedCacheEventSource fileFeedCacheEventSource = new FileFeedCacheEventSource(eventStoreId, downloadableStorage, s3ArchiveKeyFormat);
         MetricRegistry metricsRegistry = new MetricRegistry();
 
         EventSource eventstore = BasicMysqlEventSource.pooledReadOnlyDbEventSource(
@@ -93,8 +94,10 @@ public class ReadingMDEventsFromFileFeedCache {
     private static void readEventsFromCache() {
         HttpFeedCacheStorage downloadableStorage = new HttpFeedCacheStorage(URI.create("http://latest-file-feed-cacheapp-vip.oy.net.local:8000"));
 
-        NamedReaderWithCodec marketdataEventReader = eventReaderFor(new FileFeedCacheEventSource(downloadableStorage, new S3ArchiveKeyFormat("marketdata-event")), "marketdata-event");
-        FileFeedCacheEventSource imeEventReader = new FileFeedCacheEventSource(downloadableStorage, new S3ArchiveKeyFormat("tradeideasmonitor-Event"));
+        final String marketDataEventStoreId = "marketdata-event";
+        NamedReaderWithCodec marketdataEventReader = eventReaderFor(new FileFeedCacheEventSource(marketDataEventStoreId, downloadableStorage, new S3ArchiveKeyFormat(marketDataEventStoreId)), "marketdata-event");
+        final String timEventStoreId = "tradeideasmonitor-Event";
+        FileFeedCacheEventSource imeEventReader = new FileFeedCacheEventSource(timEventStoreId, downloadableStorage, new S3ArchiveKeyFormat(timEventStoreId));
         NamedReaderWithCodec timIMEEventReader = eventReaderFor(imeEventReader, "tradeideasmonitor-Event");
 
         MergedEventReader eventReader = new MergedEventReader(Clock.systemUTC(), (MergingStrategy<Instant>) event ->

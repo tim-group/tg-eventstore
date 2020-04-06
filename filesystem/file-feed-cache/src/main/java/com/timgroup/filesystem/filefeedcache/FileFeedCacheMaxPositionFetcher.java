@@ -7,7 +7,7 @@ import java.util.Optional;
 
 import static com.timgroup.filefeed.reading.StorageLocation.TimGroupEventStoreFeedStore;
 
-public class FileFeedCacheMaxPositionFetcher {
+public class FileFeedCacheMaxPositionFetcher implements MaxPositionFetcher {
 
 
     private final ReadableFeedStorage readableFeedStorage;

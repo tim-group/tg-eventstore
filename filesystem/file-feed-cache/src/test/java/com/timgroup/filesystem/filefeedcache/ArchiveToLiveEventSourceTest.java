@@ -26,11 +26,12 @@ import static org.hamcrest.Matchers.contains;
 
 public final class ArchiveToLiveEventSourceTest {
     private static final StreamId STREAM_ID = StreamId.streamId("category_1", "stream1");
+    private static final String EVENT_STORE_ARCHIVE_ID = "anEventStoreId";
 
     FileFeedCacheEventSourceTest.FakeReadableFeedStorage storage = new FileFeedCacheEventSourceTest.FakeReadableFeedStorage(ImmutableMap.of(
             "anEventStoreId/0002.gz", ImmutableList.of(archivedEvent(1), archivedEvent(2))
     ));
-    private final EventSource archive = new FileFeedCacheEventSource(storage, new S3ArchiveKeyFormat("anEventStoreId"));
+    private final EventSource archive = new FileFeedCacheEventSource(EVENT_STORE_ARCHIVE_ID, storage, new S3ArchiveKeyFormat(EVENT_STORE_ARCHIVE_ID));
     private final EventSource live = new InMemoryEventSource(new JavaInMemoryEventStore(java.time.Clock.systemUTC()));
     private ArchiveToLiveEventSource eventSource;
 
