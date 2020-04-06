@@ -1,4 +1,4 @@
-package com.timgroup.filesystem.filefeedcache;
+package com.timgroup.eventstore.mysql;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -7,7 +7,6 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 import com.timgroup.eventstore.archiver.EventStoreArchiverProtos;
 import com.timgroup.eventstore.archiver.EventStoreArchiverProtos.Event;
-import com.timgroup.eventstore.archiver.S3ArchiveKeyFormat;
 import com.timgroup.filefeed.reading.ReadableFeedStorage;
 import com.timgroup.filefeed.reading.StorageLocation;
 import org.joda.time.Instant;
@@ -96,7 +95,7 @@ public final class FileFeedCacheEventSourceTest {
     }
 
     private FileFeedCacheEventSource makeEventSourceUsing(ReadableFeedStorage storage) {
-        return new FileFeedCacheEventSource(EVENT_STORE_ID, storage, new S3ArchiveKeyFormat(EVENT_STORE_ID));
+        return new FileFeedCacheEventSource(EVENT_STORE_ID, storage);
     }
 
     static final class FakeReadableFeedStorage implements ReadableFeedStorage {

@@ -1,4 +1,4 @@
-package com.timgroup.filesystem.filefeedcache;
+package com.timgroup.eventstore.mysql;
 
 import com.timgroup.eventstore.archiver.monitoring.ComponentUtils;
 import com.timgroup.tucker.info.Component;

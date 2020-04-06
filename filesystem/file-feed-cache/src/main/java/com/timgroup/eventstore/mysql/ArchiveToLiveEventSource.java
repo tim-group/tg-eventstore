@@ -1,4 +1,4 @@
-package com.timgroup.filesystem.filefeedcache;
+package com.timgroup.eventstore.mysql;
 
 import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventReader;
@@ -32,27 +32,23 @@ public final class ArchiveToLiveEventSource implements EventReader, EventSource 
     }
 
     @Nonnull @Override
-    public ArchiveToLivePosition emptyStorePosition() {
-        return new ArchiveToLivePosition(archive.readAll().emptyStorePosition());
+    public Position emptyStorePosition() {
+        return BasicMysqlEventStorePosition.EMPTY_STORE_POSITION;
     }
 
     @Nonnull @Override
     public PositionCodec storePositionCodec() {
-        return ArchiveToLivePosition.codec(archive.readAll().storePositionCodec(), live.readAll().storePositionCodec(), maxArchivePosition);
+        return BasicMysqlEventStorePosition.CODEC;
     }
 
     @Nonnull @CheckReturnValue @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-        ArchiveToLivePosition archiveToLivePositionExclusive = (ArchiveToLivePosition) positionExclusive;
-        return archiveToLivePositionExclusive.isArchivePosition()
-                ? ArchiveToLiveEventsForwardsSpliterator.transitionedStreamFrom(
-                        archive.readAll().readAllForwards(archiveToLivePositionExclusive.underlying),
-                        live.readAll().readAllForwards(maxArchivePosition),
-                        archiveToLivePositionExclusive)
-                : ArchiveToLiveEventsForwardsSpliterator.transitionedStreamFrom(
-                        Stream.empty(),
-                        live.readAll().readAllForwards(archiveToLivePositionExclusive.underlying),
-                        archiveToLivePositionExclusive);
+        BasicMysqlEventStorePosition startingPositionExclusive = (BasicMysqlEventStorePosition) positionExclusive;
+        if (startingPositionExclusive.compareTo((BasicMysqlEventStorePosition) maxArchivePosition) < 0) {
+            return Stream.concat(archive.readAll().readAllForwards(startingPositionExclusive), live.readAll().readAllForwards(maxArchivePosition));
+        } else {
+            return live.readAll().readAllForwards(positionExclusive);
+        }
     }
 
     @Override

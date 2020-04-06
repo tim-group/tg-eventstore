@@ -1,4 +1,4 @@
-package com.timgroup.filesystem.filefeedcache;
+package com.timgroup.eventstore.mysql;
 
 import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventReader;
@@ -12,8 +12,6 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.archiver.EventStoreArchiverProtos;
 import com.timgroup.eventstore.archiver.ProtobufsEventIterator;
-import com.timgroup.eventstore.archiver.S3ArchiveKeyFormat;
-import com.timgroup.eventstore.archiver.S3ArchivePosition;
 import com.timgroup.filefeed.reading.ReadableFeedStorage;
 import com.timgroup.tucker.info.Component;
 
@@ -22,7 +20,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -36,20 +33,20 @@ import static java.util.Objects.requireNonNull;
 public final class FileFeedCacheEventSource implements EventReader, EventSource {
     private final String eventStoreId;
     private final ReadableFeedStorage downloadableStorage;
-    private final S3ArchiveKeyFormat s3ArchiveKeyFormat; // TODO rename class and field to ArchiveKeyFormat? also, S3ArchivePosition to ArchivePosition?
+    private final ArchiveKeyFormat archiveKeyFormat;
 
-    public FileFeedCacheEventSource(String eventStoreId, ReadableFeedStorage downloadableStorage, S3ArchiveKeyFormat s3ArchiveKeyFormat) {
+    public FileFeedCacheEventSource(String eventStoreId, ReadableFeedStorage downloadableStorage) {
         this.eventStoreId = eventStoreId;
         this.downloadableStorage = downloadableStorage;
-        this.s3ArchiveKeyFormat = s3ArchiveKeyFormat;
+        this.archiveKeyFormat = new ArchiveKeyFormat(eventStoreId);
     }
 
     @Override
     public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-        S3ArchivePosition toReadFrom = (S3ArchivePosition) requireNonNull(positionExclusive);
+        BasicMysqlEventStorePosition toReadFrom = (BasicMysqlEventStorePosition) requireNonNull(positionExclusive);
 
         return listFeedFiles()
-                .filter(fileName -> s3ArchiveKeyFormat.positionValueFrom(fileName) > toReadFrom.value)
+                .filter(fileName -> archiveKeyFormat.positionValueFrom(fileName).value > toReadFrom.value)
                 .flatMap(fileName -> loadEventMessages(fileName).stream())
                 .filter(event -> event.getPosition() > toReadFrom.value)
                 .map(FileFeedCacheEventSource::toResolvedEvent);
@@ -65,16 +62,16 @@ public final class FileFeedCacheEventSource implements EventReader, EventSource 
 
     @Override
     public Position emptyStorePosition() {
-        return S3ArchivePosition.EMPTY_STORE_POSITION;
+        return BasicMysqlEventStorePosition.EMPTY_STORE_POSITION;
     }
 
     @Override
     public PositionCodec storePositionCodec() {
-        return S3ArchivePosition.CODEC;
+        return BasicMysqlEventStorePosition.CODEC;
     }
 
     private Stream<String> listFeedFiles() {
-        return downloadableStorage.list(TimGroupEventStoreFeedStore, s3ArchiveKeyFormat.eventStorePrefix()).stream();
+        return downloadableStorage.list(TimGroupEventStoreFeedStore, archiveKeyFormat.eventStorePrefix()).stream();
     }
 
     private List<EventStoreArchiverProtos.Event> loadEventMessages(String fileName) {
@@ -95,7 +92,7 @@ public final class FileFeedCacheEventSource implements EventReader, EventSource 
 
     private static ResolvedEvent toResolvedEvent(EventStoreArchiverProtos.Event event) {
         return new ResolvedEvent(
-                new S3ArchivePosition(event.getPosition()),
+                new BasicMysqlEventStorePosition(event.getPosition()),
                 EventRecord.eventRecord(
                         Instant.ofEpochSecond(event.getTimestamp().getSeconds(), event.getTimestamp().getNanos()),
                         StreamId.streamId(event.getStreamCategory(), event.getStreamId()),
@@ -132,6 +129,8 @@ public final class FileFeedCacheEventSource implements EventReader, EventSource 
 
     @Nonnull @Override
     public Collection<Component> monitoring() {
-        return Arrays.asList(new FileFeedCacheConnectionComponent(eventStoreId, new FileFeedCacheMaxPositionFetcher(downloadableStorage, s3ArchiveKeyFormat)));
+        return Collections.singletonList(
+                new FileFeedCacheConnectionComponent(eventStoreId, new FileFeedCacheMaxPositionFetcher(downloadableStorage, archiveKeyFormat))
+        );
     }
 }

@@ -1,24 +1,31 @@
-package com.timgroup.filesystem.filefeedcache;
+package com.timgroup.eventstore.mysql;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.timgroup.eventstore.api.EventCategoryReader;
+import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.EventSource;
+import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.Position;
+import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
-import com.timgroup.eventstore.archiver.S3ArchiveKeyFormat;
-import com.timgroup.eventstore.memory.InMemoryEventSource;
-import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
+import com.timgroup.tucker.info.Component;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.annotation.Nonnull;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 
-import static com.timgroup.filesystem.filefeedcache.FileFeedCacheEventSourceTest.archivedEvent;
+import static com.timgroup.eventstore.mysql.FileFeedCacheEventSourceTest.archivedEvent;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -31,8 +38,8 @@ public final class ArchiveToLiveEventSourceTest {
     FileFeedCacheEventSourceTest.FakeReadableFeedStorage storage = new FileFeedCacheEventSourceTest.FakeReadableFeedStorage(ImmutableMap.of(
             "anEventStoreId/0002.gz", ImmutableList.of(archivedEvent(1), archivedEvent(2))
     ));
-    private final EventSource archive = new FileFeedCacheEventSource(EVENT_STORE_ARCHIVE_ID, storage, new S3ArchiveKeyFormat(EVENT_STORE_ARCHIVE_ID));
-    private final EventSource live = new InMemoryEventSource(new JavaInMemoryEventStore(java.time.Clock.systemUTC()));
+    private final EventSource archive = new FileFeedCacheEventSource(EVENT_STORE_ARCHIVE_ID, storage);
+    private final EventSource live = new FakeMysqlEventSource();
     private ArchiveToLiveEventSource eventSource;
 
     @Before
@@ -58,16 +65,6 @@ public final class ArchiveToLiveEventSourceTest {
     }
 
     @Test public void
-    generates_transparent_archive_to_live_positions() {
-        List<String> readEvents = eventSource.readAll().readAllForwards()
-                .map(ResolvedEvent::position)
-                .map(p -> eventSource.readAll().storePositionCodec().serializePosition(p))
-                .collect(toList());
-
-        assertThat(readEvents, contains("1", "2", "3", "4"));
-    }
-
-    @Test public void
     it_returns_only_events_from_live_if_reading_from_after_max_position_in_archive() {
         Position startPositionExclusive = eventSource.readAll().readAllForwards().limit(3).collect(toList()).get(2).position();
 
@@ -81,5 +78,40 @@ public final class ArchiveToLiveEventSourceTest {
 
     private static NewEvent newEvent(String eventType) {
         return NewEvent.newEvent(eventType, eventType.getBytes(UTF_8), new StringBuilder(eventType).reverse().toString().getBytes(UTF_8));
+    }
+
+    private static final class FakeMysqlEventSource implements EventSource, EventReader, EventStreamWriter {
+        private final List<ResolvedEvent> events = new ArrayList<>();
+
+        @Nonnull @Override public EventReader readAll() { return this; }
+        @Nonnull @Override public EventStreamWriter writeStream() { return this; }
+
+        @Nonnull @Override public Position emptyStorePosition() { return BasicMysqlEventStorePosition.EMPTY_STORE_POSITION; }
+        @Nonnull @Override public PositionCodec storePositionCodec() { return BasicMysqlEventStorePosition.CODEC; }
+
+        @Nonnull @Override public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
+            BasicMysqlEventStorePosition mysqlPositionExclusive = (BasicMysqlEventStorePosition) positionExclusive;
+            return events.stream()
+                    .filter(event -> mysqlPositionExclusive.compareTo((BasicMysqlEventStorePosition)event.position()) < 0);
+        }
+
+        @Override public void write(StreamId streamId, Collection<NewEvent> newEvents) {
+            long nextPosition = events.size() + 1;
+            for (NewEvent newEvent : newEvents) {
+                events.add(new ResolvedEvent(
+                        new BasicMysqlEventStorePosition(nextPosition),
+                        newEvent.toEventRecord(Instant.now(), streamId, nextPosition
+                )));
+                nextPosition++;
+            }
+        }
+
+        @Override public void write(StreamId streamId, Collection<NewEvent> events, long expectedVersion) {
+            write(streamId, events);
+        }
+
+        @Nonnull @Override public EventCategoryReader readCategory() { throw new UnsupportedOperationException(); }
+        @Nonnull @Override public EventStreamReader readStream() { throw new UnsupportedOperationException(); }
+        @Nonnull @Override public Collection<Component> monitoring() { return Collections.emptyList(); }
     }
 }
