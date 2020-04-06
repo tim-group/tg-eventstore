@@ -17,6 +17,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -39,7 +40,7 @@ public final class FileFeedCacheEventSourceTest {
     @Test public void
     returns_no_events_for_empty_feed_storage() {
         ReadableFeedStorage emptyStorage = new FakeReadableFeedStorage(ImmutableMap.of());
-        FileFeedCacheEventSource reader = makeEventSourceUsing(emptyStorage);
+        FileFeedCacheEventSource reader = new FileFeedCacheEventSource(EVENT_STORE_ID, emptyStorage);
 
         assertThat(reader.readAllForwards(reader.emptyStorePosition()).collect(toList()), is(empty()));
         assertThat(reader.readLastEvent(), is(Optional.empty()));
@@ -51,7 +52,7 @@ public final class FileFeedCacheEventSourceTest {
                 EVENT_STORE_ID + "/0001.gz", ImmutableList.of(archivedEvent(1)),
                 EVENT_STORE_ID + "/0003.gz", ImmutableList.of(archivedEvent(2), archivedEvent(3))
         ));
-        FileFeedCacheEventSource reader = makeEventSourceUsing(storage);
+        FileFeedCacheEventSource reader = new FileFeedCacheEventSource(EVENT_STORE_ID, storage);
 
         List<String> returnedEvents = reader.readAllForwards(reader.storePositionCodec().deserializePosition("1"))
                 .map(e -> e.eventRecord().eventType()).collect(toList());
@@ -66,7 +67,7 @@ public final class FileFeedCacheEventSourceTest {
                 EVENT_STORE_ID + "/0001.gz", ImmutableList.of(archivedEvent(1)),
                 EVENT_STORE_ID + "/0003.gz", ImmutableList.of(archivedEvent(2), archivedEvent(3))
         ));
-        FileFeedCacheEventSource reader = makeEventSourceUsing(storage);
+        FileFeedCacheEventSource reader = new FileFeedCacheEventSource(EVENT_STORE_ID, storage);
 
         assertThat(reader.readLastEvent().map(e -> e.eventRecord().eventType()), is(Optional.of("ArchiveEvent3")));
     }
@@ -77,25 +78,66 @@ public final class FileFeedCacheEventSourceTest {
                 EVENT_STORE_ID + "/0002.gz", ImmutableList.of(archivedEvent(1), archivedEvent(2)),
                 EVENT_STORE_ID + "/0004.gz", ImmutableList.of(archivedEvent(3), archivedEvent(4))
         ));
-        FileFeedCacheEventSource reader = makeEventSourceUsing(storage);
+        FileFeedCacheEventSource reader = new FileFeedCacheEventSource(EVENT_STORE_ID, storage);
 
         reader.readAllForwards(reader.storePositionCodec().deserializePosition("2")).forEach(e -> {});
 
         assertThat(storage.accessedFiles, contains(EVENT_STORE_ID + "/0004.gz"));
     }
 
+    @Test public void
+    reads_by_given_category() {
+        ReadableFeedStorage storage = new FakeReadableFeedStorage(ImmutableMap.of(EVENT_STORE_ID + "/0004.gz",
+                ImmutableList.of(
+                        archivedEvent(1, "interestingCategory"),
+                        archivedEvent(2, "interestingCategory"),
+                        archivedEvent(3, "otherCategory"),
+                        archivedEvent(4, "interestingCategory")
+                )
+        ));
+        FileFeedCacheEventSource reader = new FileFeedCacheEventSource(EVENT_STORE_ID, storage);
+
+        List<String> returnedEvents = reader.readCategory()
+                .readCategoryForwards("interestingCategory", reader.storePositionCodec().deserializePosition("1"))
+                .map(e -> e.eventRecord().eventType()).collect(toList());
+
+        assertThat(returnedEvents, contains("ArchiveEvent2", "ArchiveEvent4"));
+    }
+
+    @Test public void
+    reads_by_given_categories() {
+        ReadableFeedStorage storage = new FakeReadableFeedStorage(ImmutableMap.of(EVENT_STORE_ID + "/0004.gz",
+                ImmutableList.of(
+                        archivedEvent(1, "interestingCategory1"),
+                        archivedEvent(2, "otherCategory"),
+                        archivedEvent(3, "interestingCategory2"),
+                        archivedEvent(4, "interestingCategory1")
+                )
+        ));
+        FileFeedCacheEventSource reader = new FileFeedCacheEventSource(EVENT_STORE_ID, storage);
+
+        List<String> returnedEvents = reader.readCategory()
+                .readCategoriesForwards(
+                        Arrays.asList("interestingCategory1", "interestingCategory2"),
+                        reader.storePositionCodec().deserializePosition("1"))
+                .map(e -> e.eventRecord().eventType()).collect(toList());
+
+        assertThat(returnedEvents, contains("ArchiveEvent3", "ArchiveEvent4"));
+
+    }
+
     static Event archivedEvent(long position) {
+        return archivedEvent(position, "aStreamCategory");
+    }
+
+    static Event archivedEvent(long position, String streamCategory) {
         return Event.newBuilder()
                 .setPosition(position).setEventNumber(position)
                 .setEventType("ArchiveEvent" + position)
                 .setTimestamp(EventStoreArchiverProtos.Timestamp.newBuilder().setSeconds(position).setNanos(0).build())
-                .setStreamCategory("aStreamCategory").setStreamId("aStreamId")
+                .setStreamCategory(streamCategory).setStreamId("aStreamId")
                 .setData(ByteString.EMPTY).setMetadata(ByteString.EMPTY)
                 .build();
-    }
-
-    private FileFeedCacheEventSource makeEventSourceUsing(ReadableFeedStorage storage) {
-        return new FileFeedCacheEventSource(EVENT_STORE_ID, storage);
     }
 
     static final class FakeReadableFeedStorage implements ReadableFeedStorage {

@@ -30,7 +30,7 @@ import java.util.zip.GZIPInputStream;
 import static com.timgroup.filefeed.reading.StorageLocation.TimGroupEventStoreFeedStore;
 import static java.util.Objects.requireNonNull;
 
-public final class FileFeedCacheEventSource implements EventReader, EventSource {
+public final class FileFeedCacheEventSource implements EventSource, EventReader, EventCategoryReader {
     private final String eventStoreId;
     private final ReadableFeedStorage downloadableStorage;
     private final ArchiveKeyFormat archiveKeyFormat;
@@ -41,34 +41,54 @@ public final class FileFeedCacheEventSource implements EventReader, EventSource 
         this.archiveKeyFormat = new ArchiveKeyFormat(eventStoreId);
     }
 
-    @Override
-    public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-        BasicMysqlEventStorePosition toReadFrom = (BasicMysqlEventStorePosition) requireNonNull(positionExclusive);
+    @Nonnull @Override public EventReader readAll() { return this; }
+    @Nonnull @Override public EventCategoryReader readCategory() { return this; }
 
+    @Nonnull @Override public EventStreamReader readStream() { throw new UnsupportedOperationException(); }
+    @Nonnull @Override public EventStreamWriter writeStream() { throw new UnsupportedOperationException(); }
+
+    @Nonnull @Override public Collection<Component> monitoring() {
+        return Collections.singletonList(
+                new FileFeedCacheConnectionComponent(eventStoreId, new FileFeedCacheMaxPositionFetcher(downloadableStorage, archiveKeyFormat))
+        );
+    }
+
+    @Override public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
+        BasicMysqlEventStorePosition mysqlPositionExclusive = (BasicMysqlEventStorePosition) requireNonNull(positionExclusive);
         return listFeedFiles()
-                .filter(fileName -> archiveKeyFormat.positionValueFrom(fileName).value > toReadFrom.value)
+                .filter(fileName -> archiveKeyFormat.positionValueFrom(fileName).value > mysqlPositionExclusive.value)
                 .flatMap(fileName -> loadEventMessages(fileName).stream())
-                .filter(event -> event.getPosition() > toReadFrom.value)
+                .filter(event -> event.getPosition() > mysqlPositionExclusive.value)
                 .map(FileFeedCacheEventSource::toResolvedEvent);
     }
 
-    @Override
-    public Optional<ResolvedEvent> readLastEvent() {
+    @Override public Optional<ResolvedEvent> readLastEvent() {
         return listFeedFiles()
                 .reduce((olderFile, newerFile) -> newerFile)
                 .flatMap(file -> lastElementOf(loadEventMessages(file)))
                 .map(FileFeedCacheEventSource::toResolvedEvent);
     }
 
-    @Override
-    public Position emptyStorePosition() {
+    @Override public Position emptyStorePosition() {
         return BasicMysqlEventStorePosition.EMPTY_STORE_POSITION;
     }
-
-    @Override
-    public PositionCodec storePositionCodec() {
+    @Override public PositionCodec storePositionCodec() {
         return BasicMysqlEventStorePosition.CODEC;
     }
+
+    @Nonnull @Override
+    public Stream<ResolvedEvent> readCategoryForwards(String category, Position positionExclusive) {
+        return readAllForwards(positionExclusive).filter(re -> category.equals(re.eventRecord().streamId().category()));
+    }
+
+    @Nonnull @Override
+    public Stream<ResolvedEvent> readCategoriesForwards(List<String> categories, Position positionExclusive) {
+        return readAllForwards(positionExclusive).filter(re -> categories.contains(re.eventRecord().streamId().category()));
+    }
+
+    @Nonnull @Override public Position emptyCategoryPosition(String category) { return BasicMysqlEventStorePosition.EMPTY_STORE_POSITION; }
+    @Nonnull @Override public PositionCodec categoryPositionCodec(String category) { return BasicMysqlEventStorePosition.CODEC; }
+
 
     private Stream<String> listFeedFiles() {
         return downloadableStorage.list(TimGroupEventStoreFeedStore, archiveKeyFormat.eventStorePrefix()).stream();
@@ -105,32 +125,5 @@ public final class FileFeedCacheEventSource implements EventReader, EventSource 
 
     private static <T> Optional<T> lastElementOf(List<? extends T> list) {
         return list.isEmpty() ? Optional.empty() : Optional.of(list.get(list.size() - 1));
-    }
-
-    @Nonnull @Override
-    public EventReader readAll() {
-        return this;
-    }
-
-    @Nonnull @Override
-    public EventCategoryReader readCategory() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Nonnull @Override
-    public EventStreamReader readStream() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Nonnull @Override
-    public EventStreamWriter writeStream() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Nonnull @Override
-    public Collection<Component> monitoring() {
-        return Collections.singletonList(
-                new FileFeedCacheConnectionComponent(eventStoreId, new FileFeedCacheMaxPositionFetcher(downloadableStorage, archiveKeyFormat))
-        );
     }
 }

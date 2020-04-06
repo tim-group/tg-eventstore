@@ -20,7 +20,7 @@ import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
 
-public final class ArchiveToLiveEventSource implements EventReader, EventSource {
+public final class ArchiveToLiveEventSource implements EventSource, EventReader, EventCategoryReader {
     private final EventSource archive;
     private final EventSource live;
     private final Position maxArchivePosition;
@@ -31,49 +31,55 @@ public final class ArchiveToLiveEventSource implements EventReader, EventSource 
         this.maxArchivePosition = maxArchivePosition;
     }
 
-    @Nonnull @Override
-    public Position emptyStorePosition() {
-        return BasicMysqlEventStorePosition.EMPTY_STORE_POSITION;
-    }
+    @Nonnull @Override public EventReader readAll() { return this; }
+    @Nonnull @Override public EventCategoryReader readCategory() { return this; }
 
-    @Nonnull @Override
-    public PositionCodec storePositionCodec() {
-        return BasicMysqlEventStorePosition.CODEC;
-    }
+    @Nonnull @Override public EventStreamReader readStream() { throw new UnsupportedOperationException(); }
+    @Nonnull @Override public EventStreamWriter writeStream() { throw new UnsupportedOperationException(); }
 
-    @Nonnull @CheckReturnValue @Override
-    public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
-        BasicMysqlEventStorePosition startingPositionExclusive = (BasicMysqlEventStorePosition) positionExclusive;
-        if (startingPositionExclusive.compareTo((BasicMysqlEventStorePosition) maxArchivePosition) < 0) {
-            return Stream.concat(archive.readAll().readAllForwards(startingPositionExclusive), live.readAll().readAllForwards(maxArchivePosition));
-        } else {
-            return live.readAll().readAllForwards(positionExclusive);
-        }
-    }
-
-    @Override
-    public String toString() {
-        return "ArchiveToLiveEventSource{" +
-                "archive=" + archive +
-                ", live=" + live +
-                ", maxArchivePosition=" + maxArchivePosition +
-                '}';
-    }
-
-    @Nonnull @Override
-    public EventReader readAll() {
-        return this;
-    }
-
-    @Nonnull @Override
-    public Collection<Component> monitoring() {
+    @Nonnull @Override public Collection<Component> monitoring() {
         List<Component> result = new ArrayList<>();
         result.addAll(archive.monitoring());
         result.addAll(live.monitoring());
         return result;
     }
 
-    @Nonnull @Override public EventCategoryReader readCategory() { throw new UnsupportedOperationException(); }
-    @Nonnull @Override public EventStreamReader readStream() { throw new UnsupportedOperationException(); }
-    @Nonnull @Override public EventStreamWriter writeStream() { throw new UnsupportedOperationException(); }
+    @Nonnull @CheckReturnValue @Override
+    public Stream<ResolvedEvent> readAllForwards(Position positionExclusive) {
+        return canReadFromArchive(positionExclusive)
+                ? Stream.concat(archive.readAll().readAllForwards(positionExclusive), live.readAll().readAllForwards(maxArchivePosition))
+                : live.readAll().readAllForwards(positionExclusive);
+    }
+
+    @Nonnull @Override
+    public Stream<ResolvedEvent> readCategoryForwards(String category, Position positionExclusive) {
+        return canReadFromArchive(positionExclusive)
+                ? Stream.concat(
+                        archive.readCategory().readCategoryForwards(category, positionExclusive),
+                        live.readCategory().readCategoryForwards(category, maxArchivePosition))
+                : live.readCategory().readCategoryForwards(category, positionExclusive);
+    }
+
+    @Nonnull @Override
+    public Stream<ResolvedEvent> readCategoriesForwards(List<String> categories, Position positionExclusive) {
+        return canReadFromArchive(positionExclusive)
+                ? Stream.concat(
+                        archive.readCategory().readCategoriesForwards(categories, positionExclusive),
+                        live.readCategory().readCategoriesForwards(categories, maxArchivePosition))
+                : live.readCategory().readCategoriesForwards(categories, positionExclusive);
+    }
+
+    @Nonnull @Override public Position emptyStorePosition() { return BasicMysqlEventStorePosition.EMPTY_STORE_POSITION; }
+    @Nonnull @Override public PositionCodec storePositionCodec() { return BasicMysqlEventStorePosition.CODEC; }
+    @Nonnull @Override public Position emptyCategoryPosition(String category) { return BasicMysqlEventStorePosition.EMPTY_STORE_POSITION; }
+    @Nonnull @Override public PositionCodec categoryPositionCodec(String category) { return BasicMysqlEventStorePosition.CODEC; }
+
+    @Override public String toString() {
+        return "ArchiveToLiveEventSource{archive=" + archive + ", live=" + live + ", maxArchivePosition=" + maxArchivePosition + '}';
+    }
+
+    private boolean canReadFromArchive(Position positionExclusive) {
+        BasicMysqlEventStorePosition startingPositionExclusive = (BasicMysqlEventStorePosition) positionExclusive;
+        return startingPositionExclusive.compareTo((BasicMysqlEventStorePosition) maxArchivePosition) < 0;
+    }
 }
