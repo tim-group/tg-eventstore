@@ -22,11 +22,12 @@ java {
 
 dependencies {
     api project(":api")
+    api "com.timgroup:file-feed-consumer:0.0.3354" // autobump
+
     implementation project (":archiver")
+    implementation "org.slf4j:slf4j-api:1.7.25"
 
     compileOnly "com.google.code.findbugs:jsr305:1.3.9"
-    implementation "org.slf4j:slf4j-api:1.7.25"
-    implementation "com.timgroup:file-feed-consumer:0.0.3354" // autobump
 
     testRuntimeOnly "mysql:mysql-connector-java:5.1.39"
     testImplementation project(":stitching")
