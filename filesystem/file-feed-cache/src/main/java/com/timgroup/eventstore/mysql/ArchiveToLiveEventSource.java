@@ -26,12 +26,6 @@ public final class ArchiveToLiveEventSource implements EventSource, EventReader,
     private final EventSource live;
     private final Position maxArchivePosition;
 
-    public ArchiveToLiveEventSource(EventSource archive, EventSource live, Position maxArchivePosition) {
-        this.archive = requireNonNull(archive);
-        this.live = requireNonNull(live);
-        this.maxArchivePosition = maxArchivePosition;
-    }
-
     public ArchiveToLiveEventSource(String eventStoreId, ReadableFeedStorage readableFeedStorage, EventSource live) {
         this.archive = new FileFeedCacheEventSource(requireNonNull(eventStoreId), requireNonNull(readableFeedStorage));
         this.live = requireNonNull(live);
@@ -40,6 +34,11 @@ public final class ArchiveToLiveEventSource implements EventSource, EventReader,
                 .orElse(BasicMysqlEventStorePosition.EMPTY_STORE_POSITION);
     }
 
+    ArchiveToLiveEventSource(EventSource archive, EventSource live, Position maxArchivePosition) {
+        this.archive = requireNonNull(archive);
+        this.live = requireNonNull(live);
+        this.maxArchivePosition = maxArchivePosition;
+    }
 
     @Nonnull @Override public EventReader readAll() { return this; }
     @Nonnull @Override public EventCategoryReader readCategory() { return this; }
