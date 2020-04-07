@@ -8,6 +8,7 @@ import com.timgroup.eventstore.api.EventStreamWriter;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
+import com.timgroup.filefeed.reading.ReadableFeedStorage;
 import com.timgroup.tucker.info.Component;
 
 import javax.annotation.CheckReturnValue;
@@ -30,6 +31,15 @@ public final class ArchiveToLiveEventSource implements EventSource, EventReader,
         this.live = requireNonNull(live);
         this.maxArchivePosition = maxArchivePosition;
     }
+
+    public ArchiveToLiveEventSource(String eventStoreId, ReadableFeedStorage readableFeedStorage, EventSource live) {
+        this.archive = new FileFeedCacheEventSource(requireNonNull(eventStoreId), requireNonNull(readableFeedStorage));
+        this.live = requireNonNull(live);
+        this.maxArchivePosition = new FileFeedCacheMaxPositionFetcher(readableFeedStorage, new ArchiveKeyFormat(eventStoreId))
+                .maxPosition()
+                .orElse(BasicMysqlEventStorePosition.EMPTY_STORE_POSITION);
+    }
+
 
     @Nonnull @Override public EventReader readAll() { return this; }
     @Nonnull @Override public EventCategoryReader readCategory() { return this; }

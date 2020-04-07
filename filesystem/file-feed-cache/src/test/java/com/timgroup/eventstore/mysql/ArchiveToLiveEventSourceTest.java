@@ -40,9 +40,8 @@ public final class ArchiveToLiveEventSourceTest {
                     archivedEvent(2, "B")
             )
     ));
-    private final EventSource archive = new FileFeedCacheEventSource(EVENT_STORE_ARCHIVE_ID, storage);
     private final EventSource live = new FakeMysqlEventSource();
-    private ArchiveToLiveEventSource eventSource;
+    private final ArchiveToLiveEventSource eventSource = new ArchiveToLiveEventSource(EVENT_STORE_ARCHIVE_ID, storage, live);
 
     @Before
     public void setup() {
@@ -51,9 +50,6 @@ public final class ArchiveToLiveEventSourceTest {
         liveWriter.write(stream("B"), Collections.singleton(newEvent("ArchiveEvent2_inLive")));
         liveWriter.write(stream("A"), Collections.singleton(newEvent("LiveEvent1")));
         liveWriter.write(stream("B"), Collections.singleton(newEvent("LiveEvent2")));
-
-        Position maxPositionInArchive = live.readAll().storePositionCodec().deserializePosition("2");
-        eventSource = new ArchiveToLiveEventSource(archive, live, maxPositionInArchive);
     }
 
     @Test public void
