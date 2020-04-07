@@ -13,7 +13,6 @@ import com.timgroup.tucker.info.Component;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -21,7 +20,7 @@ import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
 
-public final class ArchiveToLiveEventSource implements EventSource, EventReader, EventCategoryReader {
+public final class ArchiveToLiveEventSource implements EventSource, EventReader, EventCategoryReader, AutoCloseable  {
     private final EventSource archive;
     private final EventSource live;
     private final Position maxArchivePosition;
@@ -90,5 +89,12 @@ public final class ArchiveToLiveEventSource implements EventSource, EventReader,
     private boolean canReadFromArchive(Position positionExclusive) {
         BasicMysqlEventStorePosition startingPositionExclusive = (BasicMysqlEventStorePosition) positionExclusive;
         return startingPositionExclusive.compareTo((BasicMysqlEventStorePosition) maxArchivePosition) < 0;
+    }
+
+    @Override
+    public void close() throws Exception {
+        if (live instanceof AutoCloseable) {
+            ((AutoCloseable) live).close();
+        }
     }
 }
