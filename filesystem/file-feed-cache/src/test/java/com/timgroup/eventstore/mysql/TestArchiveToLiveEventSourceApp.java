@@ -29,6 +29,7 @@ import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.timgroup.eventstore.mysql.BasicMysqlEventStorePosition.CODEC;
 import static com.timgroup.filefeed.reading.StorageLocation.TimGroupEventStoreFeedStore;
 import static java.util.stream.Collectors.toList;
 
@@ -67,9 +68,9 @@ public class TestArchiveToLiveEventSourceApp {
         HttpFeedCacheStorage downloadableStorage = new HttpFeedCacheStorage(URI.create("http://latest-file-feed-cacheapp-vip.oy.net.local:8000"));
         ArchiveKeyFormat archiveKeyFormat = new ArchiveKeyFormat(eventStoreId);
 
-        FileFeedCacheEventSource archive = new FileFeedCacheEventSource(eventStoreId, downloadableStorage);
-        EventSource live = BasicMysqlEventSource.pooledReadOnlyDbEventSource(CONFIG, dbConfigPrefix, dbTableName, eventStoreId, new MetricRegistry());
         BasicMysqlEventStorePosition lastPositionInArchive = new FileFeedCacheMaxPositionFetcher(downloadableStorage, archiveKeyFormat).maxPosition().get();
+        FileFeedCacheEventSource archive = new FileFeedCacheEventSource(eventStoreId, downloadableStorage, lastPositionInArchive);
+        EventSource live = BasicMysqlEventSource.pooledReadOnlyDbEventSource(CONFIG, dbConfigPrefix, dbTableName, eventStoreId, new MetricRegistry());
 
         ArchiveToLiveEventSource archiveToLiveEventSource = new ArchiveToLiveEventSource(archive, live, lastPositionInArchive);
 
@@ -82,10 +83,10 @@ public class TestArchiveToLiveEventSourceApp {
         HttpFeedCacheStorage downloadableStorage = new HttpFeedCacheStorage(URI.create("http://latest-file-feed-cacheapp-vip.oy.net.local:8000"));
         ArchiveKeyFormat archiveKeyFormat = new ArchiveKeyFormat(eventStoreId);
 
-        FileFeedCacheEventSource archive = new FileFeedCacheEventSource(eventStoreId, downloadableStorage);
-        EventSource live = BasicMysqlEventSource.pooledReadOnlyDbEventSource(CONFIG, dbConfigPrefix, dbTableName, eventStoreId, new MetricRegistry());
         BasicMysqlEventStorePosition lastPositionInArchive = new FileFeedCacheMaxPositionFetcher(downloadableStorage, archiveKeyFormat).maxPosition()
                 .orElseThrow(() -> new RuntimeException("Can't determine the max position of feed: " + archiveKeyFormat.eventStorePrefix()));
+        FileFeedCacheEventSource archive = new FileFeedCacheEventSource(eventStoreId, downloadableStorage, lastPositionInArchive);
+        EventSource live = BasicMysqlEventSource.pooledReadOnlyDbEventSource(CONFIG, dbConfigPrefix, dbTableName, eventStoreId, new MetricRegistry());
 
         ArchiveToLiveEventSource archiveToLiveEventSource = new ArchiveToLiveEventSource(archive, live, lastPositionInArchive);
 
@@ -111,7 +112,7 @@ public class TestArchiveToLiveEventSourceApp {
         LocalDirectoryReadableFeedStorage localDirStorage = new LocalDirectoryReadableFeedStorage(Paths.get(localS3ArchiveDirectory));
         localDirStorage.list(null, eventStoreId).forEach(System.out::println);
 
-        FileFeedCacheEventSource localDirEventSource = new FileFeedCacheEventSource(eventStoreId, localDirStorage);
+        FileFeedCacheEventSource localDirEventSource = new FileFeedCacheEventSource(eventStoreId, localDirStorage, CODEC.deserializePosition(Long.toString(Long.MAX_VALUE)));
         localDirEventSource.readAll()
                 .readAllForwards(localDirEventSource.storePositionCodec().deserializePosition(startPositionExclusive))
                 .limit(maxResults);
@@ -122,7 +123,7 @@ public class TestArchiveToLiveEventSourceApp {
         localDirStorage.list(null, eventStoreId).forEach(System.out::println);
         S3ArchiveKeyFormat s3ArchiveKeyFormat = new S3ArchiveKeyFormat(eventStoreId);
 
-        EventSource localS3EventSource = new FileFeedCacheEventSource(eventStoreId, localDirStorage);
+        EventSource localS3EventSource = new FileFeedCacheEventSource(eventStoreId, localDirStorage, CODEC.deserializePosition(Long.toString(Long.MAX_VALUE)));
         EventSource dbEventSource = BasicMysqlEventSource.pooledReadOnlyDbEventSource(CONFIG, dbConfigPrefix, dbTableName, eventStoreId, new MetricRegistry());
 
         Iterator<ResolvedEvent> db = dbEventSource.readAll()

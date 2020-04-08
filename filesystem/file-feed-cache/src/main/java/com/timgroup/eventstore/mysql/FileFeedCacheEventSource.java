@@ -34,11 +34,13 @@ public final class FileFeedCacheEventSource implements EventSource, EventReader,
     private final String eventStoreId;
     private final ReadableFeedStorage downloadableStorage;
     private final ArchiveKeyFormat archiveKeyFormat;
+    private final Position maxArchivePosition;
 
-    public FileFeedCacheEventSource(String eventStoreId, ReadableFeedStorage downloadableStorage) {
+    public FileFeedCacheEventSource(String eventStoreId, ReadableFeedStorage downloadableStorage, Position maxArchivePosition) {
         this.eventStoreId = eventStoreId;
         this.downloadableStorage = downloadableStorage;
         this.archiveKeyFormat = new ArchiveKeyFormat(eventStoreId);
+        this.maxArchivePosition = maxArchivePosition;
     }
 
     @Nonnull @Override public EventReader readAll() { return this; }
@@ -91,7 +93,10 @@ public final class FileFeedCacheEventSource implements EventSource, EventReader,
 
 
     private Stream<String> listFeedFiles() {
-        return downloadableStorage.list(TimGroupEventStoreFeedStore, archiveKeyFormat.eventStorePrefix()).stream();
+        return downloadableStorage
+                .list(TimGroupEventStoreFeedStore, archiveKeyFormat.eventStorePrefix())
+                .stream()
+                .filter(fileName -> archiveKeyFormat.positionValueFrom(fileName).compareTo((BasicMysqlEventStorePosition) maxArchivePosition) <= 0);
     }
 
     private List<EventStoreArchiverProtos.Event> loadEventMessages(String fileName) {
