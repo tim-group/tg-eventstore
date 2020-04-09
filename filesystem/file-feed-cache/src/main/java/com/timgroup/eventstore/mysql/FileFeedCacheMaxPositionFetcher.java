@@ -23,8 +23,9 @@ public class FileFeedCacheMaxPositionFetcher implements MaxPositionFetcher {
     public Optional<BasicMysqlEventStorePosition> maxPosition() {
         return readableFeedStorage.list(TimGroupEventStoreFeedStore, archiveKeyFormat.eventStorePrefix())
                 .stream()
-                .reduce((r1, r2) -> r2)
-                .map(archiveKeyFormat::positionValueFrom);
+                .sorted(Comparator.reverseOrder())
+                .map(archiveKeyFormat::positionValueFrom)
+                .findFirst();
     }
 
     @Override
@@ -36,7 +37,7 @@ public class FileFeedCacheMaxPositionFetcher implements MaxPositionFetcher {
                         .getArrivalTime(TimGroupEventStoreFeedStore, file)
                         .map(fileArrivalTime -> !fileArrivalTime.isAfter(ofEpochMilli(cutOff.toEpochMilli())))
                         .orElse(false))
-                .reduce((r1, r2) -> r1)
-                .map(archiveKeyFormat::positionValueFrom);
+                .map(archiveKeyFormat::positionValueFrom)
+                .findFirst();
     }
 }
