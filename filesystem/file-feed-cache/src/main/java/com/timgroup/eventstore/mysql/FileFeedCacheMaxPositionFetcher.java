@@ -7,7 +7,6 @@ import java.util.Comparator;
 import java.util.Optional;
 
 import static com.timgroup.filefeed.reading.StorageLocation.TimGroupEventStoreFeedStore;
-import static org.joda.time.Instant.ofEpochMilli;
 
 public class FileFeedCacheMaxPositionFetcher implements MaxPositionFetcher {
 
@@ -35,7 +34,7 @@ public class FileFeedCacheMaxPositionFetcher implements MaxPositionFetcher {
                 .sorted(Comparator.reverseOrder())
                 .filter(file -> readableFeedStorage
                         .getArrivalTime(TimGroupEventStoreFeedStore, file)
-                        .map(fileArrivalTime -> !fileArrivalTime.isAfter(ofEpochMilli(cutOff.toEpochMilli())))
+                        .map(fileArrivalTime -> !fileArrivalTime.isAfter(org.joda.time.Instant.ofEpochMilli(cutOff.toEpochMilli())))
                         .orElse(false))
                 .map(archiveKeyFormat::positionValueFrom)
                 .findFirst();

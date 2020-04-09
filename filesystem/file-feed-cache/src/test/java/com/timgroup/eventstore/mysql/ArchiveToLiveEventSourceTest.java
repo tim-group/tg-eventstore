@@ -15,6 +15,7 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.mysql.FileFeedCacheEventSourceTest.FakeReadableFeedStorage;
 import com.timgroup.tucker.info.Component;
+import org.joda.time.Duration;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -83,6 +84,36 @@ public final class ArchiveToLiveEventSourceTest {
                 .collect(toList());
 
         assertThat(readEvents, contains("LiveEvent2"));
+    }
+
+    @Test public void it_returns_only_events_from_the_max_position_before_a_given_time_in_archive() {
+
+        final String cutOffDateString = "2018-11-20T01:00:00Z";
+        org.joda.time.Instant timestamp = org.joda.time.Instant.parse(cutOffDateString);
+
+        FakeReadableFeedStorage storage = new FakeReadableFeedStorage(ImmutableMap.of(
+                "anEventStoreId/0002.gz", ImmutableList.of(
+                        archivedEvent(1, "A"),
+                        archivedEvent(2, "B")
+                ),
+                "anEventStoreId/0003.gz", ImmutableList.of(
+                        archivedEvent(3, "C"),
+                        archivedEvent(4, "D")
+                )
+        ));
+
+        storage.setArrivalTime("anEventStoreId/0002.gz", timestamp);
+        storage.setArrivalTime("anEventStoreId/0003.gz", timestamp.plus(Duration.millis(1)));
+
+        ArchiveToLiveEventSource eventSource = new ArchiveToLiveEventSource(EVENT_STORE_ARCHIVE_ID, storage, live, Instant.parse(cutOffDateString));
+
+        List<String> readEvents = eventSource.readAll().readAllForwards()
+                .map(ResolvedEvent::eventRecord)
+                .map(EventRecord::eventType)
+                .collect(toList());
+
+        assertThat(readEvents, contains("ArchiveEvent1", "ArchiveEvent2", "LiveEvent1", "LiveEvent2"));
+
     }
 
     private static NewEvent newEvent(String eventType) {

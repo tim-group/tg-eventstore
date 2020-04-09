@@ -13,9 +13,11 @@ import com.timgroup.tucker.info.Component;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
@@ -25,13 +27,18 @@ public final class ArchiveToLiveEventSource implements EventSource, EventReader,
     private final EventSource live;
     private final Position maxArchivePosition;
 
-    public ArchiveToLiveEventSource(String eventStoreId, ReadableFeedStorage readableFeedStorage, EventSource live) {
-        this.maxArchivePosition = new FileFeedCacheMaxPositionFetcher(readableFeedStorage, new ArchiveKeyFormat(eventStoreId))
-                .maxPosition()
-                .orElse(BasicMysqlEventStorePosition.EMPTY_STORE_POSITION);
-
+    public ArchiveToLiveEventSource(String eventStoreId, ReadableFeedStorage readableFeedStorage, EventSource live, Instant archiveCutOffTime) {
+        final FileFeedCacheMaxPositionFetcher fileFeedCacheMaxPositionFetcher = new FileFeedCacheMaxPositionFetcher(readableFeedStorage, new ArchiveKeyFormat(eventStoreId));
+        this.maxArchivePosition =
+                Optional.ofNullable(archiveCutOffTime)
+                        .flatMap(fileFeedCacheMaxPositionFetcher::maxPositionBefore)
+                        .orElse(fileFeedCacheMaxPositionFetcher.maxPosition().orElse(BasicMysqlEventStorePosition.EMPTY_STORE_POSITION));
         this.archive = new FileFeedCacheEventSource(requireNonNull(eventStoreId), requireNonNull(readableFeedStorage), maxArchivePosition);
         this.live = requireNonNull(live);
+    }
+
+    public ArchiveToLiveEventSource(String eventStoreId, ReadableFeedStorage readableFeedStorage, EventSource live) {
+        this(eventStoreId, readableFeedStorage, live, null);
     }
 
     ArchiveToLiveEventSource(EventSource archive, EventSource live, Position maxArchivePosition) {
