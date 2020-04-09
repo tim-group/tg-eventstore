@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -159,15 +160,20 @@ public final class FileFeedCacheEventSourceTest {
 
     static final class FakeReadableFeedStorage implements ReadableFeedStorage {
         private final Map<String, List<Event>> eventsByFile;
+        private final Map<String, Instant> arrivalTimeByFile = new HashMap<>();
         private Set<String> accessedFiles = new HashSet<>();
 
         FakeReadableFeedStorage(Map<String, List<Event>> eventsByFile) {
             this.eventsByFile = eventsByFile;
         }
 
+        public void setArrivalTime(String fileName, Instant arrivalTime) {
+            arrivalTimeByFile.put(fileName, arrivalTime);
+        }
+
         @Override public Optional<Instant> getArrivalTime(StorageLocation storageLocation, String fileName) {
             return storageLocation == TimGroupEventStoreFeedStore && eventsByFile.containsKey(fileName)
-                    ? Optional.of(Instant.EPOCH)
+                    ? Optional.of(arrivalTimeByFile.getOrDefault(fileName, Instant.EPOCH))
                     : Optional.empty();
         }
 

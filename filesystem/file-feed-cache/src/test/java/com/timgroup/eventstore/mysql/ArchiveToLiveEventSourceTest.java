@@ -13,6 +13,7 @@ import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
+import com.timgroup.eventstore.mysql.FileFeedCacheEventSourceTest.FakeReadableFeedStorage;
 import com.timgroup.tucker.info.Component;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,7 +35,7 @@ import static org.hamcrest.Matchers.contains;
 public final class ArchiveToLiveEventSourceTest {
     private static final String EVENT_STORE_ARCHIVE_ID = "anEventStoreId";
 
-    FileFeedCacheEventSourceTest.FakeReadableFeedStorage storage = new FileFeedCacheEventSourceTest.FakeReadableFeedStorage(ImmutableMap.of(
+    FakeReadableFeedStorage storage = new FakeReadableFeedStorage(ImmutableMap.of(
             "anEventStoreId/0002.gz", ImmutableList.of(
                     archivedEvent(1, "A"),
                     archivedEvent(2, "B")
