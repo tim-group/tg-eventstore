@@ -27,7 +27,7 @@ dependencies {
     implementation "io.dropwizard.metrics:metrics-graphite:3.2.3"
     implementation project(":api")
     compileOnly "com.google.code.findbugs:jsr305:1.3.9"
-    implementation "com.google.guava:guava:28.0-jre"
+    implementation "com.google.guava:guava:29.0-jre"
     runtimeOnly "mysql:mysql-connector-java:$mysqlJdbcVersion"
     testImplementation project(":api:testlib")
     testImplementation project(":memory")
