@@ -142,6 +142,7 @@ public class EndToEndTest {
 
         eventually(() -> {
             assertThat(statusComponent().getReport().getStatus(), is(CRITICAL));
+            assertThat(subscription.health().get(), is(ill));
             assertThat(statusComponent().getReport().getValue().toString(), containsString("Event subscription terminated. Failed to process position 1: failure"));
             assertThat(eventsProcessed, Contains.inOrder(
                     equalTo(new DeserialisedEvent(store.readAllForwards().collect(Collectors.toList()).get(0).eventRecord())),
@@ -150,6 +151,18 @@ public class EndToEndTest {
         });
 
         assertThat(initialCatchupFuture.isCompletedExceptionally(), equalTo(true));
+    }
+
+    @Test
+    public void does_not_mark_as_healthy_if_initial_catchup_fails() throws Exception {
+        subscription = subscription(Deserializer.applying(EndToEndTest::deserialize), failingHandler(() -> new RuntimeException("failure")));
+        subscription.start();
+
+        eventually(() -> {
+            assertThat(statusComponent().getReport().getStatus(), is(CRITICAL));
+            assertThat(subscription.health().get(), is(ill));
+            assertThat(statusComponent().getReport().getValue().toString(), containsString("Event subscription terminated"));
+        });
     }
 
     @Test

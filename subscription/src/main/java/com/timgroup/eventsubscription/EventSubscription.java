@@ -11,6 +11,7 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventsubscription.healthcheck.ChaserHealth;
 import com.timgroup.eventsubscription.healthcheck.DurationThreshold;
 import com.timgroup.eventsubscription.healthcheck.EventSubscriptionStatus;
+import com.timgroup.eventsubscription.lifecycleevents.SubscriptionTerminated;
 import com.timgroup.structuredevents.EventSink;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Health;
@@ -98,10 +99,14 @@ public class EventSubscription {
                 new DisruptorDeserializationAdapter(deserializer)
         ).then(new DisruptorEventHandlerAdapter((position, deserialized) -> {
             if (running.get()) {
+                boolean applied = false;
                 try {
                     eventHandler.apply(position, deserialized);
+                    applied = true;
                 } finally {
-                    subscriptionStatus.apply(position, deserialized);
+                    if (applied || (deserialized instanceof SubscriptionTerminated)) {
+                        subscriptionStatus.apply(position, deserialized);
+                    }
                 }
             }
         }, metricRegistry.map(r -> r.counter(String.format("eventsubscription.%s.missedCatchup", name)))));
