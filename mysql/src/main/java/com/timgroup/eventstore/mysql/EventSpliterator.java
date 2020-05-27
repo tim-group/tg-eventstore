@@ -8,6 +8,8 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -30,6 +32,10 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
     private T locationPointer;
     private Iterator<ResolvedEvent> currentPage = Collections.emptyIterator();
     private boolean streamExhausted = false;
+
+    private static Instant readInstant(ResultSet rs, String columnName) throws SQLException {
+        return rs.getTimestamp(columnName).toLocalDateTime().toInstant(ZoneOffset.UTC);
+    }
 
     public static Spliterator<ResolvedEvent> readAllEventSpliterator(ConnectionProvider connectionProvider,
                                                                      int batchSize,
@@ -130,7 +136,7 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
                         list.add(new ResolvedEvent(
                                 new BasicMysqlEventStorePosition(resultSet.getLong("position")),
                                 eventRecord(
-                                        resultSet.getTimestamp("timestamp").toInstant(),
+                                        readInstant(resultSet, "timestamp"),
                                         StreamId.streamId(resultSet.getString("stream_category"), resultSet.getString("stream_id")),
                                         resultSet.getLong("event_number"),
                                         resultSet.getString("event_type"),
