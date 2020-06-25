@@ -21,7 +21,7 @@ java {
 }
 
 dependencies {
-    api "com.timgroup:Tucker:1.0.1554" // autobump
+    api "com.timgroup:Tucker:1.0.1555" // autobump
     compileOnly "com.google.code.findbugs:jsr305:1.3.9"
     testImplementation "junit:junit:4.13"
     testImplementation "org.hamcrest:hamcrest-core:1.3"
