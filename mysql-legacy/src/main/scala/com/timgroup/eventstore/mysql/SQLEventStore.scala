@@ -99,7 +99,7 @@ class SQLEventStore(connectionProvider: ConnectionProvider,
 
     val closeConnection = new Runnable {
       override def run(): Unit = {
-        allCatch { resultSet.close() }
+        allCatch { if (null != resultSet) resultSet.close() }
         allCatch { statement.close() }
         allCatch { connection.close() }
       }
