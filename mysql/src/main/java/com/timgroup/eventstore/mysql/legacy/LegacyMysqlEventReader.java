@@ -1,7 +1,6 @@
 package com.timgroup.eventstore.mysql.legacy;
 
 import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
 import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventStreamReader;
@@ -11,6 +10,7 @@ import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
+import com.timgroup.eventstore.mysql.Timer;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -22,6 +22,7 @@ import java.sql.Statement;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static com.timgroup.eventstore.mysql.BasicMysqlEventReader.pageFetchTimer;
 import static java.util.stream.StreamSupport.stream;
 
 public final class LegacyMysqlEventReader implements EventReader, EventStreamReader, EventCategoryReader {
@@ -30,14 +31,18 @@ public final class LegacyMysqlEventReader implements EventReader, EventStreamRea
     private final String tableName;
     private final StreamId pretendStreamId;
     private final int batchSize;
-    private final Optional<Timer> timer;
+    private final Timer timer;
 
     public LegacyMysqlEventReader(ConnectionProvider connectionProvider, String database, String tableName, StreamId pretendStreamId, int batchSize, @Nullable MetricRegistry metricRegistry) {
         this.connectionProvider = connectionProvider;
         this.tableName = tableName;
         this.pretendStreamId = pretendStreamId;
         this.batchSize = batchSize;
-        this.timer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.read.page_fetch_time", database, tableName)));
+        if (metricRegistry == null) {
+            this.timer = (Runnable r) -> pageFetchTimer.labels(database, tableName, "read_legacy").time(r);
+        } else {
+            this.timer = metricRegistry.timer(String.format("database.%s.%s.read.page_fetch_time", database, tableName))::time;
+        }
     }
 
     @Nonnull

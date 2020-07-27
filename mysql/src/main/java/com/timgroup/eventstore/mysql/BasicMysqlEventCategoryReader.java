@@ -1,7 +1,6 @@
 package com.timgroup.eventstore.mysql;
 
 import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
 import com.timgroup.eventstore.api.EventCategoryReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
@@ -15,6 +14,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.timgroup.eventstore.mysql.BasicMysqlEventReader.pageFetchTimer;
 import static com.timgroup.eventstore.mysql.BasicMysqlEventStorePosition.EMPTY_STORE_POSITION;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.StreamSupport.stream;
@@ -24,15 +24,20 @@ public class BasicMysqlEventCategoryReader implements EventCategoryReader {
     private final ConnectionProvider connectionProvider;
     private final String tableName;
     private final int batchSize;
-    private final Optional<Timer> timer;
-    private final Optional<Timer> multiCategoryTimer;
+    private final Timer timer;
+    private final Timer multiCategoryTimer;
 
     public BasicMysqlEventCategoryReader(ConnectionProvider connectionProvider, String databaseName, String tableName, int batchSize, @Nullable MetricRegistry metricRegistry) {
         this.connectionProvider = requireNonNull(connectionProvider);
         this.tableName = requireNonNull(tableName);
         this.batchSize = batchSize;
-        this.timer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.read_category.page_fetch_time", databaseName, tableName)));
-        this.multiCategoryTimer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.read_categories.page_fetch_time", databaseName, tableName)));
+        if (metricRegistry == null) {
+            this.timer = (Runnable r) -> pageFetchTimer.labels(databaseName, tableName, "read_category").time(r);
+            this.multiCategoryTimer = (Runnable r) -> pageFetchTimer.labels(databaseName, tableName, "read_categories").time(r);
+        } else {
+            this.timer = metricRegistry.timer(String.format("database.%s.%s.read_category.page_fetch_time", databaseName, tableName))::time;
+            this.multiCategoryTimer = metricRegistry.timer(String.format("database.%s.%s.read_categories.page_fetch_time", databaseName, tableName))::time;
+        }
     }
 
     @CheckReturnValue

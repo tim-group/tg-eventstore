@@ -1,11 +1,11 @@
 package com.timgroup.eventstore.mysql;
 
 import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.Position;
 import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
+import io.prometheus.client.Histogram;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -18,16 +18,25 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.StreamSupport.stream;
 
 public class BasicMysqlEventReader implements EventReader {
+
+    public final static Histogram pageFetchTimer = Histogram.build("tg_eventstore_page_fetch_seconds", "TG Eventstore page fetch time")
+            .labelNames("database", "table", "read_type")
+            .register();
+
     private final ConnectionProvider connectionProvider;
     private final String tableName;
     private final int batchSize;
-    private final Optional<Timer> timer;
+    private final Timer timer;
 
     public BasicMysqlEventReader(ConnectionProvider connectionProvider, String databaseName, String tableName, int batchSize, @Nullable MetricRegistry metricRegistry) {
         this.connectionProvider = requireNonNull(connectionProvider);
         this.tableName = requireNonNull(tableName);
         this.batchSize = batchSize;
-        this.timer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.read_all.page_fetch_time", databaseName, tableName)));
+        if (metricRegistry == null) {
+            this.timer = (Runnable r) -> pageFetchTimer.labels(databaseName, tableName, "read_all").time(r);
+        } else {
+            this.timer = metricRegistry.timer(String.format("database.%s.%s.read_all.page_fetch_time", databaseName, tableName))::time;
+        }
     }
 
     @CheckReturnValue

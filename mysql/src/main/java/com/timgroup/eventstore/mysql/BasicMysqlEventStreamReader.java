@@ -1,12 +1,12 @@
 package com.timgroup.eventstore.mysql;
 
 import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
 import com.timgroup.eventstore.api.EventStreamReader;
 import com.timgroup.eventstore.api.NoSuchStreamException;
 import com.timgroup.eventstore.api.PositionCodec;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
+import io.prometheus.client.Histogram;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -16,26 +16,36 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Optional;
 import java.util.stream.Stream;
 
+import static com.timgroup.eventstore.mysql.BasicMysqlEventReader.pageFetchTimer;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.StreamSupport.stream;
 
 @ParametersAreNonnullByDefault
 public class BasicMysqlEventStreamReader implements EventStreamReader {
+
+    private final static Histogram streamValidationTimer = Histogram.build("tg_eventstore_ensure_stream_exists_validation_seconds", "TG Eventstore ensure stream exists validation")
+            .labelNames("database", "table")
+            .register();
+
     private final ConnectionProvider connectionProvider;
     private final String tableName;
     private final int batchSize;
-    private final Optional<Timer> timer;
-    private final Optional<Timer> streamValidationTimer;
+    private final Timer timer;
+    private final Timer validationTimer;
 
     public BasicMysqlEventStreamReader(ConnectionProvider connectionProvider, String databaseName, String tableName, int batchSize, @Nullable MetricRegistry metricRegistry) {
         this.connectionProvider = requireNonNull(connectionProvider);
         this.tableName = requireNonNull(tableName);
         this.batchSize = batchSize;
-        this.streamValidationTimer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.ensure_stream_exists_validation.time", databaseName, tableName)));
-        this.timer = Optional.ofNullable(metricRegistry).map(r -> r.timer(String.format("database.%s.%s.read_stream.page_fetch_time", databaseName, tableName)));
+        if (metricRegistry == null) {
+            this.timer = (Runnable r) -> pageFetchTimer.labels(databaseName, tableName, "read_stream").time(r);
+            this.validationTimer = (Runnable r) -> streamValidationTimer.labels(databaseName, tableName).time(r);
+        } else {
+            this.timer = metricRegistry.timer(String.format("database.%s.%s.read_stream.page_fetch_time", databaseName, tableName))::time;
+            this.validationTimer = metricRegistry.timer(String.format("database.%s.%s.ensure_stream_exists_validation.time", databaseName, tableName))::time;
+        }
     }
 
     @CheckReturnValue
@@ -105,7 +115,7 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
     }
 
     private void ensureStreamExists(StreamId streamId) throws NoSuchStreamException {
-        try (Timer.Context c = streamValidationTimer.orElse(new Timer()).time()) {
+        validationTimer.time(() -> {
             try (Connection connection = connectionProvider.getConnection();
                  Statement statement = connection.createStatement();
                  ResultSet resultSet = statement.executeQuery(String.format("select position from %s force index(stream_category) where stream_category = '%s' and stream_id = '%s' limit 1", tableName, streamId.category(), streamId.id()))
@@ -116,6 +126,6 @@ public class BasicMysqlEventStreamReader implements EventStreamReader {
             } catch (SQLException e) {
                 throw new RuntimeException(String.format("Error checking whether stream '%s' exists", streamId), e);
             }
-        }
+        });
     }
 }

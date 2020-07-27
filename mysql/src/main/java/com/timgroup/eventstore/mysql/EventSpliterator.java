@@ -1,6 +1,5 @@
 package com.timgroup.eventstore.mysql;
 
-import com.codahale.metrics.Timer;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 
@@ -14,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -27,7 +25,7 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
     private final ConnectionProvider connectionProvider;
     private final Function<T, String> queryStringGenerator;
     private final Function<ResolvedEvent, T> locationPointerExtractor;
-    private final Optional<Timer> timer;
+    private final Timer timer;
 
     private T locationPointer;
     private Iterator<ResolvedEvent> currentPage = Collections.emptyIterator();
@@ -41,8 +39,7 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
                                                                      int batchSize,
                                                                      String tableName,
                                                                      BasicMysqlEventStorePosition startingPosition,
-                                                                     boolean backwards, Optional<Timer> timer)
-    {
+                                                                     boolean backwards, Timer timer) {
         final String queryString = "select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata" +
                 " from " + tableName +
                 " where position " + (backwards ? "<" : ">") + " %s" +
@@ -53,7 +50,7 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
                 connectionProvider,
                 startingPosition,
                 position -> String.format(queryString, position.value),
-                resolvedEvent -> (BasicMysqlEventStorePosition)resolvedEvent.position(),
+                resolvedEvent -> (BasicMysqlEventStorePosition) resolvedEvent.position(),
                 timer);
     }
 
@@ -63,8 +60,7 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
                                                                           String category,
                                                                           BasicMysqlEventStorePosition startingPosition,
                                                                           boolean backwards,
-                                                                          Optional<Timer> timer)
-    {
+                                                                          Timer timer) {
         final String queryString = "select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata" +
                 " from " + tableName +
                 " FORCE INDEX (stream_category_2)" +
@@ -88,8 +84,7 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
                                                                         StreamId streamId,
                                                                         long startingEventNumber,
                                                                         boolean backwards,
-                                                                        Optional<Timer> timer)
-    {
+                                                                        Timer timer) {
         final String queryString = "select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata" +
                 " from " + tableName +
                 " where event_number " + (backwards ? "<" : ">") + " %d" +
@@ -112,8 +107,7 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
             T startingLocation,
             Function<T, String> queryStringGenerator,
             Function<ResolvedEvent, T> locationPointerExtractor,
-            Optional<Timer> timer)
-    {
+            Timer timer) {
         this.connectionProvider = connectionProvider;
         this.locationPointer = startingLocation;
         this.queryStringGenerator = queryStringGenerator;
@@ -124,7 +118,7 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
     @Override
     public boolean tryAdvance(Consumer<? super ResolvedEvent> action) {
         if (!currentPage.hasNext() && !streamExhausted) {
-            try (Timer.Context c = timer.map(t -> t.time()).orElse(new Timer().time());) {
+            timer.time(() -> {
                 try (Connection connection = connectionProvider.getConnection();
                      Statement statement = streamingStatementFrom(connection);
                      ResultSet resultSet = statement.executeQuery(queryStringGenerator.apply(locationPointer))
@@ -148,7 +142,7 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
                 }
-            }
+            });
         }
 
         if (currentPage.hasNext()) {

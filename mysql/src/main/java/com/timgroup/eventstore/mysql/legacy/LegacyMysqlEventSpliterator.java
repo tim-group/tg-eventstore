@@ -1,9 +1,9 @@
 package com.timgroup.eventstore.mysql.legacy;
 
-import com.codahale.metrics.Timer;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
+import com.timgroup.eventstore.mysql.Timer;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 
@@ -28,11 +27,11 @@ final class LegacyMysqlEventSpliterator implements Spliterator<ResolvedEvent> {
     private final String queryString;
 
     private LegacyMysqlEventPosition lastPosition;
-    private final Optional<Timer> timer;
+    private final Timer timer;
     private Iterator<ResolvedEvent> currentPage = Collections.emptyIterator();
     private boolean streamExhausted = false;
 
-    LegacyMysqlEventSpliterator(ConnectionProvider connectionProvider, int batchSize, String tableName, StreamId pretendStreamId, LegacyMysqlEventPosition startingPosition, boolean backwards, Optional<Timer> timer) {
+    LegacyMysqlEventSpliterator(ConnectionProvider connectionProvider, int batchSize, String tableName, StreamId pretendStreamId, LegacyMysqlEventPosition startingPosition, boolean backwards, Timer timer) {
         this.connectionProvider = connectionProvider;
         this.pretendStreamId = pretendStreamId;
         this.lastPosition = startingPosition;
@@ -47,7 +46,7 @@ final class LegacyMysqlEventSpliterator implements Spliterator<ResolvedEvent> {
     @Override
     public boolean tryAdvance(Consumer<? super ResolvedEvent> action) {
         if (!currentPage.hasNext() && !streamExhausted) {
-            try (Timer.Context c = timer.map(Timer::time).orElse(new Timer().time())) {
+            timer.time(() -> {
                 try (Connection connection = connectionProvider.getConnection();
                      Statement statement = streamingStatementFrom(connection);
                      ResultSet resultSet = statement.executeQuery(String.format(queryString, lastPosition.legacyVersion))
@@ -72,7 +71,7 @@ final class LegacyMysqlEventSpliterator implements Spliterator<ResolvedEvent> {
                 } catch (SQLException e) {
                     throw new RuntimeException(e);
                 }
-            }
+            });
         }
 
         if (currentPage.hasNext()) {
