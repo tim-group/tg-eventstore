@@ -35,6 +35,14 @@ public class LegacyMysqlEventSource implements EventSource {
     private final LegacyMysqlEventReader eventReader;
     private final LegacyMysqlEventStreamWriter eventStreamWriter;
 
+    public LegacyMysqlEventSource(ConnectionProvider connectionProvider, String tableName, StreamId pretendStreamId, int batchSize, String name) {
+        this(connectionProvider, tableName, pretendStreamId, batchSize, name, null);
+    }
+
+    /**
+     * @deprecated Use corresponding API without metric registry
+     */
+    @Deprecated
     public LegacyMysqlEventSource(ConnectionProvider connectionProvider, String tableName, StreamId pretendStreamId, int batchSize, String name, @Nullable MetricRegistry metricRegistry) {
         this.connectionProvider = connectionProvider;
         this.tableName = tableName;
@@ -44,10 +52,26 @@ public class LegacyMysqlEventSource implements EventSource {
         this.eventStreamWriter = new LegacyMysqlEventStreamWriter(connectionProvider, database, tableName, pretendStreamId, metricRegistry);
     }
 
+    public LegacyMysqlEventSource(ConnectionProvider connectionProvider, String tableName, int batchSize) {
+        this(connectionProvider, tableName, DEFAULT_STREAM_ID, batchSize, "EventStore");
+    }
+
+    /**
+     * @deprecated Use corresponding API without metric registry
+     */
+    @Deprecated
     public LegacyMysqlEventSource(ConnectionProvider connectionProvider, String tableName, int batchSize, MetricRegistry metricRegistry) {
         this(connectionProvider, tableName, DEFAULT_STREAM_ID, batchSize, "EventStore", metricRegistry);
     }
 
+    public LegacyMysqlEventSource(ConnectionProvider connectionProvider, String tableName) {
+        this(connectionProvider, tableName, DEFAULT_BATCH_SIZE);
+    }
+
+    /**
+     * @deprecated Use corresponding API without metric registry
+     */
+    @Deprecated
     public LegacyMysqlEventSource(ConnectionProvider connectionProvider, String tableName, MetricRegistry metricRegistry) {
         this(connectionProvider, tableName, DEFAULT_BATCH_SIZE, metricRegistry);
     }
@@ -93,147 +117,158 @@ public class LegacyMysqlEventSource implements EventSource {
                 '}';
     }
 
-    /**
-     * @deprecated  replaced by {@link #pooledMasterDbEventSource(Config config, String tableName, String name, MetricRegistry metricRegistry)}
-     */
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name) {
         return pooledMasterDbEventSource(config, tableName, name, null);
     }
 
+    /**
+     * @deprecated Use corresponding API without metric registry
+     */
+    @Deprecated
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name, @Nullable MetricRegistry metricRegistry) {
         return pooledMasterDbEventSource(config, tableName, DEFAULT_STREAM_ID, name, metricRegistry);
     }
 
-    /**
-     * @deprecated  replaced by {@link #pooledMasterDbEventSource(Config config, String tableName, String name, int batchSize, MetricRegistry metricRegistry)}
-     */
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name, int batchSize) {
         return pooledMasterDbEventSource(config, tableName, name, batchSize, null);
     }
 
+    /**
+     * @deprecated Use corresponding API without metric registry
+     */
+    @Deprecated
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, String name, int batchSize, @Nullable MetricRegistry metricRegistry) {
         return pooledMasterDbEventSource(config, tableName, DEFAULT_STREAM_ID, name, batchSize, metricRegistry);
     }
 
-    /**
-     * @deprecated  replaced by {@link #pooledMasterDbEventSource(Config config, String tableName, StreamId pretendStreamId, String name, MetricRegistry metricRegistry)}
-     */
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, StreamId pretendStreamId, String name) {
         return pooledMasterDbEventSource(config, tableName, pretendStreamId, name, null);
     }
 
+    /**
+     * @deprecated Use corresponding API without metric registry
+     */
+    @Deprecated
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, StreamId pretendStreamId, String name, @Nullable MetricRegistry metricRegistry) {
         return pooledMasterDbEventSource(config, tableName, pretendStreamId, name, DEFAULT_BATCH_SIZE, metricRegistry);
     }
 
-    /**
-     * @deprecated  replaced by {@link #pooledMasterDbEventSource(Config config, String tableName, StreamId pretendStreamId, String name, int batchSize, MetricRegistry metricRegistry)}
-     */
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, StreamId pretendStreamId, String name, int batchSize) {
         return pooledMasterDbEventSource(config, tableName, pretendStreamId, name, batchSize, null);
     }
 
+    /**
+     * @deprecated Use corresponding API without metric registry
+     */
+    @Deprecated
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Config config, String tableName, StreamId pretendStreamId, String name, int batchSize, @Nullable MetricRegistry metricRegistry) {
         return pooledEventSource(StacksConfiguredDataSource.pooledMasterDb(config, metricRegistry), tableName, pretendStreamId, name, batchSize, metricRegistry);
     }
 
-    /**
-     * @deprecated  replaced by {@link #pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name, MetricRegistry metricRegistry)}
-     */
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name) {
         return pooledMasterDbEventSource(properties, configPrefix, tableName, name, null);
     }
 
-
+    /**
+     * @deprecated Use corresponding API without metric registry
+     */
+    @Deprecated
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name, @Nullable MetricRegistry metricRegistry) {
         return pooledMasterDbEventSource(properties, configPrefix, tableName, DEFAULT_STREAM_ID, name, metricRegistry);
     }
 
-    /**
-     * @deprecated  replaced by {@link #pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize, MetricRegistry metricRegistry)}
-     */
-    @Deprecated
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize) {
         return pooledMasterDbEventSource(properties, configPrefix, tableName, name, batchSize, null);
     }
 
+    /**
+     * @deprecated Use corresponding API without metric registry
+     */
+    @Deprecated
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize, @Nullable MetricRegistry metricRegistry) {
         return pooledMasterDbEventSource(properties, configPrefix, tableName, DEFAULT_STREAM_ID, name, batchSize, metricRegistry);
     }
 
-    /**
-     * @deprecated  replaced by {@link #pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, StreamId pretendStreamId, String name, MetricRegistry metricRegistry)}
-     */
-    @Deprecated
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, StreamId pretendStreamId, String name) {
         return pooledMasterDbEventSource(properties, configPrefix, tableName, pretendStreamId, name, null);
     }
 
+    /**
+     * @deprecated Use corresponding API without metric registry
+     */
+    @Deprecated
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, StreamId pretendStreamId, String name, @Nullable MetricRegistry metricRegistry) {
         return pooledMasterDbEventSource(properties, configPrefix, tableName, pretendStreamId, name, DEFAULT_BATCH_SIZE, metricRegistry);
     }
 
-    /**
-     * @deprecated  replaced by {@link #pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, StreamId pretendStreamId, String name, int batchSize, MetricRegistry metricRegistry)}
-     */
-    @Deprecated
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, StreamId pretendStreamId, String name, int batchSize) {
         return pooledMasterDbEventSource(properties, configPrefix, tableName, pretendStreamId, name, batchSize, null);
     }
 
+    /**
+     * @deprecated Use corresponding API without metric registry
+     */
+    @Deprecated
     public static LegacyPooledMysqlEventSource pooledMasterDbEventSource(Properties properties, String configPrefix, String tableName, StreamId pretendStreamId, String name, int batchSize, @Nullable MetricRegistry metricRegistry) {
         return pooledEventSource(StacksConfiguredDataSource.pooledMasterDb(properties, configPrefix, metricRegistry), tableName, pretendStreamId, name, batchSize, metricRegistry);
     }
 
-    /**
-     * @deprecated  replaced by {@link #pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name, MetricRegistry metricRegistry)}
-     */
-    @Deprecated
     public static LegacyPooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name) {
         return pooledReadOnlyDbEventSource(properties, configPrefix, tableName, DEFAULT_STREAM_ID, name, null);
     }
 
+    /**
+     * @deprecated Use corresponding API without metric registry
+     */
+    @Deprecated
     public static LegacyPooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name, @Nullable MetricRegistry metricRegistry) {
         return pooledReadOnlyDbEventSource(properties, configPrefix, tableName, DEFAULT_STREAM_ID, name, metricRegistry);
     }
 
-    /**
-     * @deprecated  replaced by {@link #pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize, MetricRegistry metricRegistry)}
-     */
-    @Deprecated
     public static LegacyPooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize) {
         return pooledReadOnlyDbEventSource(properties, configPrefix, tableName, DEFAULT_STREAM_ID, name, batchSize, null);
     }
 
+    /**
+     * @deprecated Use corresponding API without metric registry
+     */
+    @Deprecated
     public static LegacyPooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, String name, int batchSize, @Nullable MetricRegistry metricRegistry) {
         return pooledReadOnlyDbEventSource(properties, configPrefix, tableName, DEFAULT_STREAM_ID, name, batchSize, metricRegistry);
     }
 
-    /**
-     * @deprecated  replaced by {@link #pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, StreamId pretendStreamId, String name, MetricRegistry metricRegistry)}
-     */
-    @Deprecated
     public static LegacyPooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, StreamId pretendStreamId, String name) {
         return pooledReadOnlyDbEventSource(properties, configPrefix, tableName, pretendStreamId, name, DEFAULT_BATCH_SIZE);
     }
 
+    /**
+     * @deprecated Use corresponding API without metric registry
+     */
+    @Deprecated
     public static LegacyPooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, StreamId pretendStreamId, String name, @Nullable MetricRegistry metricRegistry) {
         return pooledReadOnlyDbEventSource(properties, configPrefix, tableName, pretendStreamId, name, DEFAULT_BATCH_SIZE, metricRegistry);
     }
 
-    /**
-     * @deprecated  replaced by {@link #pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, StreamId pretendStreamId, String name, int batchSize, MetricRegistry metricRegistry)}
-     */
-    @Deprecated
     public static LegacyPooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, StreamId pretendStreamId, String name, int batchSize) {
         return pooledReadOnlyDbEventSource(properties, configPrefix, tableName, pretendStreamId, name, batchSize, null);
     }
 
+    /**
+     * @deprecated Use corresponding API without metric registry
+     */
+    @Deprecated
     public static LegacyPooledMysqlEventSource pooledReadOnlyDbEventSource(Properties properties, String configPrefix, String tableName, StreamId pretendStreamId, String name, int batchSize, @Nullable MetricRegistry metricRegistry) {
         return pooledEventSource(StacksConfiguredDataSource.pooledReadOnlyDb(properties, configPrefix, metricRegistry), tableName, pretendStreamId, name, batchSize, metricRegistry);
     }
 
+    public static LegacyPooledMysqlEventSource pooledEventSource(PooledDataSource dataSource, String tableName, StreamId pretendStreamId, String name, int batchSize) {
+        return pooledEventSource(dataSource, tableName, pretendStreamId, name, batchSize, null);
+    }
 
+    /**
+     * @deprecated Use corresponding API without metric registry
+     */
+    @Deprecated
     public static LegacyPooledMysqlEventSource pooledEventSource(PooledDataSource dataSource, String tableName, StreamId pretendStreamId, String name, int batchSize, @Nullable MetricRegistry metricRegistry) {
         try {
             new LegacyMysqlEventStoreSetup(dataSource::getConnection, tableName).lazyCreate();
@@ -247,6 +282,15 @@ public class LegacyMysqlEventSource implements EventSource {
     public static final class LegacyPooledMysqlEventSource extends LegacyMysqlEventSource implements AutoCloseable {
         private final PooledDataSource dataSource;
 
+        public LegacyPooledMysqlEventSource(PooledDataSource dataSource, String tableName, StreamId pretendStreamId, int batchSize, String name) {
+            super(dataSource::getConnection, tableName, pretendStreamId, batchSize, name);
+            this.dataSource = dataSource;
+        }
+
+        /**
+         * @deprecated Use corresponding API without metric registry
+         */
+        @Deprecated
         public LegacyPooledMysqlEventSource(PooledDataSource dataSource, String tableName, StreamId pretendStreamId, int batchSize, String name, @Nullable MetricRegistry metricRegistry) {
             super(dataSource::getConnection, tableName, pretendStreamId, batchSize, name, metricRegistry);
             this.dataSource = dataSource;

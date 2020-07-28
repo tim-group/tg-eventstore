@@ -31,6 +31,9 @@ public final class StacksConfiguredDataSource {
         return pooledMasterDb(properties, configPrefix, null);
     }
 
+    /**
+     * @deprecated Use corresponding API without metric registry
+     */
     @Deprecated
     public static PooledDataSource pooledMasterDb(Properties properties, String configPrefix, @Nullable MetricRegistry metricRegistry) {
         return pooledMasterDb(properties, configPrefix, DEFAULT_MAX_POOLSIZE, metricRegistry);
@@ -40,6 +43,9 @@ public final class StacksConfiguredDataSource {
         return pooledMasterDb(properties, configPrefix, maxPoolSize, null);
     }
 
+    /**
+     * @deprecated Use corresponding API without metric registry
+     */
     @Deprecated
     public static PooledDataSource pooledMasterDb(Properties properties, String configPrefix, int maxPoolSize, @Nullable MetricRegistry metricRegistry) {
         return getPooledDataSource(properties, configPrefix, "hostname", maxPoolSize, DEFAULT_SOCKET_TIMEOUT_MS, metricRegistry);
