@@ -172,7 +172,7 @@ public final class EventShovel {
 
     private static <T> Iterator<Iterator<T>> batchBy(Iterator<T> it, Function<T, Object> grouping) {
         return new Iterator<Iterator<T>>() {
-            PeekingIterator<T> peekingIterator = peekingIterator(it);
+            final PeekingIterator<T> peekingIterator = peekingIterator(it);
 
             @Override
             public boolean hasNext() {
@@ -182,7 +182,7 @@ public final class EventShovel {
             @Override
             public Iterator<T> next() {
                 return new Iterator<T>() {
-                    private Object currentGroup = grouping.apply(peekingIterator.peek());
+                    private final Object currentGroup = grouping.apply(peekingIterator.peek());
 
                     private boolean isSameGroup() {
                         return currentGroup.equals(grouping.apply(peekingIterator.peek()));
