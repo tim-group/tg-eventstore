@@ -33,7 +33,7 @@ dependencies {
     api project(":mysql") 
     api project(":subscription")
     api "com.google.protobuf:protobuf-java:$protobufVersion"
-    api "com.timgroup:Tucker:1.0.1566" // autobump
+    api "com.timgroup:Tucker:1.0.1567" // autobump
     api "com.timgroup:tim-structured-events:0.4.1284" // autobump
 
     implementation "com.google.code.findbugs:jsr305:3.0.2"
