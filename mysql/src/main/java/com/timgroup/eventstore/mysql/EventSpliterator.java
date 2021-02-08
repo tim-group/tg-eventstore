@@ -86,7 +86,7 @@ class EventSpliterator<T> implements Spliterator<ResolvedEvent> {
                                                                         boolean backwards,
                                                                         Timer timer) {
         final String queryString = "select position, timestamp, stream_category, stream_id, event_number, event_type, data, metadata" +
-                " from " + tableName +
+                " from " + tableName + "FORCE INDEX (stream_category)" +
                 " where event_number " + (backwards ? "<" : ">") + " %d" +
                 " and stream_category = '" + streamId.category() + "'" +
                 " and stream_id = '" + streamId.id() + "'" +
