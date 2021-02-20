@@ -34,11 +34,11 @@ dependencies {
     api project(":subscription")
     api "com.google.protobuf:protobuf-java:$protobufVersion"
     api "com.timgroup:Tucker:1.0.1583" // autobump
-    api "com.timgroup:tim-structured-events:0.4.1284" // autobump
+    api "com.timgroup:tim-structured-events:0.4.1286" // autobump
 
     implementation "com.google.code.findbugs:jsr305:3.0.2"
     implementation "com.timgroup:tim-logger:1.5.1109" // autobump
-    implementation "com.timgroup:tim-remote-file-storage-s3:0.0.1217" // autobump
+    implementation "com.timgroup:tim-remote-file-storage-s3:0.0.1218" // autobump
 
     runtimeOnly "javax.xml.bind:jaxb-api:2.3.0"
     runtimeOnly "com.sun.xml.bind:jaxb-core:2.3.0"
@@ -55,7 +55,7 @@ dependencies {
 
     testImplementation "com.timgroup:tg-config-java-bindings:1.0.82" // autobump
     testImplementation "org.apache.commons:commons-lang3:3.3.2"
-    testImplementation "com.timgroup:clocks-testing:1.0.1107" // autobump
+    testImplementation "com.timgroup:clocks-testing:1.0.1109" // autobump
     testImplementation "net.ttsui.junit.rules.pending:pending:0.0.1055"
     testImplementation "org.mockito:mockito-core:3.7.7"
     testImplementation "com.youdevise:Matchers:0.0.1293" // autobump
