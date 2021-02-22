@@ -10,7 +10,6 @@ Modules
  - api          - defines core classes for Events and interfaces for reading/writing
  - mysql        - an eventstore implementation backed by a MySQL table
  - memory       - an eventstore implementation run entirely in memory
- - ges-http     - an eventstore implementation backed by Greg Young's eventstore (see https://geteventstore.com)
  - subscription - facilitates reading all the events from an eventstore and then consuming new events as they arrive
  - stitching    - utilities for merging, stitching, shovelling and otherwise manipulating event streams
  - archiving    - Chases an Eventstore and archives it to S3.
