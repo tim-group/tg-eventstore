@@ -297,7 +297,7 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
 
         archiver.start();
         liveEventSource.writeStream().write(stream_1, asList(event_1, event_1, event_1));
-        successfullyArchiveUntilCaughtUp(liveEventSource);
+        successfullyArchiveUntilCaughtUp(liveEventSource).stop();
         assertThat(archiver.state(), equalTo(new ArchiverState(RUNNING, Optional.of(3L), Optional.of(2L))));
 
         archiver.stop();
