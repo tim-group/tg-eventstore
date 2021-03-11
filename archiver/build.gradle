@@ -34,7 +34,7 @@ dependencies {
     api project(":subscription")
     api "com.google.protobuf:protobuf-java:$protobufVersion"
     api "com.timgroup:Tucker:1.0.1583" // autobump
-    api "com.timgroup:tim-structured-events:0.4.1287" // autobump
+    api "com.timgroup:tim-structured-events:0.4.1288" // autobump
 
     implementation "com.google.code.findbugs:jsr305:3.0.2"
     implementation "com.timgroup:tim-logger:1.5.1109" // autobump
