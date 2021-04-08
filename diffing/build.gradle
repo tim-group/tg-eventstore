@@ -22,7 +22,7 @@ java {
 
 dependencies {
     implementation project(":mysql")
-    implementation "io.dropwizard.metrics:metrics-core:3.2.3"
+    implementation "io.dropwizard.metrics:metrics-core:4.1.19"
     implementation "io.dropwizard.metrics:metrics-jvm:3.2.3"
     implementation "io.dropwizard.metrics:metrics-graphite:3.2.3"
     implementation project(":api")
