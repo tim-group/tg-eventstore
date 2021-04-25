@@ -38,7 +38,7 @@ dependencies {
 
     implementation "com.google.code.findbugs:jsr305:3.0.2"
     implementation "com.timgroup:tim-logger:1.5.1109" // autobump
-    implementation "com.timgroup:tim-remote-file-storage-s3:0.0.1223" // autobump
+    implementation "com.timgroup:tim-remote-file-storage-s3:0.0.1224" // autobump
 
     runtimeOnly "javax.xml.bind:jaxb-api:2.3.0"
     runtimeOnly "com.sun.xml.bind:jaxb-core:2.3.0"
