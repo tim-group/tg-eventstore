@@ -7,7 +7,7 @@ plugins {
 
 ext {
     buildNumber = System.getenv("BUILD_NUMBER") ?: System.getenv("TRAVIS_BUILD_NUMBER")
-    mysqlJdbcVersion = "5.1.47"
+    mysqlJdbcVersion = "8.0.26"
     protobufVersion = "3.9.2"
 }
 
