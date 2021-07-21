@@ -39,7 +39,7 @@ dependencies {
     testImplementation "org.mockito:mockito-core:3.7.7"
     testImplementation "com.youdevise:Matchers:0.0.1293" // autobump
     testImplementation "net.ttsui.junit.rules.pending:pending:0.0.1055"
-    testRuntimeOnly "org.slf4j:slf4j-simple:1.7.25"
+    testRuntimeOnly "org.slf4j:slf4j-simple:1.7.32"
 }
 
 tasks.withType(JavaCompile).configureEach {

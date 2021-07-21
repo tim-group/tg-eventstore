@@ -36,7 +36,7 @@ dependencies {
     testImplementation "com.timgroup:clocks-testing:1.0.1111" // autobump
     testImplementation "mysql:mysql-connector-java:$mysqlJdbcVersion"
     testCompileOnly "com.google.code.findbugs:jsr305:1.3.9"
-    testRuntimeOnly "org.slf4j:slf4j-simple:1.7.25"
+    testRuntimeOnly "org.slf4j:slf4j-simple:1.7.32"
 }
 
 tasks.withType(JavaCompile).configureEach {
