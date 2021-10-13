@@ -32,10 +32,14 @@ public final class ChaserHealth extends Component implements ChaserListener {
     private volatile Position currentPosition;
 
     public ChaserHealth(String name, Clock clock, Duration subscriptionRunFrequency) {
+        this(name, clock, max(MIN_WARNING_THRESHOLD, subscriptionRunFrequency.multipliedBy(5)), max(MIN_CRITICAL_THRESHOLD, subscriptionRunFrequency.multipliedBy(10)));
+    }
+
+    public ChaserHealth(String name, Clock clock, Duration warningThreshold, Duration criticalThreshold) {
         super("event-store-chaser-" + name, "Eventstore chaser health (" + name + ")");
         this.clock = clock;
-        this.warningThreshold = max(MIN_WARNING_THRESHOLD, subscriptionRunFrequency.multipliedBy(5));
-        this.criticalThreshold = max(MIN_CRITICAL_THRESHOLD, subscriptionRunFrequency.multipliedBy(10));
+        this.warningThreshold = warningThreshold;
+        this.criticalThreshold = criticalThreshold;
     }
 
     @Override

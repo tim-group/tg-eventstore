@@ -28,6 +28,7 @@ public class SubscriptionBuilder {
     private Duration runFrequency = Duration.ofSeconds(1);
     private DurationThreshold initialReplay = new DurationThreshold(Duration.ofSeconds(1), Duration.ofSeconds(2));
     private DurationThreshold staleness;
+    private DurationThreshold chaserStaleness;
     private int bufferSize = 1024;
     private final List<EventHandler> handlers = new ArrayList<>();
 
@@ -128,6 +129,11 @@ public class SubscriptionBuilder {
         return this;
     }
 
+    public SubscriptionBuilder withChaserStaleness(DurationThreshold staleness) {
+        this.chaserStaleness = staleness;
+        return this;
+    }
+
     @Nonnull
     public EventSubscription build() {
         requireNonNull(reader);
@@ -166,7 +172,8 @@ public class SubscriptionBuilder {
                 initialReplay,
                 staleness,
                 eventSink,
-                Optional.ofNullable(metricRegistry)
+                Optional.ofNullable(metricRegistry),
+                chaserStaleness
         );
     }
 

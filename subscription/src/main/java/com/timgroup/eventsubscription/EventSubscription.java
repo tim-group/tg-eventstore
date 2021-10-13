@@ -49,6 +49,39 @@ public class EventSubscription {
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     EventSubscription(
+            String name,
+            String description,
+            Function<Position, Stream<ResolvedEvent>> eventSource,
+            Deserializer<? extends Event> deserializer,
+            EventHandler eventHandler,
+            Clock clock,
+            int bufferSize,
+            Duration runFrequency,
+            Position startingPosition,
+            DurationThreshold initialReplay,
+            DurationThreshold staleness,
+            EventSink eventSink,
+            Optional<MetricRegistry> metricRegistry
+    ) {
+        this(
+                name,
+                description,
+                eventSource,
+                deserializer,
+                eventHandler,
+                clock,
+                bufferSize,
+                runFrequency,
+                startingPosition,
+                initialReplay,
+                staleness,
+                eventSink,
+                metricRegistry,
+                null
+        );
+    }
+    
+    EventSubscription(
                 String name,
                 String description,
                 Function<Position, Stream<ResolvedEvent>> eventSource,
@@ -61,10 +94,14 @@ public class EventSubscription {
                 DurationThreshold initialReplay,
                 DurationThreshold staleness,
                 EventSink eventSink,
-                Optional<MetricRegistry> metricRegistry
+                Optional<MetricRegistry> metricRegistry,
+                DurationThreshold chaserStaleness
     ) {
         this.runFrequency = runFrequency;
-        ChaserHealth chaserHealth = new ChaserHealth(name, clock, runFrequency);
+        ChaserHealth chaserHealth = chaserStaleness == null
+                ? new ChaserHealth(name, clock, runFrequency)
+                : new ChaserHealth(name, clock, chaserStaleness.getWarning(), chaserStaleness.getCritical()
+        );
         subscriptionStatus = new EventSubscriptionStatus(name, clock, initialReplay, staleness, eventSink);
 
         chaserExecutor = Executors.newScheduledThreadPool(1, new NamedThreadFactory("EventChaser-" + name));
