@@ -27,7 +27,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
-import org.junit.Ignore;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -56,7 +55,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-@Ignore
 public class S3ArchiveEventSourceIntegrationTest extends S3IntegrationTest {
     private AmazonS3 amazonS3;
     private String bucketName;

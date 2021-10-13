@@ -30,7 +30,6 @@ import org.hamcrest.Matcher;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.junit.Ignore;
 
 import java.io.InputStream;
 import java.time.Clock;
@@ -64,7 +63,6 @@ import static org.mockito.Mockito.doReturn;
 
 
 //TO run the test, please follow instructions in README.md in this module.
-@Ignore
 @SuppressWarnings("OptionalGetWithoutIsPresent")
 public class S3ArchiverIntegrationTest extends S3IntegrationTest {
     private AmazonS3 amazonS3;
