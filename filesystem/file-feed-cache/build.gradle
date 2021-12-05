@@ -22,7 +22,7 @@ java {
 
 dependencies {
     api project(":api")
-    api "com.timgroup:file-feed-consumer:0.0.3466" // autobump
+    api "com.timgroup:file-feed-consumer:0.0.3467" // autobump
 
 
     implementation project (":archiver")
