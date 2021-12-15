@@ -38,6 +38,17 @@ subprojects {
             rootProject.tasks.named("publishScala").configure {
                 it.dependsOn(tasks.named("publish"))
             }
+            dependencies {
+                constraints {
+                    zinc("org.apache.logging.log4j:log4j-core") {
+                        version {
+                            strictly("[2.16, 3[")
+                            prefer("2.16.0")
+                        }
+                        because("CVE-2021-44228: Log4j vulnerable to remote code execution")
+                    }
+                }
+            }
         }
     }
 }
