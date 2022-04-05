@@ -53,7 +53,7 @@ dependencies {
     testImplementation "org.hamcrest:hamcrest-core:1.3"
     testImplementation "org.hamcrest:hamcrest-library:1.3"
 
-    testImplementation "com.timgroup:tg-config-java-bindings:1.0.95" // autobump
+    testImplementation "com.timgroup:tg-config-java-bindings:1.0.96" // autobump
     testImplementation "org.apache.commons:commons-lang3:3.3.2"
     testImplementation "com.timgroup:clocks-testing:1.0.1111" // autobump
     testImplementation "net.ttsui.junit.rules.pending:pending:0.0.1055"
