@@ -110,7 +110,7 @@ class CurrentBatchWriter {
         compressedSizeMetrics.update(compressedContentSize);
 
         return new S3BatchObject(
-                new ByteArrayInputStream(content),
+                content,
                 compressedContentSize,
                 buildObjectMetadata(uncompressedContentSize, compressedContentSize, lastEventInBatch));
     }

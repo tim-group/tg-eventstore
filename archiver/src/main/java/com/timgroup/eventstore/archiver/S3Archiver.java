@@ -92,7 +92,8 @@ public class S3Archiver {
                 compressedSizeMetrics);
         Timer s3UploadTimer = metricRegistry.timer(this.monitoringPrefix + ".archive.upload");
 
-        this.batchingUploadHandler = new BatchingUploadHandler(output, currentBatchWriter, clock, appMetadata, monitoringPrefix, s3UploadTimer);
+        this.batchingUploadHandler = new BatchingUploadHandler(output, currentBatchWriter, clock, appMetadata,
+                monitoringPrefix, s3UploadTimer, 30000);
 
         this.eventSubscription = subscriptionBuilder
                 .readingFrom(liveEventSource.readAll(), convertPosition(maxPositionInArchiveOnStartup))
@@ -185,7 +186,7 @@ public class S3Archiver {
         @SuppressWarnings("WeakerAccess")
         public final EventRecord record;
 
-        private EventRecordHolder(EventRecord record) {
+        public EventRecordHolder(EventRecord record) {
             this.record = record;
         }
     }

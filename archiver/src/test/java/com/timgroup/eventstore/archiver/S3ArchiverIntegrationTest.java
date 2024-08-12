@@ -20,7 +20,6 @@ import com.timgroup.remotefilestorage.api.ListableStorage;
 import com.timgroup.remotefilestorage.s3.S3ClientFactory;
 import com.timgroup.remotefilestorage.s3.S3ListableStorage;
 import com.timgroup.remotefilestorage.s3.S3StreamingDownloadableStorage;
-import com.timgroup.remotefilestorage.s3.S3UploadableStorage;
 import com.timgroup.remotefilestorage.s3.S3UploadableStorageForInputStream;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Status;
@@ -471,6 +470,6 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
     }
 
     private S3UploadableStorageForInputStream createUploadableStorage() {
-        return new S3UploadableStorageForInputStream(new S3UploadableStorage(amazonS3, bucketName), amazonS3, bucketName);
+        return new S3UploadableStorageForInputStream(amazonS3, bucketName);
     }
 }
