@@ -30,7 +30,7 @@ dependencies {
     testImplementation project(":memory")
     testImplementation "junit:junit:4.13.2"
     testImplementation "org.hamcrest:hamcrest-core:1.3"
-    testImplementation "org.hamcrest:hamcrest-library:1.3"
+    testImplementation "org.hamcrest:hamcrest-library:2.2"
     testImplementation "com.timgroup:clocks-testing:1.0.1111" // autobump
     testImplementation "com.youdevise:Matchers:0.0.1293" // autobump
 }
