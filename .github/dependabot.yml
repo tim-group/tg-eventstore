@@ -1,0 +1,39 @@
+version: 2
+updates:
+- package-ecosystem: gradle
+  directory: "/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: io.dropwizard.metrics:metrics-core
+    versions:
+    - 4.1.18
+    - 4.1.19
+  - dependency-name: io.dropwizard.metrics:metrics-jvm
+    versions:
+    - 4.1.17
+    - 4.1.18
+    - 4.1.19
+  - dependency-name: mysql:mysql-connector-java
+    versions:
+    - 8.0.23
+  - dependency-name: org.apache.httpcomponents:httpclient
+    versions:
+    - 4.5.13
+  - dependency-name: com.fasterxml.jackson.datatype:jackson-datatype-jsr310
+    versions:
+    - 2.12.1
+  - dependency-name: junit:junit
+    versions:
+    - 4.13.1
+    - 4.13.2
+  - dependency-name: joda-time:joda-time
+    versions:
+    - 2.10.9
+  - dependency-name: com.sun.xml.ws:jaxws-rt
+    versions:
+    - 3.0.0
+  - dependency-name: com.google.protobuf
+    versions:
+    - 0.8.14
