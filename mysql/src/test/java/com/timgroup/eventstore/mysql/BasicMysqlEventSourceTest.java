@@ -36,8 +36,7 @@ public class BasicMysqlEventSourceTest extends JavaEventStoreTest {
         }
     }
 
-    private final ConnectionProvider connectionProvider = () -> DriverManager.getConnection("jdbc:mysql://localhost:3306/sql_eventstore?useGmtMillisForDatetimes=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&useTimezone=true&serverTimezone=UTC");
-
+    private final ConnectionProvider connectionProvider = TestConnectionProvider.create();
     private final String tableName = "basic_eventstore";
 
     private final Config config = parseString(

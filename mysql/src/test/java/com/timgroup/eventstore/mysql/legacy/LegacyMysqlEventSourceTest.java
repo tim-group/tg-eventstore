@@ -12,6 +12,7 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.api.WrongExpectedVersionException;
 import com.timgroup.eventstore.mysql.ConnectionProvider;
+import com.timgroup.eventstore.mysql.TestConnectionProvider;
 import com.typesafe.config.Config;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -59,8 +60,7 @@ public final class LegacyMysqlEventSourceTest {
         }
     }
 
-    private final ConnectionProvider connectionProvider = () -> DriverManager.getConnection("jdbc:mysql://localhost:3306/sql_eventstore?useGmtMillisForDatetimes=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&useTimezone=true&serverTimezone=UTC");
-
+    private final ConnectionProvider connectionProvider = TestConnectionProvider.create();
     private final String tableName = "legacy_eventstore";
 
     private final Config config = parseString(
