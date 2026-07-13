@@ -1,23 +1,7 @@
 plugins {
-    id "java-library"
+    id "java-common-conventions"
+    id "java-publishing-conventions"
     id "com.timgroup.jarmangit"
-    id "maven-publish"
-}
-
-group = 'com.timgroup'
-if (buildNumber) version = '0.0.' + buildNumber
-
-repositories {
-    maven {
-        url "${repoUrl}/groups/public"
-    }
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
-    withSourcesJar()
-    withJavadocJar()
 }
 
 dependencies {
@@ -39,23 +23,6 @@ dependencies {
     testRuntimeOnly "org.slf4j:slf4j-simple:1.7.25"
 }
 
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = "UTF-8"
-    options.incremental = true
-    options.deprecation = true
-    options.compilerArgs << "-parameters"
-}
-
-tasks.withType(Jar).configureEach {
-    manifest {
-        attributes(
-                'Implementation-Title': project.name,
-                'Implementation-Version': project.version,
-                'Implementation-Vendor': 'TIM Group Ltd'
-        )
-    }
-}
-
 tasks.named("jar").configure {
     manifest {
         attributes(
@@ -65,23 +32,3 @@ tasks.named("jar").configure {
 }
 
 test.dependsOn(":createDb")
-
-publishing {
-    repositories {
-        if (project.hasProperty("repoUrl")) {
-            maven {
-                url "${project.repoUrl}/repositories/yd-release-candidates"
-                credentials {
-                    username = project.repoUsername
-                    password = project.repoPassword
-                }
-            }
-        }
-    }
-    publications {
-        mavenJava(MavenPublication) {
-            artifactId "eventstore-mysql"
-            from components.java
-        }
-    }
-}

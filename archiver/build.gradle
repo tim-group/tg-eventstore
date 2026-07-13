@@ -1,31 +1,14 @@
 plugins {
-    id "java-library"
-    id "idea"
-    id "com.google.protobuf"
+    id "java-common-conventions"
+    id "java-publishing-conventions"
     id "com.timgroup.jarmangit"
-    id "maven-publish"
-}
-
-group = 'com.timgroup'
-if (buildNumber) version = "0.0.${buildNumber}"
-
-repositories {
-    maven {
-        url = "$repoUrl/groups/public"
-    }
+    id "com.google.protobuf"
 }
 
 protobuf {
     protoc {
         artifact = "com.google.protobuf:protoc:$protobufVersion"
     }
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
-    withSourcesJar()
-    withJavadocJar()
 }
 
 dependencies {
@@ -61,48 +44,10 @@ dependencies {
     testImplementation "com.youdevise:Matchers:0.0.1293" // autobump
 }
 
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = "UTF-8"
-    options.incremental = true
-    options.deprecation = true
-    options.compilerArgs << "-parameters"
-    options.compilerArgs << "-Xlint:unchecked"
-}
-
-tasks.withType(Jar) {
-    manifest {
-        attributes(
-                'Implementation-Title': project.name,
-                'Implementation-Version': project.version,
-                'Implementation-Vendor': 'TIM Group Ltd'
-        )
-    }
-}
-
 tasks.named("jar").configure {
     manifest {
         attributes(
                 'Automatic-Module-Name': "com.timgroup.eventstore.archiver"
         )
-    }
-}
-
-publishing {
-    repositories {
-        if (project.hasProperty("repoUrl")) {
-            maven {
-                url "${project.repoUrl}/repositories/yd-release-candidates"
-                credentials {
-                    username = project.repoUsername
-                    password = project.repoPassword
-                }
-            }
-        }
-    }
-    publications {
-        mavenJava(MavenPublication) {
-            artifactId "eventstore-archiver"
-            from components.java
-        }
     }
 }

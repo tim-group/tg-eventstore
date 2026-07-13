@@ -1,24 +1,8 @@
 plugins {
-    id "java-library"
+    id "java-common-conventions"
+    id "java-publishing-conventions"
     id "scala"
     id "com.timgroup.jarmangit"
-    id "maven-publish"
-}
-
-group = 'com.timgroup'
-if (buildNumber) version = '0.0.' + buildNumber
-
-repositories {
-    maven {
-        url "${repoUrl}/groups/public"
-    }
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
-    withSourcesJar()
-    withJavadocJar()
 }
 
 // https://chrismarks.wordpress.com/2013/07/31/compiling-a-mixed-scala-project-with-gradle/
@@ -35,46 +19,6 @@ dependencies {
     implementation "org.hamcrest:hamcrest-library:1.3"
 }
 
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = "UTF-8"
-    options.incremental = true
-    options.deprecation = true
-    options.compilerArgs << "-parameters"
-}
-
-tasks.withType(ScalaCompile).configureEach {
-    options.encoding = "UTF-8"
-    options.deprecation = true
-    options.compilerArgs << "-parameters"
-    scalaCompileOptions.additionalParameters = ["-feature", "-language:implicitConversions", "-unchecked"]
-}
-
-tasks.withType(Jar).configureEach {
-    manifest {
-        attributes(
-                'Implementation-Title': project.name,
-                'Implementation-Version': project.version,
-                'Implementation-Vendor': 'TIM Group Ltd'
-        )
-    }
-}
-
-publishing {
-    repositories {
-        if (project.hasProperty("repoUrl")) {
-            maven {
-                url "${project.repoUrl}/repositories/yd-release-candidates"
-                credentials {
-                    username = project.repoUsername
-                    password = project.repoPassword
-                }
-            }
-        }
-    }
-    publications {
-        mavenJava(MavenPublication) {
-            artifactId "eventstore-api-legacy-testlib_${scalaApiVersion}"
-            from components.java
-        }
-    }
+timgroupRepo {
+    artifactId = "eventstore-api-legacy-testlib_${scalaApiVersion}"
 }

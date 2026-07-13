@@ -1,0 +1,45 @@
+plugins {
+    id "maven-publish"
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+publishing {
+    repositories {
+        if (timgroupRepo.nexusRepoUrl.present && timgroupRepo.nexusRepoUsername.present && timgroupRepo.nexusRepoPassword.present) {
+            maven {
+                name = "nexus"
+                url = "${timgroupRepo.nexusRepoUrl.get()}/repositories/yd-release-candidates"
+                credentials {
+                    username = timgroupRepo.nexusRepoUsername.get()
+                    password = timgroupRepo.nexusRepoPassword.get()
+                }
+                allowInsecureProtocol = true
+            }
+        }
+        if (timgroupRepo.codeartifactUrl.present && timgroupRepo.codeartifactToken.present) {
+            maven {
+                name = "codeartifact"
+                url = timgroupRepo.codeartifactUrl.get()
+                credentials {
+                    username = "aws"
+                    password = timgroupRepo.codeartifactToken.get()
+                }
+            }
+        }
+    }
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                artifactId timgroupRepo.artifactId.get()
+                from components.java
+            }
+        }
+    }
+}

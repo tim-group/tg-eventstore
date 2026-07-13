@@ -1,0 +1,91 @@
+plugins {
+    id "java-library"
+}
+
+extensions.create("timgroupRepo", com.timgroup.gradle.TimRepoExtension)
+
+group = timgroupRepo.group.get()
+if (timgroupRepo.version.present) version = timgroupRepo.version.get()
+
+// give build script a chance to override name or version
+afterEvaluate {
+    tasks.withType(Jar).configureEach {
+        manifest {
+            attributes(
+                    'Implementation-Title': project.name,
+                    'Implementation-Version': project.version,
+                    'Implementation-Vendor': 'TIM Group'
+            )
+        }
+        inputs.property("projectName", project.name)
+        inputs.property("projectVersion", project.version)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+    options.deprecation = true
+    options.compilerArgs << "-parameters"
+    options.compilerArgs << "-Xlint:unchecked"
+}
+
+tasks.withType(ScalaCompile).configureEach {
+    options.encoding = "UTF-8"
+    options.deprecation = true
+    options.compilerArgs << "-parameters"
+    scalaCompileOptions.additionalParameters = ["-feature", "-language:implicitConversions", "-unchecked", "-target:jvm-1.8"]
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+}
+
+repositories {
+    mavenCentral()
+    if (timgroupRepo.nexusRepoUrl.present) {
+        maven {
+            name = "nexus"
+            url = "${timgroupRepo.nexusRepoUrl.get()}/groups/public"
+            allowInsecureProtocol = true
+        }
+    }
+    if (timgroupRepo.codeartifactUrl.present && timgroupRepo.codeartifactToken.present) {
+        maven {
+            name = "codeartifact"
+            url = timgroupRepo.codeartifactUrl.get()
+            credentials {
+                username = "aws"
+                password = timgroupRepo.codeartifactToken.get()
+            }
+        }
+    }
+}
+
+dependencies {
+    components.all(com.timgroup.gradle.LoggingCapability)
+}
+
+configurations.configureEach {
+    resolutionStrategy.capabilitiesResolution.withCapability("commons-logging:commons-logging") {
+        def toBeSelected = candidates.find { it.id instanceof ModuleComponentIdentifier && it.id.module == "jcl-over-slf4j" }
+        if (toBeSelected != null) {
+            select(toBeSelected)
+            because "use slf4j in place of clogger"
+        }
+    }
+    resolutionStrategy.capabilitiesResolution.withCapability("org.slf4j:jcl-over-slf4j") {
+        selectHighestVersion()
+    }
+    resolutionStrategy.capabilitiesResolution.withCapability("log4j:log4j") {
+        def toBeSelected = candidates.find { it.id instanceof ModuleComponentIdentifier && it.id.module == "log4j-over-slf4j" }
+        if (toBeSelected != null) {
+            select(toBeSelected)
+            because "use slf4j in place of log4j"
+        }
+    }
+    resolutionStrategy.capabilitiesResolution.withCapability("org.slf4j:log4j-over-slf4j") {
+        selectHighestVersion()
+    }
+}

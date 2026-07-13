@@ -1,16 +1,10 @@
 plugins {
-    id "java"
+    id "java-common-conventions"
     id "application"
     id "com.timgroup.jarmangit"
 }
 
 mainClassName = "com.timgroup.eventstore.filesystem.archivetool.ArchiveTool"
-
-repositories {
-    maven {
-        url "${repoUrl}/groups/public"
-    }
-}
 
 dependencies {
     implementation project(":filesystem")
@@ -20,19 +14,9 @@ dependencies {
     runtimeOnly "org.slf4j:slf4j-simple:1.7.25"
 }
 
-tasks.withType(JavaCompile).configureEach {
-    sourceCompatibility = "1.8"
-    targetCompatibility = "1.8"
-    options.encoding = "UTF-8"
-    options.incremental = true
-    options.deprecation = true
-    options.compilerArgs << "-parameters"
-    options.compilerArgs << "-Xlint:unchecked"
-}
-
-task archiveTestSource(type: JavaExec) {
+tasks.register("archiveTestSource", JavaExec) {
     outputs.dir("archive")
     classpath = sourceSets.main.runtimeClasspath
-    main = mainClassName
+    mainClass = mainClassName
     args = ["-init", "-d" ,"archive", "config.properties", "testing", "basic_eventstore"]
 }

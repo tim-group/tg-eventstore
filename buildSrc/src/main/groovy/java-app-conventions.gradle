@@ -1,0 +1,36 @@
+plugins {
+    id "com.github.johnrengelman.shadow"
+}
+
+shadowJar {
+    mergeServiceFiles()
+
+    manifest {
+        attributes(
+                "X-Java-Version": javaToolchains.launcherFor(java.toolchain).map { it.metadata.languageVersion },
+                "Main-Class": provider { project.ext.mainClassName }
+        )
+    }
+}
+
+tasks.named("assemble").configure {
+    dependsOn("shadowJar")
+}
+
+tasks.register("run", JavaExec) {
+    group = "run"
+    description = "Run application using regular and library jars"
+    mainClass = project.ext.mainClassName
+    classpath = sourceSets.main.runtimeClasspath
+    args file("config.properties")
+    javaLauncher = javaToolchains.launcherFor(java.toolchain)
+}
+
+tasks.register("runShadow", JavaExec) {
+    group = "run"
+    description = "Run application from shadow-jar, just like as deployed"
+    classpath = files(tasks.shadowJar)
+    args file("config.properties")
+    systemProperties("logback.configurationFile": "logback-ecs.xml")
+    javaLauncher = javaToolchains.launcherFor(java.toolchain)
+}
