@@ -19,3 +19,7 @@ tasks.named("jar").configure {
         )
     }
 }
+
+timgroupRepo {
+    artifactId = "eventstore-api-testlib"
+}

@@ -33,3 +33,7 @@ tasks.named("jar").configure {
         )
     }
 }
+
+timgroupRepo {
+    artifactId = "eventstore-subscription"
+}

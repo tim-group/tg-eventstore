@@ -30,3 +30,7 @@ tasks.named("jar").configure {
         )
     }
 }
+
+timgroupRepo {
+    artifactId = "eventstore-filesystem-file-feed-cache"
+}
