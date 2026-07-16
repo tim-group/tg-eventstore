@@ -4,7 +4,6 @@ import com.codahale.metrics.MetricRegistry;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.archiver.monitoring.S3ArchiveBucketConfigurationComponent;
 import com.timgroup.eventsubscription.SubscriptionBuilder;
-import com.timgroup.remotefilestorage.api.StreamingUploadableStorage;
 import com.timgroup.remotefilestorage.s3sdkv2.S3SDKv2Storage;
 import com.timgroup.tucker.info.Component;
 import software.amazon.awssdk.services.s3.S3Client;

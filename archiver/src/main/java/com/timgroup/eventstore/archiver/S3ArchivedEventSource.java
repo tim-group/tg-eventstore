@@ -13,7 +13,6 @@ import com.timgroup.tucker.info.Component;
 import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 

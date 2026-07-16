@@ -1,7 +1,6 @@
 package com.timgroup.eventstore.archiver;
 
 import com.codahale.metrics.MetricRegistry;
-import com.timgroup.config.ConfigLoader;
 import com.timgroup.eventstore.api.EventReader;
 import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.EventSource;
