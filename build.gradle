@@ -5,12 +5,6 @@ plugins {
     id "scala-properties"
 }
 
-ext {
-    buildNumber = System.getenv("BUILD_NUMBER") ?: System.getenv("TRAVIS_BUILD_NUMBER")
-    mysqlJdbcVersion = "5.1.47"
-    protobufVersion = "3.25.2"
-}
-
 tasks.register("createDb") {
     doFirst {
         def mysql_exec = { db, cmd ->

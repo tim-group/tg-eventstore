@@ -12,11 +12,9 @@ dependencies {
     implementation "org.slf4j:slf4j-api:1.7.25"
     testImplementation project(":api:testlib")
     testImplementation project(":memory")
-    testImplementation "junit:junit:4.13.2"
-    testImplementation "org.hamcrest:hamcrest-core:1.3"
-    testImplementation "org.hamcrest:hamcrest-library:1.3"
-    testImplementation "com.timgroup:clocks-testing:1.0.1111" // autobump
-    testImplementation "com.youdevise:Matchers:0.0.1293" // autobump
+    testImplementation libs.bundles.junit
+    testImplementation libs.timgroup.clocks.testing
+    testImplementation libs.timgroup.matchers
 }
 
 tasks.named("jar").configure {

@@ -1,0 +1,50 @@
+[versions]
+protobuf = "3.25.2"
+mysql = "5.1.47"
+guava = "30.1.1-jre"
+
+timgroup-tucker = "1.0.1595"
+timgroup-tucker-guice = "1.0.1473"
+timgroup-tucker-rabbitmq = "1.0.1388"
+timgroup-clocks = "1.0.1116"
+timgroup-metrics = "1.0.56"
+timgroup-structuredevents = "0.4.1297"
+timgroup-tgconfig = "1.0.155"
+timgroup-matchers = "0.0.1294"
+timgroup-logger = "1.5.1124"
+timgroup-storage = "0.0.1322"
+timgroup-filefeedconsumer = "0.0.3538"
+
+[libraries]
+guava = { group = "com.google.guava", name = "guava", version.ref = "guava" }
+guava-testlib = { group = "com.google.guava", name = "guava-testlib", version.ref = "guava" }
+mysql = { group = "mysql", name = "mysql-connector-java", version.ref = "mysql" }
+
+protobuf = { group = "com.google.protobuf", name = "protobuf-java", version.ref = "protobuf" }
+
+junit = { group = "junit", name = "junit", version = "4.13.2" }
+hamcrest-core = { group = "org.hamcrest", name = "hamcrest-core", version = "1.3" }
+hamcrest-library = { group = "org.hamcrest", name = "hamcrest-library", version = "1.3" }
+mockito-core = { group = "org.mockito", name = "mockito-core", version = "2.26.0" }
+
+timgroup-tucker = { group = "com.timgroup", name = "Tucker", version.ref = "timgroup-tucker" }
+timgroup-tucker-rabbitmq = { group = "com.timgroup", name = "tucker-rabbitmq", version.ref = "timgroup-tucker-rabbitmq" }
+timgroup-tucker-guice = { group = "com.timgroup", name = "TuckerGuice", version.ref = "timgroup-tucker-guice" }
+timgroup-clocks-joda = { group = "com.timgroup", name = "clocks-joda", version.ref = "timgroup-clocks" }
+timgroup-clocks-testing = { group = "com.timgroup", name = "clocks-testing", version.ref = "timgroup-clocks" }
+timgroup-clocks-joda-testing = { group = "com.timgroup", name = "clocks-joda-testing", version.ref = "timgroup-clocks" }
+timgroup-metrics = { group = "com.timgroup", name = "tim-metrics", version.ref = "timgroup-metrics" }
+timgroup-structuredevents = { group = "com.timgroup", name = "tim-structured-events", version.ref = "timgroup-structuredevents" }
+timgroup-structuredevents-testing = { group = "com.timgroup", name = "tim-structured-events-testing", version.ref = "timgroup-structuredevents" }
+timgroup-tgconfig = { group = "com.timgroup", name = "tg-config-java-bindings", version.ref = "timgroup-tgconfig" }
+timgroup-matchers = { group = "com.youdevise", name = "Matchers", version.ref = "timgroup-matchers" }
+timgroup-matchers-http = { group = "com.youdevise", name = "HttpClientMatchers", version.ref = "timgroup-matchers" }
+timgroup-logger = { group = "com.timgroup", name = "tim-logger", version.ref = "timgroup-logger" }
+timgroup-storage-api = { group = "com.timgroup", name = "tim-remote-file-storage-api", version.ref = "timgroup-storage" }
+timgroup-storage-memory = { group = "com.timgroup", name = "tim-remote-file-storage-memory", version.ref = "timgroup-storage" }
+timgroup-storage-s3 = { group = "com.timgroup", name = "tim-remote-file-storage-s3", version.ref = "timgroup-storage" }
+timgroup-storage-s3sdkv2 = { group = "com.timgroup", name = "tim-remote-file-storage-s3-sdkv2", version.ref = "timgroup-storage" }
+timgroup-filefeedconsumer = { group = "com.timgroup", name = "file-feed-consumer", version.ref = "timgroup-filefeedconsumer" }
+
+[bundles]
+junit = ["junit", "hamcrest-core", "hamcrest-library", "mockito-core"]
