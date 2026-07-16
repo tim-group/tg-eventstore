@@ -1,16 +1,11 @@
 package com.timgroup.eventstore.archiver;
 
-import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
-import com.timgroup.eventstore.api.EventRecord;
 import com.timgroup.eventstore.api.NewEvent;
 import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.api.StreamId;
 import com.timgroup.eventstore.memory.InMemoryEventSource;
-import com.timgroup.remotefilestorage.s3.UploadStorage;
-import junit.framework.TestCase;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
+import com.timgroup.remotefilestorage.api.StreamingUploadableStorage;
 import org.junit.Test;
 
 import java.io.InputStream;
@@ -20,7 +15,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -68,7 +62,7 @@ public class BatchingUploadHandlerTest {
         assertThat(uploadableStorage.count, is(1));
     }
 
-    public static class TestStorage implements UploadStorage {
+    public static class TestStorage implements StreamingUploadableStorage {
         int count = 0;
         private int failCount = 0;
 

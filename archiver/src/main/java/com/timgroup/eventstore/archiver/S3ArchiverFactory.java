@@ -1,21 +1,21 @@
 package com.timgroup.eventstore.archiver;
 
-import com.amazonaws.services.s3.AmazonS3;
 import com.codahale.metrics.MetricRegistry;
 import com.timgroup.eventstore.api.EventSource;
 import com.timgroup.eventstore.archiver.monitoring.S3ArchiveBucketConfigurationComponent;
 import com.timgroup.eventsubscription.SubscriptionBuilder;
-import com.timgroup.remotefilestorage.s3.S3ClientFactory;
-import com.timgroup.remotefilestorage.s3.S3ListableStorage;
-import com.timgroup.remotefilestorage.s3.S3StreamingDownloadableStorage;
-import com.timgroup.remotefilestorage.s3.S3UploadableStorageForInputStream;
+import com.timgroup.remotefilestorage.api.StreamingUploadableStorage;
+import com.timgroup.remotefilestorage.s3sdkv2.S3SDKv2Storage;
 import com.timgroup.tucker.info.Component;
+import software.amazon.awssdk.services.s3.S3Client;
 
 import java.time.Clock;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
+
+import static com.timgroup.remotefilestorage.s3sdkv2.S3SDKv2Config.*;
+import static java.util.Collections.singletonList;
 
 public class S3ArchiverFactory {
 
@@ -28,15 +28,21 @@ public class S3ArchiverFactory {
     private final Clock clock;
 
     private static final int MAX_KEYS_PER_S3_LISTING = 1_000;
-    private final AmazonS3 amazonS3;
-    private List<Component> monitoring;
+    private final S3Client s3client;
+    private final S3SDKv2Storage storage;
+    private final List<Component> monitoring;
 
     public S3ArchiverFactory(String bucketName, Properties config, MetricRegistry metricRegistry, Clock clock) {
         this.bucketName = bucketName;
         this.metricRegistry = metricRegistry;
         this.clock = clock;
-        this.amazonS3 = new S3ClientFactory().fromProperties(config);
-        this.monitoring = Collections.singletonList(new S3ArchiveBucketConfigurationComponent(amazonS3, bucketName));
+        this.s3client = S3Client.builder()
+                .applyMutation(addCredentialsFromConfigOrUseDefault(config))
+                .applyMutation(addRegionFromConfigOrDefault(config))
+                .applyMutation(addProxyFromConfigOrUseDefault(config))
+                .build();
+        this.storage = S3SDKv2Storage.builder().bucketName(bucketName).client(s3client).build();
+        this.monitoring = singletonList(new S3ArchiveBucketConfigurationComponent(s3client, bucketName));
     }
 
     public S3Archiver newS3Archiver(String eventStoreId, EventSource liveEventSource, int batchsize,  String appName) {
@@ -48,11 +54,9 @@ public class S3ArchiverFactory {
     }
 
     private S3Archiver build(EventSource liveEventSource, BatchingPolicy batchingPolicy, String eventStoreId, String appName, String subscriptionName, String monitoringPrefix) {
-        S3UploadableStorageForInputStream s3UploadableStorage = createUploadableStorage();
-
         return S3Archiver.newS3Archiver(
                 liveEventSource,
-                s3UploadableStorage,
+                storage,
                 eventStoreId,
                 SubscriptionBuilder.eventSubscription(subscriptionName),
                 batchingPolicy,
@@ -68,23 +72,10 @@ public class S3ArchiverFactory {
     }
 
     public EventSource createS3ArchivedEventSource(String eventStoreId) {
-        return new S3ArchivedEventSource(createS3ListableStorage(amazonS3), createDownloadableStorage(amazonS3), bucketName, eventStoreId);
-    }
-
-    private S3StreamingDownloadableStorage createDownloadableStorage(AmazonS3 amazonS3)  {
-        return new S3StreamingDownloadableStorage(amazonS3, bucketName);
+        return new S3ArchivedEventSource(storage, storage, bucketName, eventStoreId);
     }
 
     public S3ArchiveMaxPositionFetcher newS3ArchiveMaxPositionFetcher(String eventStoreId) {
-        final S3ListableStorage s3ListableStorage = createS3ListableStorage(amazonS3);
-        return new S3ArchiveMaxPositionFetcher(s3ListableStorage, new S3ArchiveKeyFormat(eventStoreId));
-    }
-
-    private S3ListableStorage createS3ListableStorage(AmazonS3 amazonS3) {
-        return new S3ListableStorage(amazonS3, bucketName, MAX_KEYS_PER_S3_LISTING);
-    }
-
-    private S3UploadableStorageForInputStream createUploadableStorage() {
-        return new S3UploadableStorageForInputStream(amazonS3, bucketName);
+        return new S3ArchiveMaxPositionFetcher(storage, new S3ArchiveKeyFormat(eventStoreId));
     }
 }

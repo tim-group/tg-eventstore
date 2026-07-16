@@ -11,7 +11,7 @@ import com.timgroup.eventsubscription.Deserializer;
 import com.timgroup.eventsubscription.Event;
 import com.timgroup.eventsubscription.EventSubscription;
 import com.timgroup.eventsubscription.SubscriptionBuilder;
-import com.timgroup.remotefilestorage.s3.S3UploadableStorageForInputStream;
+import com.timgroup.remotefilestorage.api.StreamingUploadableStorage;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Report;
 import com.timgroup.tucker.info.Status;
@@ -53,7 +53,7 @@ public class S3Archiver {
     private RunState runState = RunState.UNSTARTED;
 
     private S3Archiver(EventSource liveEventSource,
-                       S3UploadableStorageForInputStream output,
+                       StreamingUploadableStorage output,
                        String eventStoreId,
                        SubscriptionBuilder subscriptionBuilder,
                        BatchingPolicy batchingPolicy,
@@ -126,7 +126,7 @@ public class S3Archiver {
         return Long.parseLong(liveEventSource.readAll().storePositionCodec().serializePosition(eventFromLiveEventSource.position()));
     }
 
-    public static S3Archiver newS3Archiver(EventSource liveEventSource, S3UploadableStorageForInputStream output,
+    public static S3Archiver newS3Archiver(EventSource liveEventSource, StreamingUploadableStorage output,
             String eventStoreId, SubscriptionBuilder subscriptionBuilder, BatchingPolicy batchingPolicy,
             S3ArchiveMaxPositionFetcher maxPositionFetcher, String applicationName, MetricRegistry metricRegistry,
             String monitoringPrefix, Clock clock) {

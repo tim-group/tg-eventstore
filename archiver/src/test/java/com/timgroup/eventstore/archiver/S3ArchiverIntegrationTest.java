@@ -1,9 +1,5 @@
 package com.timgroup.eventstore.archiver;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.util.IOUtils;
 import com.codahale.metrics.MetricRegistry;
 import com.timgroup.config.ConfigLoader;
 import com.timgroup.eventstore.api.EventReader;
@@ -17,10 +13,8 @@ import com.timgroup.eventstore.memory.JavaInMemoryEventStore;
 import com.timgroup.eventsubscription.SubscriptionBuilder;
 import com.timgroup.eventsubscription.healthcheck.InitialCatchupFuture;
 import com.timgroup.remotefilestorage.api.ListableStorage;
-import com.timgroup.remotefilestorage.s3.S3ClientFactory;
-import com.timgroup.remotefilestorage.s3.S3ListableStorage;
-import com.timgroup.remotefilestorage.s3.S3StreamingDownloadableStorage;
-import com.timgroup.remotefilestorage.s3.S3UploadableStorageForInputStream;
+import com.timgroup.remotefilestorage.api.StreamingDownloadableStorage;
+import com.timgroup.remotefilestorage.s3sdkv2.S3SDKv2Storage;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Status;
 import com.youdevise.testutils.matchers.Contains;
@@ -29,6 +23,8 @@ import org.hamcrest.Matcher;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import java.io.InputStream;
 import java.time.Clock;
@@ -45,29 +41,22 @@ import java.util.zip.GZIPInputStream;
 import static com.timgroup.eventstore.api.NewEvent.newEvent;
 import static com.timgroup.eventstore.api.ObjectPropertiesMatcher.objectWith;
 import static com.timgroup.eventstore.api.StreamId.streamId;
-import static com.timgroup.eventstore.archiver.S3Archiver.RunState.RUNNING;
-import static com.timgroup.eventstore.archiver.S3Archiver.RunState.STOPPED;
-import static com.timgroup.eventstore.archiver.S3Archiver.RunState.UNSTARTED;
+import static com.timgroup.eventstore.archiver.S3Archiver.RunState.*;
+import static com.timgroup.remotefilestorage.s3sdkv2.S3SDKv2Config.*;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.anything;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasEntry;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 import static org.mockito.Mockito.doReturn;
 
 
 //TO run the test, please follow instructions in README.md in this module.
 @SuppressWarnings("OptionalGetWithoutIsPresent")
 public class S3ArchiverIntegrationTest extends S3IntegrationTest {
-    private AmazonS3 amazonS3;
+    private S3Client s3Client;
     private String bucketName;
     private String eventStoreId;
-    private String testClassName = getClass().getSimpleName();
+    private static final String testClassName = S3ArchiverIntegrationTest.class.getSimpleName();
 
     private final String category_1 = randomCategory();
     private final StreamId stream_1 = streamId(category_1, "1");
@@ -84,8 +73,12 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
 
     @Before public void
     configure() {
-        Properties properties = ConfigLoader.loadConfig(S3_PROPERTIES_FILE);
-        amazonS3 = new S3ClientFactory().fromProperties(properties);
+        Properties properties = loadIntegrationConfig();
+        s3Client = S3Client.builder()
+                .applyMutation(addCredentialsFromConfigOrUseDefault(properties))
+                .applyMutation(addRegionFromConfigOrDefault(properties))
+                .applyMutation(addProxyFromConfigOrUseDefault(properties))
+                .build();
         bucketName = properties.getProperty("tg.eventstore.archive.bucketName");
         eventStoreId = uniqueEventStoreId(testClassName);
     }
@@ -213,7 +206,7 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
 
         successfullyArchiveUntilCaughtUp(liveEventSource);
 
-        S3StreamingDownloadableStorage downloadableStorage = createDownloadableStorage();
+        StreamingDownloadableStorage downloadableStorage = createStorage();
 
         String onlyBatchKey = new S3ArchiveKeyFormat(eventStoreId).objectKeyFor(2L, "gz");
         assertThat(downloadableStorage.download(onlyBatchKey, (this::isGzipped)), is(true));
@@ -226,14 +219,12 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
             int len = inputStream.read(signature);
             assertThat("Couldn't read signature (2 bytes) from input stream", len, equalTo(2));
             int head = ((int) signature[0] & 0xff) | ((signature[1] << 8) & 0xff00);
-            IOUtils.drainInputStream(inputStream);
             return (GZIPInputStream.GZIP_MAGIC == head);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     @Test public void
     archiver_resumes_subscription_from_last_archived_position() {
         EventSource liveEventSource = new InMemoryEventSource(new JavaInMemoryEventStore(fixedClock));
@@ -308,7 +299,7 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
 
     @Test public void
     max_position_from_archive_is_absent_when_there_is_no_events() {
-        ListableStorage listableStorage = new S3ListableStorage(amazonS3, bucketName, 1);
+        ListableStorage listableStorage = createStorage();
         S3ArchiveMaxPositionFetcher fetcher = new S3ArchiveMaxPositionFetcher(listableStorage, new S3ArchiveKeyFormat(eventStoreId));
 
         assertThat(fetcher.maxPosition(), equalTo(Optional.empty()));
@@ -322,7 +313,7 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
 
         successfullyArchiveUntilCaughtUp(liveEventSource);
 
-        S3ArchiveMaxPositionFetcher fetcher = new S3ArchiveMaxPositionFetcher(createListableStorage(), new S3ArchiveKeyFormat(eventStoreId));
+        S3ArchiveMaxPositionFetcher fetcher = new S3ArchiveMaxPositionFetcher(createStorage(), new S3ArchiveKeyFormat(eventStoreId));
 
         assertThat(fetcher.maxPosition(), equalTo(Optional.of(4L)));
     }
@@ -339,9 +330,9 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
 
         String lastestBatchKey = new S3ArchiveKeyFormat(eventStoreId).objectKeyFor(4L, "gz");
 
-        S3Object s3Object = amazonS3.getObject(new GetObjectRequest(bucketName, lastestBatchKey));
+        HeadObjectResponse s3Object = s3Client.headObject(r -> r.bucket(bucketName).key(lastestBatchKey));
 
-        assertThat(s3Object.getObjectMetadata().getUserMetadata(), allOf(
+        assertThat(s3Object.metadata(), allOf(
                 hasEntry(equalTo("event_source"), containsString(liveEventSource.toString())),
                 hasEntry(equalTo("hostname"), anything()),
                 hasEntry("app_version", "1.0.12345"),
@@ -421,22 +412,17 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
     }
 
     private EventSource createS3ArchivedEventSource() {
-        return new S3ArchivedEventSource(createListableStorage(), createDownloadableStorage(), bucketName, eventStoreId);
+        return new S3ArchivedEventSource(createStorage(), createStorage(), bucketName, eventStoreId);
     }
 
-    private S3StreamingDownloadableStorage createDownloadableStorage() {
-        return new S3StreamingDownloadableStorage(amazonS3, bucketName);
-    }
-
-    private S3ListableStorage createListableStorage() {
-        int maxKeysInListingToTriggerPagingBehaviour = 1;
-        return new S3ListableStorage(amazonS3, bucketName, maxKeysInListingToTriggerPagingBehaviour);
+    private S3SDKv2Storage createStorage() {
+        return S3SDKv2Storage.builder().bucketName(bucketName).client(s3Client).build();
     }
 
     private S3Archiver createUnstartedArchiver(EventSource liveEventSource) {
-        S3ArchiveMaxPositionFetcher maxPositionFetcher = new S3ArchiveMaxPositionFetcher(createListableStorage(), new S3ArchiveKeyFormat(eventStoreId));
+        S3ArchiveMaxPositionFetcher maxPositionFetcher = new S3ArchiveMaxPositionFetcher(createStorage(), new S3ArchiveKeyFormat(eventStoreId));
         return S3Archiver.newS3Archiver(liveEventSource,
-                createUploadableStorage(),
+                createStorage(),
                 eventStoreId,
                 SubscriptionBuilder.eventSubscription("test"),
                 twoEventsPerBatch,
@@ -457,8 +443,8 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
                 .withRunFrequency(Duration.of(1, ChronoUnit.MILLIS))
                 .publishingTo(catchupFuture);
 
-        S3ListableStorage listableStorage = createListableStorage();
-        S3Archiver archiver = S3Archiver.newS3Archiver(liveEventSource, createUploadableStorage(), eventStoreId, subscription,
+        ListableStorage listableStorage = createStorage();
+        S3Archiver archiver = S3Archiver.newS3Archiver(liveEventSource, createStorage(), eventStoreId, subscription,
                 twoEventsPerBatch, new S3ArchiveMaxPositionFetcher(listableStorage, new S3ArchiveKeyFormat(eventStoreId)),
                 testClassName, metricRegistry, S3Archiver.DEFAULT_MONITORING_PREFIX, clock);
 
@@ -467,9 +453,5 @@ public class S3ArchiverIntegrationTest extends S3IntegrationTest {
         completeOrFailAfter(catchupFuture, Duration.ofSeconds(5L));
 
         return archiver;
-    }
-
-    private S3UploadableStorageForInputStream createUploadableStorage() {
-        return new S3UploadableStorageForInputStream(amazonS3, bucketName);
     }
 }

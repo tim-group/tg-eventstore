@@ -1,37 +1,36 @@
 package com.timgroup.eventstore.archiver.monitoring;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.GetBucketEncryptionResult;
-import com.amazonaws.services.s3.model.ServerSideEncryptionByDefault;
-import com.amazonaws.services.s3.model.ServerSideEncryptionConfiguration;
-import com.amazonaws.services.s3.model.ServerSideEncryptionRule;
-import com.timgroup.config.ConfigLoader;
-import com.timgroup.eventstore.archiver.S3ArchiveKeyFormat;
-import com.timgroup.remotefilestorage.s3.S3ClientFactory;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.Report;
 import com.timgroup.tucker.info.Status;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetBucketEncryptionRequest;
+import software.amazon.awssdk.services.s3.model.GetBucketEncryptionResponse;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
 
-import java.util.Properties;
-import java.util.stream.Stream;
+import java.util.function.Consumer;
 
-import static org.mockito.Mockito.*;
-import static java.util.Arrays.asList;
-import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class S3ArchiveBucketConfigurationComponentTest {
 
-    @Test public void
+    @Test
+    public void
     is_ok_when_bucket_is_encrypted() {
-        AmazonS3 amazonS3 = mock(AmazonS3.class);
-        when(amazonS3.getBucketEncryption("encrypted")).thenReturn(new GetBucketEncryptionResult().withServerSideEncryptionConfiguration(
-                new ServerSideEncryptionConfiguration().withRules(new ServerSideEncryptionRule().withApplyServerSideEncryptionByDefault(new ServerSideEncryptionByDefault().withSSEAlgorithm("AES256")))));
+        S3Client amazonS3 = mock(S3Client.class);
+        when(amazonS3.getBucketEncryption(ArgumentMatchers.any(Consumer.class))).thenReturn(GetBucketEncryptionResponse.builder()
+                .serverSideEncryptionConfiguration(
+                        c -> c.rules(
+                                r -> r.applyServerSideEncryptionByDefault(d -> d.sseAlgorithm(ServerSideEncryption.AES256))
+                        )
+                )
+                .build());
 
         Component encryptedBucketComponent = new S3ArchiveBucketConfigurationComponent(amazonS3, "encrypted");
 
@@ -40,10 +39,11 @@ public class S3ArchiveBucketConfigurationComponentTest {
         assertThat(report.getValue().toString(), allOf(containsString("is encrypted"), containsString("AES256")));
     }
 
-    @Test public void
+    @Test
+    public void
     warns_when_bucket_is_not_encrypted() {
-        AmazonS3 amazonS3 = mock(AmazonS3.class);
-        when(amazonS3.getBucketEncryption("unencrypted")).thenThrow(new AmazonS3Exception("No encryption"));
+        S3Client amazonS3 = mock(S3Client.class);
+        when(amazonS3.getBucketEncryption(ArgumentMatchers.any(Consumer.class))).thenThrow(S3Exception.builder().message("No encryption").build());
 
         Component unencryptedBucketComponent = new S3ArchiveBucketConfigurationComponent(amazonS3, "unencrypted");
 
@@ -52,12 +52,13 @@ public class S3ArchiveBucketConfigurationComponentTest {
         assertThat(unencryptedBucketReport.getValue().toString(), containsString("Could not verify default server-side encryption algorithm AES256"));
     }
 
-    @Test public void
+    @Test
+    public void
     includes_bucket_name_in_output() {
-        AmazonS3 amazonS3 = mock(AmazonS3.class);
-        when(amazonS3.getBucketEncryption("My Lovely Bucket")).thenThrow(new AmazonS3Exception("No encryption"));
+        S3Client s3client = mock(S3Client.class);
+        when(s3client.getBucketEncryption(ArgumentMatchers.any(Consumer.class))).thenThrow(S3Exception.builder().message("No encryption").build());
 
-        Component component = new S3ArchiveBucketConfigurationComponent(amazonS3, "My Lovely Bucket");
+        Component component = new S3ArchiveBucketConfigurationComponent(s3client, "My Lovely Bucket");
 
         assertThat(component.getLabel(), containsString("My Lovely Bucket"));
     }

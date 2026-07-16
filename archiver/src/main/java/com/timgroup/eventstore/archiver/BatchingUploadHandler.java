@@ -6,7 +6,7 @@ import com.timgroup.eventstore.api.ResolvedEvent;
 import com.timgroup.eventstore.archiver.monitoring.ComponentUtils;
 import com.timgroup.eventsubscription.Event;
 import com.timgroup.eventsubscription.EventHandler;
-import com.timgroup.remotefilestorage.s3.UploadStorage;
+import com.timgroup.remotefilestorage.api.StreamingUploadableStorage;
 import com.timgroup.tucker.info.Component;
 import com.timgroup.tucker.info.component.SimpleValueComponent;
 
@@ -24,7 +24,7 @@ import static com.timgroup.tucker.info.Status.WARNING;
 import static java.lang.String.format;
 
 final class BatchingUploadHandler implements EventHandler {
-    private final UploadStorage output;
+    private final StreamingUploadableStorage output;
     private final Clock clock;
     private final CurrentBatchWriter currentBatchWriter;
 
@@ -35,7 +35,7 @@ final class BatchingUploadHandler implements EventHandler {
     private final SimpleValueComponent lastUploadState;
 
     BatchingUploadHandler(
-            UploadStorage uploadableStorage,
+            StreamingUploadableStorage uploadableStorage,
             CurrentBatchWriter currentBatchWriter,
             Clock clock,
             Map<String, String> appMetadata,

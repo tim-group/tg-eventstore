@@ -1,5 +1,6 @@
 package com.timgroup.eventstore.archiver;
 
+import com.timgroup.config.ConfigLoader;
 import net.ttsui.junit.rules.pending.PendingRule;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.BeforeClass;
@@ -9,6 +10,7 @@ import org.junit.rules.TestName;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
@@ -19,16 +21,33 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assume.assumeTrue;
 
 public class S3IntegrationTest {
-    public static final String S3_PROPERTIES_FILE = "s3_do_not_check_in.properties";
+    private static final String S3_PROPERTIES_FILE = "s3_do_not_check_in.properties";
+
+    private static boolean isTimgroupdevTheDefaultAccount() {
+        // hacky, but avoids issues with trying to probe a possibly-broken AWS setup
+        String profileFromEnvironment = System.getenv("AWS_PROFILE");
+        return profileFromEnvironment != null && profileFromEnvironment.equals("timgroupdev");
+    }
+
+    protected static Properties loadIntegrationConfig() {
+        if (isTimgroupdevTheDefaultAccount()) {
+            Properties timgroupDevProperties = new Properties();
+            timgroupDevProperties.setProperty("tg.eventstore.archive.bucketName", "aslive-timgroup-automated-tests");
+            return timgroupDevProperties;
+        }
+
+        return ConfigLoader.loadConfig(S3_PROPERTIES_FILE);
+    }
 
     @Rule
     public PendingRule pendingRule = new PendingRule();
 
-    @Rule public TestName testNameRule = new TestName();
+    @Rule
+    public TestName testNameRule = new TestName();
 
     @BeforeClass
     public static void verifyS3CredentialsSupplied() {
-        assumeTrue("S3 credentials must be supplied via properties file", Files.exists(Paths.get(S3_PROPERTIES_FILE)));
+        assumeTrue("S3 credentials must be supplied via properties file or timgroupdev credentials added to the environment", isTimgroupdevTheDefaultAccount() || Files.exists(Paths.get(S3_PROPERTIES_FILE)));
     }
 
     private final Long descendingCounter = Long.MAX_VALUE - System.currentTimeMillis();
