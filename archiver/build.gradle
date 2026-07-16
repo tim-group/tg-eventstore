@@ -31,6 +31,15 @@ dependencies {
     testImplementation libs.timgroup.clocks.testing
     testImplementation "net.ttsui.junit.rules.pending:pending:0.0.1055"
     testImplementation libs.timgroup.matchers
+
+    constraints {
+        implementation('org.apache.httpcomponents.client5:httpclient5') {
+            version {
+                strictly("5.5")
+            }
+            because("later versions use a constant not available in Java 1.8.0_40")
+        }
+    }
 }
 
 tasks.named("jar").configure {
