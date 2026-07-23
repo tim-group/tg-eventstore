@@ -7,6 +7,8 @@ import com.typesafe.config.Config;
 import io.prometheus.client.Gauge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
 
 import javax.annotation.Nullable;
 import java.sql.SQLException;
@@ -24,6 +26,8 @@ public final class StacksConfiguredDataSource {
 
     public static final int DEFAULT_MAX_POOLSIZE = 15;
     public static final int DEFAULT_SOCKET_TIMEOUT_MS = 15000;
+
+    private static final SecretsManagerClient secretsManager = SecretsManagerClient.create();
 
     private StacksConfiguredDataSource() { /* prevent instantiation */ }
 
@@ -102,6 +106,7 @@ public final class StacksConfiguredDataSource {
                 Integer.parseInt(properties.getProperty(prefix + "port")),
                 properties.getProperty(prefix + "username"),
                 properties.getProperty(prefix + "password"),
+                properties.getProperty(prefix + "secret_id"),
                 properties.getProperty(prefix + "database"),
                 properties.getProperty(prefix + "driver"),
                 maxPoolSize,
@@ -136,6 +141,7 @@ public final class StacksConfiguredDataSource {
                 config.getInt("port"),
                 config.getString("username"),
                 config.getString("password"),
+                null,
                 config.getString("database"),
                 config.getString("driver"),
                 maxPoolSize,
@@ -170,6 +176,7 @@ public final class StacksConfiguredDataSource {
                 config.getInt("port"),
                 config.getString("username"),
                 config.getString("password"),
+                null,
                 config.getString("database"),
                 config.getString("driver"),
                 maxPoolSize,
@@ -182,7 +189,8 @@ public final class StacksConfiguredDataSource {
             String hostname,
             int port,
             String username,
-            String password,
+            @Nullable String password,
+            @Nullable String secretId,
             String database,
             String driver,
             int maxPoolsize,
@@ -194,7 +202,16 @@ public final class StacksConfiguredDataSource {
                 port,
                 database));
         dataSource.setUser(username);
-        dataSource.setPassword(password);
+        if (password != null) {
+            dataSource.setPassword(password);
+        }
+        else if (secretId != null) {
+            GetSecretValueResponse response = secretsManager.getSecretValue(r -> r.secretId(secretId));
+            dataSource.setPassword(response.secretString());
+        }
+        else {
+            throw new IllegalArgumentException("Neither password nor secretId provided");
+        }
         dataSource.setIdleConnectionTestPeriod(60 * 5);
         dataSource.setMinPoolSize(Math.min(3, maxPoolsize));
         dataSource.setInitialPoolSize(3);
