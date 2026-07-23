@@ -11,7 +11,7 @@ dependencies {
     implementation libs.timgroup.structuredevents
     implementation libs.guava
     implementation "com.fasterxml.jackson.core:jackson-databind:2.9.8"
-    implementation "org.slf4j:slf4j-api:1.7.25"
+    implementation "org.slf4j:slf4j-api:2.0.18"
 
     testImplementation project(":api:testlib")
     testImplementation project(":memory")
@@ -20,7 +20,7 @@ dependencies {
     testImplementation libs.timgroup.structuredevents.testing
     testImplementation libs.timgroup.matchers
     testImplementation "net.ttsui.junit.rules.pending:pending:0.0.1055"
-    testRuntimeOnly "org.slf4j:slf4j-simple:1.7.25"
+    testRuntimeOnly "org.slf4j:slf4j-simple:2.0.18"
 }
 
 tasks.named("jar").configure {
