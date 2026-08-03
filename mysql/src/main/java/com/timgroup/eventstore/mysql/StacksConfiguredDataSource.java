@@ -226,9 +226,6 @@ public final class StacksConfiguredDataSource {
                 LOG.info("Read raw database password for {} from {}", username, response.arn());
             }
         }
-        else {
-            throw new IllegalArgumentException("Neither password nor secretId provided");
-        }
         dataSource.setIdleConnectionTestPeriod(60 * 5);
         dataSource.setMinPoolSize(Math.min(3, maxPoolsize));
         dataSource.setInitialPoolSize(3);
