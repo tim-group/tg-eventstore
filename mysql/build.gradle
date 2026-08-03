@@ -16,6 +16,7 @@ dependencies {
     runtimeOnly "software.amazon.awssdk:sso"
     runtimeOnly "software.amazon.awssdk:ssooidc"
     runtimeOnly "software.amazon.awssdk:sts"
+    implementation libs.bundles.jackson
 
     testImplementation project(":api:testlib")
     testImplementation project(":memory")

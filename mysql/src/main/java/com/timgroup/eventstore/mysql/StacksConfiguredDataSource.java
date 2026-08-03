@@ -12,13 +12,14 @@ import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRespon
 
 import javax.annotation.Nullable;
 import java.sql.SQLException;
+import java.util.Optional;
 import java.util.Properties;
 
 import static java.lang.String.format;
 
 public final class StacksConfiguredDataSource {
 
-    private static final Logger logger = LoggerFactory.getLogger(StacksConfiguredDataSource.class);
+    private static final Logger LOG = LoggerFactory.getLogger(StacksConfiguredDataSource.class);
 
     private static final Gauge databaseConnections = Gauge.build("database_connections", "TG Eventstore Database connections")
             .labelNames("database", "state")
@@ -188,7 +189,7 @@ public final class StacksConfiguredDataSource {
     private static PooledDataSource pooled(
             String hostname,
             int port,
-            String username,
+            @Nullable String username,
             @Nullable String password,
             @Nullable String secretId,
             String database,
@@ -202,12 +203,28 @@ public final class StacksConfiguredDataSource {
                 port,
                 database));
         dataSource.setUser(username);
-        if (password != null) {
+        if (password != null && !password.isEmpty()) {
             dataSource.setPassword(password);
         }
-        else if (secretId != null) {
+        else if (secretId != null && !secretId.isEmpty()) {
             GetSecretValueResponse response = secretsManager.getSecretValue(r -> r.secretId(secretId));
-            dataSource.setPassword(response.secretString());
+            Optional<CredentialsInSecret> jsonCredentials = CredentialsInSecret.extract(response.secretString());
+            if (jsonCredentials.isPresent()) {
+                dataSource.setPassword(jsonCredentials.get().password);
+
+                // do not override directly-specified property
+                if (username == null || username.isEmpty()) {
+                    LOG.info("Read JSON database credentials from {}", response.arn());
+                    dataSource.setUser(jsonCredentials.get().username);
+                }
+                else {
+                    LOG.info("Read JSON database password for {} from {}", username, response.arn());
+                }
+            }
+            else {
+                dataSource.setPassword(response.secretString());
+                LOG.info("Read raw database password for {} from {}", username, response.arn());
+            }
         }
         else {
             throw new IllegalArgumentException("Neither password nor secretId provided");
@@ -247,7 +264,7 @@ public final class StacksConfiguredDataSource {
             try {
                 return source.get();
             } catch (SQLException e) {
-                logger.warn("Failed to fetch '" + name + "' metric from data source");
+                LOG.warn("Failed to fetch '" + name + "' metric from data source");
                 return null;
             }
         });
@@ -267,7 +284,7 @@ public final class StacksConfiguredDataSource {
                 try {
                     return source.get();
                 } catch (SQLException e) {
-                    logger.warn("Failed to fetch " + connectionState + " metric from database " + databaseName, e);
+                    LOG.warn("Failed to fetch " + connectionState + " metric from database " + databaseName, e);
                     return -1;
                 }
             }

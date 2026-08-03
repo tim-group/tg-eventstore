@@ -20,6 +20,7 @@ dependencies {
     api libs.timgroup.structuredevents
 
     implementation "com.google.code.findbugs:jsr305:3.0.2"
+    api libs.timgroup.storage.api
     implementation libs.timgroup.storage.s3sdkv2
 
     testImplementation project(":api:testlib")
