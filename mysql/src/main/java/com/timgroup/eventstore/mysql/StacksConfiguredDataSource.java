@@ -4,6 +4,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 import com.mchange.v2.c3p0.PooledDataSource;
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import io.prometheus.client.Gauge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,18 +93,18 @@ public final class StacksConfiguredDataSource {
         return getPooledDataSource(properties, configPrefix, "read_only_cluster", maxPoolSize, socketTimeoutMs, metricRegistry);
     }
 
-    private static PooledDataSource getPooledDataSource(Properties properties, String configPrefix, String host_propertyname, int maxPoolSize, int socketTimeoutMs, @Nullable MetricRegistry metricRegistry) {
+    private static PooledDataSource getPooledDataSource(Properties properties, String configPrefix, String hostProperty, int maxPoolSize, int socketTimeoutMs, @Nullable MetricRegistry metricRegistry) {
         String prefix = configPrefix;
 
-        if (properties.getProperty(prefix + host_propertyname) == null) {
+        if (properties.getProperty(prefix + hostProperty) == null) {
             prefix = "db." + prefix + ".";
-            if (properties.getProperty(prefix + host_propertyname) == null) {
-                throw new IllegalArgumentException("No " + configPrefix + host_propertyname + " property available to configure data source");
+            if (properties.getProperty(prefix + hostProperty) == null) {
+                throw new IllegalArgumentException("No " + configPrefix + hostProperty + " property available to configure data source");
             }
         }
 
         return pooled(
-                properties.getProperty(prefix + host_propertyname),
+                properties.getProperty(prefix + hostProperty),
                 Integer.parseInt(properties.getProperty(prefix + "port")),
                 properties.getProperty(prefix + "username"),
                 properties.getProperty(prefix + "password"),
@@ -132,19 +133,22 @@ public final class StacksConfiguredDataSource {
         return pooledMasterDb(config, maxPoolSize, null);
     }
 
+    private static final Config DATA_SOURCE_FALLBACK = ConfigFactory.parseString("username=\nsecret_id=");
+
     /**
      * @deprecated Use corresponding API without metric registry
      */
     @Deprecated
     public static PooledDataSource pooledMasterDb(Config config, int maxPoolSize, @Nullable MetricRegistry metricRegistry) {
+        Config defaultedConfig = config.withFallback(DATA_SOURCE_FALLBACK);
         return pooled(
-                config.getString("hostname"),
-                config.getInt("port"),
-                config.getString("username"),
-                config.getString("password"),
-                null,
-                config.getString("database"),
-                config.getString("driver"),
+                defaultedConfig.getString("hostname"),
+                defaultedConfig.getInt("port"),
+                defaultedConfig.getString("username"),
+                defaultedConfig.getString("password"),
+                defaultedConfig.getString("secret_id"),
+                defaultedConfig.getString("database"),
+                defaultedConfig.getString("driver"),
                 maxPoolSize,
                 DEFAULT_SOCKET_TIMEOUT_MS,
                 metricRegistry
@@ -172,14 +176,15 @@ public final class StacksConfiguredDataSource {
      */
     @Deprecated
     public static PooledDataSource pooledReadOnlyDb(Config config, int maxPoolSize, @Nullable MetricRegistry metricRegistry) {
+        Config defaultedConfig = config.withFallback(DATA_SOURCE_FALLBACK);
         return pooled(
-                config.getString("read_only_cluster"),
-                config.getInt("port"),
-                config.getString("username"),
-                config.getString("password"),
-                null,
-                config.getString("database"),
-                config.getString("driver"),
+                defaultedConfig.getString("read_only_cluster"),
+                defaultedConfig.getInt("port"),
+                defaultedConfig.getString("username"),
+                defaultedConfig.getString("password"),
+                defaultedConfig.getString("secret_id"),
+                defaultedConfig.getString("database"),
+                defaultedConfig.getString("driver"),
                 maxPoolSize,
                 DEFAULT_SOCKET_TIMEOUT_MS,
                 metricRegistry
@@ -205,8 +210,7 @@ public final class StacksConfiguredDataSource {
         dataSource.setUser(username);
         if (password != null && !password.isEmpty()) {
             dataSource.setPassword(password);
-        }
-        else if (secretId != null && !secretId.isEmpty()) {
+        } else if (secretId != null && !secretId.isEmpty()) {
             GetSecretValueResponse response = secretsManager.getSecretValue(r -> r.secretId(secretId));
             Optional<CredentialsInSecret> jsonCredentials = CredentialsInSecret.extract(response.secretString());
             if (jsonCredentials.isPresent()) {
@@ -216,12 +220,10 @@ public final class StacksConfiguredDataSource {
                 if (username == null || username.isEmpty()) {
                     LOG.info("Read JSON database credentials from {}", response.arn());
                     dataSource.setUser(jsonCredentials.get().username);
-                }
-                else {
+                } else {
                     LOG.info("Read JSON database password for {} from {}", username, response.arn());
                 }
-            }
-            else {
+            } else {
                 dataSource.setPassword(response.secretString());
                 LOG.info("Read raw database password for {} from {}", username, response.arn());
             }
