@@ -5,6 +5,8 @@ import com.mchange.v2.c3p0.ComboPooledDataSource;
 import com.mchange.v2.c3p0.PooledDataSource;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigParseOptions;
+import com.typesafe.config.ConfigSyntax;
 import io.prometheus.client.Gauge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -133,7 +135,7 @@ public final class StacksConfiguredDataSource {
         return pooledMasterDb(config, maxPoolSize, null);
     }
 
-    private static final Config DATA_SOURCE_FALLBACK = ConfigFactory.parseString("username=\nsecret_id=");
+    private static final Config DATA_SOURCE_FALLBACK = ConfigFactory.parseString("username=\nsecret_id=\npassword=", ConfigParseOptions.defaults().setSyntax(ConfigSyntax.PROPERTIES));
 
     /**
      * @deprecated Use corresponding API without metric registry
