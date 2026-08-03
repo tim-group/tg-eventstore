@@ -15,7 +15,7 @@ final class CredentialsInSecret {
             .registerModule(new ParameterNamesModule())
             .registerModule(new Jdk8Module());
 
-    private static final Pattern PREFIX_PATTERN = Pattern.compile("^\\s*\\{\\s*\"}");
+    private static final Pattern PREFIX_PATTERN = Pattern.compile("^\\s*\\{\\s*\"");
     private static final Pattern SUFFIX_PATTERN = Pattern.compile("\\s*}\\s*$");
 
     public static Optional<CredentialsInSecret> extract(String secretString) {
