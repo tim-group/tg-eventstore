@@ -207,7 +207,7 @@ public final class StacksConfiguredDataSource {
         if (secretId != null && !secretId.isEmpty()) {
             UserCredentials userCredentials = UserCredentials.fetch(secretId);
             dataSource.setUser(userCredentials.username);
-            dataSource.setUser(userCredentials.password);
+            dataSource.setPassword(userCredentials.password);
             LOG.info("Read JSON database credentials from {}", secretId);
         }
         else {
