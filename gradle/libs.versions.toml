@@ -1,6 +1,6 @@
 [versions]
 protobuf = "3.25.2"
-mysql = "5.1.47"
+mysql = "5.1.49"
 guava = "30.1.1-jre"
 jackson = "2.9.8"
 aws = "2.39.5"

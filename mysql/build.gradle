@@ -25,6 +25,12 @@ dependencies {
     testImplementation libs.mysql
     testCompileOnly "com.google.code.findbugs:jsr305:1.3.9"
     testRuntimeOnly "org.slf4j:slf4j-simple:1.7.25"
+
+    constraints {
+        implementation(libs.mysql) {
+            because("required for MySQL 8")
+        }
+    }
 }
 
 tasks.named("jar").configure {
