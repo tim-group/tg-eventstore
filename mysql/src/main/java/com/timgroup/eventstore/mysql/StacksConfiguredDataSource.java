@@ -10,12 +10,9 @@ import com.typesafe.config.ConfigSyntax;
 import io.prometheus.client.Gauge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
-import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
 
 import javax.annotation.Nullable;
 import java.sql.SQLException;
-import java.util.Optional;
 import java.util.Properties;
 
 import static java.lang.String.format;
@@ -30,8 +27,6 @@ public final class StacksConfiguredDataSource {
 
     public static final int DEFAULT_MAX_POOLSIZE = 15;
     public static final int DEFAULT_SOCKET_TIMEOUT_MS = 15000;
-
-    private static final SecretsManagerClient secretsManager = SecretsManagerClient.create();
 
     private StacksConfiguredDataSource() { /* prevent instantiation */ }
 
@@ -209,26 +204,15 @@ public final class StacksConfiguredDataSource {
                 hostname,
                 port,
                 database));
-        dataSource.setUser(username);
-        if (password != null && !password.isEmpty()) {
+        if (secretId != null && !secretId.isEmpty()) {
+            UserCredentials userCredentials = UserCredentials.fetch(secretId);
+            dataSource.setUser(userCredentials.username);
+            dataSource.setUser(userCredentials.password);
+            LOG.info("Read JSON database credentials from {}", secretId);
+        }
+        else {
+            dataSource.setUser(username);
             dataSource.setPassword(password);
-        } else if (secretId != null && !secretId.isEmpty()) {
-            GetSecretValueResponse response = secretsManager.getSecretValue(r -> r.secretId(secretId));
-            Optional<CredentialsInSecret> jsonCredentials = CredentialsInSecret.extract(response.secretString());
-            if (jsonCredentials.isPresent()) {
-                dataSource.setPassword(jsonCredentials.get().password);
-
-                // do not override directly-specified property
-                if (username == null || username.isEmpty()) {
-                    LOG.info("Read JSON database credentials from {}", response.arn());
-                    dataSource.setUser(jsonCredentials.get().username);
-                } else {
-                    LOG.info("Read JSON database password for {} from {}", username, response.arn());
-                }
-            } else {
-                dataSource.setPassword(response.secretString());
-                LOG.info("Read raw database password for {} from {}", username, response.arn());
-            }
         }
         dataSource.setIdleConnectionTestPeriod(60 * 5);
         dataSource.setMinPoolSize(Math.min(3, maxPoolsize));
