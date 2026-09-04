@@ -1,9 +1,9 @@
 package com.timgroup.eventstore.mysql;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueResponse;
 import software.amazon.awssdk.services.secretsmanager.model.ResourceNotFoundException;
@@ -13,10 +13,11 @@ import java.util.Objects;
 
 import static java.lang.String.format;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 final class UserCredentials {
     private static final SecretsManagerClient secretsManagerClient = SecretsManagerClient.builder().build();
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new ParameterNamesModule())
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
     public static UserCredentials fetch(String secretId) {
         GetSecretValueResponse response;
@@ -36,7 +37,7 @@ final class UserCredentials {
     public final String password;
 
     @JsonCreator
-    private UserCredentials(@JsonProperty("username") String username, @JsonProperty("password") String password) {
+    private UserCredentials(String username, String password) {
         this.username = username;
         this.password = password;
     }
