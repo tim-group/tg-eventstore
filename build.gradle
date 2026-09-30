@@ -2,47 +2,5 @@ plugins {
     id "com.timgroup.jarmangit" version "1.1.117" apply false
     id "com.github.maiflai.scalatest" version "0.31" apply false
     id "com.google.protobuf" version "0.9.4" apply false
-    id "scala-properties"
-}
-
-tasks.register("createDb") {
-    doFirst {
-        def mysql_exec = { db, cmd ->
-            project.exec {
-                if (db) {
-                    commandLine("mysql", db, "-e$cmd")
-                }
-                else {
-                    commandLine("mysql", "-e$cmd")
-                }
-                environment("MYSQL_HOST", "127.0.0.1")
-            }
-        }
-        mysql_exec(null, "drop database if exists sql_eventstore")
-        mysql_exec(null, "create database sql_eventstore")
-        mysql_exec("sql_eventstore", "CREATE TABLE Event(eventType VARCHAR(255), body BLOB, version INT PRIMARY KEY, effective_timestamp datetime)")
-    }
-}
-
-tasks.register("publishScala")
-
-subprojects {
-    afterEvaluate {
-        if (project.plugins.hasPlugin("scala")) {
-            rootProject.tasks.named("publishScala").configure {
-                it.dependsOn(tasks.named("publish"))
-            }
-            dependencies {
-                constraints {
-                    zinc("org.apache.logging.log4j:log4j-core") {
-                        version {
-                            strictly("[2.16, 3[")
-                            prefer("2.16.0")
-                        }
-                        because("CVE-2021-44228: Log4j vulnerable to remote code execution")
-                    }
-                }
-            }
-        }
-    }
+    id "com.github.johnrengelman.shadow" version "7.1.2" apply false
 }

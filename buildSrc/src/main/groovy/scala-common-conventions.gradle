@@ -1,0 +1,102 @@
+plugins {
+    id "java-common-conventions"
+    id "scala"
+    id "com.github.maiflai.scalatest"
+}
+
+def scalaTargetProvider = providers.zip(
+        providers.gradleProperty("scalaTarget").orElse(""),
+        providers.fileContents(rootProject.layout.projectDirectory.file("scala_targets.txt")).asText,
+        { scalaTargetSpecified, targetsFileContents ->
+            if (!scalaTargetSpecified.isEmpty()) {
+                logger.info("Scala: specified: $scalaTargetSpecified")
+                return scalaTargetSpecified
+            } else {
+                def scalaTargetsFromFile = targetsFileContents.split()
+                def firstScalaTarget = scalaTargetsFromFile[0]
+                logger.info("Scala: default: $firstScalaTarget")
+                return firstScalaTarget
+            }
+        })
+
+def scalaVersionsProvider = scalaTargetProvider.map { scalaTarget ->
+    def match = (scalaTarget =~ /^(\d+\.\d+)\.(\d+)$/)
+    if (!match.matches()) throw new RuntimeException("Invalid scalaTarget: $scalaTarget")
+    //noinspection GroovyUnusedAssignment
+    def (_all, major, minor) = match[0]
+    if (major == "2.9") {
+        return ["$major.$minor", "$major.$minor"]
+    } else {
+        return ["$major.$minor", major]
+    }
+}
+
+extensions.extraProperties.set("scalaVersion", scalaVersionsProvider.get()[0])
+extensions.extraProperties.set("scalaApiVersion", scalaVersionsProvider.get()[1])
+
+tasks.withType(ScalaCompile).configureEach {
+    scalaCompileOptions.additionalParameters = ["-target:jvm-1.8"]
+    options.encoding = "UTF-8"
+    options.deprecation = true
+    options.compilerArgs << "-parameters"
+}
+
+dependencies {
+    constraints {
+        zinc("org.apache.logging.log4j:log4j-core") {
+            version {
+                strictly("[2.16, 3[")
+                prefer("2.16.0")
+            }
+            because("CVE-2021-44228: Log4j vulnerable to remote code execution")
+        }
+    }
+}
+
+tasks.named("check").configure {
+    dependsOn("scalatest")
+}
+
+tasks.named("scalatest").configure {
+    workingDir = rootProject.projectDir
+}
+
+tasks.register("assembleScalaParts") {
+    dependsOn("assemble")
+}
+
+tasks.register("checkScalaParts") {
+    dependsOn("check")
+}
+
+tasks.register("buildScalaParts") {
+    dependsOn("build")
+}
+
+def scalaVersionSpecificSources = scalaVersionsProvider.map { scalaVersions -> layout.projectDirectory.dir("src/main/scala-${scalaVersions[1]}") }
+def scalaVersionSpecificTestSources = scalaVersionsProvider.map { scalaVersions -> layout.projectDirectory.dir("src/test/scala-${scalaVersions[1]}") }
+
+sourceSets {
+    main {
+        scala {
+            srcDir(scalaVersionSpecificSources)
+        }
+    }
+    test {
+        scala {
+            srcDir(scalaVersionSpecificTestSources)
+        }
+    }
+}
+
+afterEvaluate {
+    if (project.plugins.hasPlugin("maven-publish")) {
+        tasks.register("publishScalaParts") {
+            dependsOn("publish")
+        }
+
+        tasks.register("publishScalaPartsToMavenLocal") {
+            dependsOn("publishToMavenLocal")
+        }
+    }
+}

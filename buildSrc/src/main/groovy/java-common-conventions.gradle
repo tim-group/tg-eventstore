@@ -29,16 +29,9 @@ tasks.withType(JavaCompile).configureEach {
     options.compilerArgs << "-Xlint:unchecked"
 }
 
-tasks.withType(ScalaCompile).configureEach {
-    options.encoding = "UTF-8"
-    options.deprecation = true
-    options.compilerArgs << "-parameters"
-    scalaCompileOptions.additionalParameters = ["-feature", "-language:implicitConversions", "-unchecked", "-target:jvm-1.8"]
-}
-
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(8)
+        languageVersion = JavaLanguageVersion.of(17)
     }
 }
 

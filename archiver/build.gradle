@@ -1,8 +1,13 @@
 plugins {
     id "java-common-conventions"
     id "java-publishing-conventions"
-    id "com.timgroup.jarmangit"
     id "com.google.protobuf"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
 }
 
 protobuf {

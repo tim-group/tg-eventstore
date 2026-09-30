@@ -1,7 +1,12 @@
 plugins {
     id "java-common-conventions"
     id "java-publishing-conventions"
-    id "com.timgroup.jarmangit"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
 }
 
 dependencies {
@@ -40,8 +45,6 @@ tasks.named("jar").configure {
         )
     }
 }
-
-test.dependsOn(":createDb")
 
 timgroupRepo {
     artifactId = "eventstore-mysql"

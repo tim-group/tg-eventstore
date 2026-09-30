@@ -1,16 +1,14 @@
 plugins {
     id "java-common-conventions"
     id "java-publishing-conventions"
-    id "scala"
-    id "com.timgroup.jarmangit"
-    id "com.github.maiflai.scalatest"
+    id "scala-common-conventions"
 }
 
-// https://chrismarks.wordpress.com/2013/07/31/compiling-a-mixed-scala-project-with-gradle/
-sourceSets.main.scala.srcDir "src/main/java"
-sourceSets.main.java.srcDirs = []
-sourceSets.test.scala.srcDir "src/test/java"
-sourceSets.test.java.srcDirs = []
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+}
 
 dependencies {
     api project(":api-legacy")
@@ -32,8 +30,6 @@ dependencies {
     testRuntimeOnly "org.slf4j:slf4j-simple:1.7.25"
 }
 
-check.dependsOn("scalatest")
-
 tasks.named("jar").configure {
     manifest {
         attributes(
@@ -44,7 +40,6 @@ tasks.named("jar").configure {
 
 scalatest {
     maxParallelForks = 1
-    dependsOn(":createDb")
 }
 
 timgroupRepo {

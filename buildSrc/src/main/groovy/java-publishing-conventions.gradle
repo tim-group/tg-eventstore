@@ -1,10 +1,10 @@
 plugins {
     id "maven-publish"
+    id "com.timgroup.jarmangit"
 }
 
 java {
     withSourcesJar()
-    withJavadocJar()
 }
 
 publishing {

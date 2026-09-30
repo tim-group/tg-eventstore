@@ -1,10 +1,17 @@
 plugins {
     id "java-common-conventions"
-    id "application"
-    id "com.timgroup.jarmangit"
+    id "java-app-conventions"
 }
 
-mainClassName = "com.timgroup.eventstore.filesystem.archivetool.ArchiveTool"
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+}
+
+ext {
+    mainClassName = "com.timgroup.eventstore.filesystem.archivetool.ArchiveTool"
+}
 
 dependencies {
     implementation project(":filesystem")

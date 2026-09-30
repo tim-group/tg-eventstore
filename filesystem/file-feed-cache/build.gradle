@@ -1,7 +1,12 @@
 plugins {
     id "java-common-conventions"
     id "java-publishing-conventions"
-    id "com.timgroup.jarmangit"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
 }
 
 dependencies {
