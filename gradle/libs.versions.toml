@@ -11,10 +11,10 @@ timgroup-tucker-rabbitmq = "1.0.1388"
 timgroup-clocks = "1.0.1116"
 timgroup-metrics = "1.0.56"
 timgroup-structuredevents = "0.4.1297"
-timgroup-tgconfig = "1.0.155"
+timgroup-tgconfig = "1.0.178"
 timgroup-matchers = "0.0.1294"
 timgroup-logger = "1.5.1124"
-timgroup-storage = "0.0.1322"
+timgroup-storage = "0.0.1340"
 timgroup-filefeedconsumer = "0.0.3538"
 
 [libraries]
