@@ -37,8 +37,20 @@ afterEvaluate {
     publishing {
         publications {
             mavenJava(MavenPublication) {
-                artifactId timgroupRepo.artifactId.get()
+                artifactId = timgroupRepo.artifactId.get()
                 from components.java
+            }
+        }
+        repositories {
+            if (timgroupRepo.githubPackagesToken.present && timgroupRepo.githubPackagesRepo.present) {
+                maven {
+                    name = "github"
+                    url = "https://maven.pkg.github.com/ION-Analytics/${timgroupRepo.githubPackagesRepo.get()}"
+                    credentials {
+                        username = "github"
+                        password = timgroupRepo.githubPackagesToken.get()
+                    }
+                }
             }
         }
     }

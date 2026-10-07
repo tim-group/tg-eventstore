@@ -54,6 +54,16 @@ repositories {
             }
         }
     }
+    if (timgroupRepo.githubPackagesToken.present) {
+        maven {
+            name = "github"
+            url = "https://maven.pkg.github.com/ION-Analytics/*"
+            credentials {
+                username = "github"
+                password = timgroupRepo.githubPackagesToken.get()
+            }
+        }
+    }
 }
 
 dependencies {
